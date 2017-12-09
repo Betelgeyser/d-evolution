@@ -19,18 +19,12 @@ import std.random : Mt19937_64, unpredictableSeed;
 
 import network;
 
-immutable ubyte  bias      =   1;
-immutable double maxWeigth =  10;
-immutable double minWeigth = -10;
-
 void main()
 {
 	auto rng = Mt19937_64(unpredictableSeed());
-	auto a = RandomNetwork(2, 1, 1, 3, minWeigth, maxWeigth, rng);
-//	auto layer  = new Layer(3, 4, rng);
-//	writeln(layer);
-//	neuron([1, 5, -3, 0, 0.2]);
-//	writeln(lay);
-
+	auto rn = RandomNetwork(2, 1, 3, 3, -10, 10, rng);
+	writeln(rn);
+	
+	writeln(rn([4, 6]));
 	writeln("Hello World.");
 }

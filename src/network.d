@@ -16,18 +16,24 @@
 module network;
 
 import layer;
+	import std.stdio;
 
 struct RandomNetwork
 {
 	InputLayer  inputLayer;
 	HiddenLayer outputLayer;
+	
 	private RandomLayer[] hiddenLayers;
 	
-	this(T)(ulong inputs, ulong outputs, ulong maxHLayers, ulong maxNeurons, double minWeight, double maxWeigth, T generator)
+	this(T)(ulong inputs, ulong outputs, ulong maxHLayers, ulong maxNeurons, double minWeight, double maxWeigth, ref T generator)
 	{
+		assert (inputs     >= 1);
+		assert (outputs    >= 1);
 		assert (maxHLayers >= 1);
+		assert (maxNeurons >= 1);
 		
 		inputLayer = InputLayer(inputs);
+		
 		hiddenLayers ~= RandomLayer(maxNeurons, inputLayer.length, minWeight, maxWeigth, generator);
 		
 		for(ulong i = 1; i < maxHLayers; i++)
@@ -36,4 +42,46 @@ struct RandomNetwork
 		outputLayer = HiddenLayer(outputs, hiddenLayers[hiddenLayers.length - 1].length, minWeight, maxWeigth, generator);
 		outputLayer.sig = false;
 	}
+	
+	double[] opCall()
+	{
+		return outputLayer();
+	}
+	
+	double[] opCall(double[] input)
+	{
+		assert (input.length == inputLayer.length);
+		
+		inputLayer(input);
+		hiddenLayers[0](inputLayer);
+		
+		for (ulong i = 1; i < hiddenLayers.length; i++)
+			hiddenLayers[i](hiddenLayers[i - 1]);
+		
+		outputLayer(hiddenLayers[hiddenLayers.length - 1]);
+		
+		return outputLayer();
+	}
+	
+	@property string toString()
+	{
+		string result = "RandomNetwork:\n";
+		result ~= inputLayer.toString("\t");
+		foreach(i, h; hiddenLayers)
+			result ~= h.toString("\t", i);
+		result ~= outputLayer.toString("\t");
+		return result;
+	}
+}
+
+unittest
+{
+	import std.stdio;
+	writeln("RandomNetwork...");
+	
+	import std.random : Mt19937_64;
+	auto rng = Mt19937_64(0);
+	
+	auto rn = RandomNetwork(5, 3, 2, 5, -10, 10, rng);
+	assert (rn() == [0, 0, 0]);
 }

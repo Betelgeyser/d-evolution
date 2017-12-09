@@ -17,13 +17,14 @@ module layer;
 
 import std.random : uniform;
 import std.range  : generate, take;
+import std.conv   : to;
 import std.array;
 
 import neuron;
 
 struct InputLayer
 {
-	InputNeuron[] neurons;
+	private InputNeuron[] neurons;
 	
 	this(ulong size)
 	{
@@ -44,10 +45,8 @@ struct InputLayer
 	double[] opSlice(size_t i, size_t j)
 	{
 		double[] result;
-		
 		for (size_t k = i; k <= j; k++)
 			result ~= neurons[k]();
-		
 		return result;
 	}
 	
@@ -56,9 +55,25 @@ struct InputLayer
 		return this[0 .. this.length - 1];
 	}
 	
+	double[] opCall(double[] values)
+	{
+		assert(values.length == neurons.length);
+		foreach(i, ref n; neurons)
+			n(values[i]);
+		return this[0 .. this.length - 1];
+	}
+	
 	@property size_t length()
 	{
 		return neurons.length;
+	}
+	
+	@property string toString(string indent = "")
+	{
+		string result = indent ~ "InputLayer:\n";
+		foreach(i, n; neurons)
+			result ~= n.toString(indent ~ "\t", i);
+		return result;
 	}
 }
 
@@ -70,6 +85,9 @@ unittest
 	auto i1 = InputLayer(6);
 	assert(i1.length == 6);
 	
+	i1([1, 2, 3, 4, 5, 6]);
+	assert (i1[0 .. i1.length - 1] == [1, 2, 3, 4, 5, 6]);
+	
 	auto i2 = InputLayer([1, 2, 3, 4, 5]);
 	assert (i2()                   == [1, 2, 3, 4, 5]);
 	assert (i2[0 .. i2.length - 1] == [1, 2, 3, 4, 5]);
@@ -77,11 +95,14 @@ unittest
 
 struct HiddenLayer
 {
-	RandomNeuron[] neurons;
+	private RandomNeuron[] neurons;
 	bool sig = true; 
 	
-	this(T)(ulong size, ulong prevSize, double minWeight, double maxWeigth, T generator)
+	this(T)(ulong size, ulong prevSize, double minWeight, double maxWeigth, ref T generator)
 	{
+		assert (size     >= 1);
+		assert (prevSize >= 1);
+		
 		neurons = generate(
 			() => RandomNeuron(prevSize, minWeight, maxWeigth, generator)
 		).take(size)
@@ -96,22 +117,38 @@ struct HiddenLayer
 	double[] opSlice(size_t i, size_t j)
 	{
 		double[] result;
-		
 		foreach(n; neurons)
 			result ~= n();
-		
 		return result;
 	}
 	
-	void opCall(T)(T prevLayer)
+	double[] opCall()
 	{
+		double[] result;
 		foreach(n; neurons)
-			n(prevLayer[0 .. prevLayer.length - 1], sig);
+			result ~= n();
+		return result;
+	}
+	
+	double[] opCall(T)(T prevLayer)
+	{
+		double[] result;
+		foreach(ref n; neurons)
+			result ~= n(prevLayer[0 .. prevLayer.length - 1], sig);
+		return result;
 	}
 	
 	@property size_t length()
 	{
 		return neurons.length;
+	}
+	
+	@property string toString(string indent = "", ulong num = 0)
+	{
+		string result = indent ~ "HiddenLayer[" ~ num.to!string ~ "]:\n";
+		foreach(i, n; neurons)
+			result ~= n.toString(indent ~ "\t", i);
+		return result;
 	}
 }
 
@@ -119,13 +156,16 @@ struct RandomLayer
 {
 	private HiddenLayer layer;
 	
-	this(T)(ulong maxSize, ulong prevSize, double minWeight, double maxWeigth, T generator)
+	this(T)(ulong maxSize, ulong prevSize, double minWeight, double maxWeigth, ref T generator)
 	{
+		assert (maxSize  >= 1);
+		assert (prevSize >= 1);
+		
 		layer = HiddenLayer(
-			uniform!"[)"(0, maxSize, generator),
+			uniform!"[)"(1, maxSize, generator),
 			prevSize,
 			minWeight,
-			maxWeigth, 
+			maxWeigth,
 			generator
 		);
 	}
@@ -148,5 +188,10 @@ struct RandomLayer
 	@property size_t length()
 	{
 		return layer.length;
+	}
+	
+	@property string toString(string indent = "", ulong num = 0)
+	{
+		return indent ~ "RandomLayer[" ~ num.to!string ~"]:\n" ~ layer.toString(indent ~ "\t");
 	}
 }

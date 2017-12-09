@@ -42,10 +42,16 @@ struct InputNeuron
 		return value;
 	}
 	
-	@property string toString()
+	double opCall(double value)
 	{
-		string result = "InputNeuron:\n";
-		result ~= "\tValue = " ~ value.to!string ~ "\n";
+		this.value = value;
+		return this.value;
+	}
+	
+	@property string toString(string indent = "", ulong num = 0)
+	{
+		string result = indent ~ "InputNeuron[" ~ num.to!string ~ "]:\n";
+		result ~= indent ~ "\tValue = " ~ value.to!string ~ "\n";
 		return result;
 	}
 }
@@ -66,7 +72,7 @@ struct RandomNeuron
 		double   biasWeight;
 	}
 	
-	this(T)(ulong inputLength, double minWeight, double maxWeight, T generator)
+	this(T)(ulong inputLength, double minWeight, double maxWeight, ref T generator)
 	{
 		value       = 0;
 		biasWeight  = uniform!"[]"(minWeight, maxWeight, generator);
@@ -102,6 +108,8 @@ struct RandomNeuron
 		foreach(i, w; weights)
 			value += w * inputs[i];
 		
+		value += biasWeight;
+		
 		if (sig)
 			value = sigmoid(value);
 		
@@ -113,16 +121,16 @@ struct RandomNeuron
 		return weights.length;
 	}
 	
-	@property string toString()
+	@property string toString(string indent = "", ulong num = 0)
 	{
-		string result = "RandomNeuron:\n";
-		result ~= "\tValue = " ~ value.to!string ~ "\n";
-		result ~= "\tBias weight = " ~ biasWeight.to!string ~ "\n";
-		result ~= "\tWeights:\n";
+		string result = indent ~ "RandomNeuron[" ~ num.to!string ~ "]:\n";
+		result ~= indent ~ "\tValue = " ~ value.to!string ~ "\n";
+		result ~= indent ~ "\tBias weight = " ~ biasWeight.to!string ~ "\n";
+		result ~= indent ~ "\tWeights:\n";
 		
 		weights.each!(
 			(i, w) =>
-				result ~= "\t\tWeight[" ~ i.to!string ~ "] = "~ w.to!string ~ "\n"
+				result ~= indent ~ "\t\tWeight[" ~ i.to!string ~ "] = "~ w.to!string ~ "\n"
 		)();
 		
 		return result;
