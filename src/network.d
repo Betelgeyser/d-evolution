@@ -18,26 +18,31 @@ module network;
 import layer;
 	import std.stdio;
 
-struct RandomNetwork
+struct Network
 {
-	InputLayer  inputLayer;
-	HiddenLayer outputLayer;
+	InputLayer  inputLayer;  /// Input layer.
+	HiddenLayer outputLayer; /// Output layer.
 	
-	private RandomLayer[] hiddenLayers;
+	private HiddenLayer[] hiddenLayers;
 	
-	this(T)(ulong inputs, ulong outputs, ulong maxHLayers, ulong maxNeurons, double minWeight, double maxWeigth, ref T generator)
+	this(T)(ulong inputs, ulong outputs, ulong lNumber, ulong nNumber, double minWeight, double maxWeigth, ref T generator)
+	in
 	{
-		assert (inputs     >= 1);
-		assert (outputs    >= 1);
-		assert (maxHLayers >= 1);
-		assert (maxNeurons >= 1);
+		assert (inputs  >= 1, "Network must have at least 1 input neuron.");
+		assert (outputs >= 1, "Network must have at least 1 output neuron.");
+		assert (lNumber >= 1, "Network must have at least 1 hidden layer.");
+		assert (nNumber >= 1, "Each of network's hidden layers must have at least 1 neuron.");
 		
+		assert (maxWeigth >= minWeight, "Max neuron weight must be greater or equal than min weight.");
+	}
+	body
+	{
 		inputLayer = InputLayer(inputs);
 		
-		hiddenLayers ~= RandomLayer(maxNeurons, inputLayer.length, minWeight, maxWeigth, generator);
+		hiddenLayers ~= HiddenLayer(nNumber, inputLayer.length, minWeight, maxWeigth, generator);
 		
-		for(ulong i = 1; i < maxHLayers; i++)
-			hiddenLayers ~= RandomLayer(maxNeurons, hiddenLayers[i - 1].length, minWeight, maxWeigth, generator);
+		for(ulong i = 1; i < lNumber; i++)
+			hiddenLayers ~= HiddenLayer(nNumber, hiddenLayers[i - 1].length, minWeight, maxWeigth, generator);
 		
 		outputLayer = HiddenLayer(outputs, hiddenLayers[hiddenLayers.length - 1].length, minWeight, maxWeigth, generator);
 		outputLayer.sig = false;
@@ -82,6 +87,6 @@ unittest
 	import std.random : Mt19937_64;
 	auto rng = Mt19937_64(0);
 	
-	auto rn = RandomNetwork(5, 3, 2, 5, -10, 10, rng);
+	auto rn = Network(5, 3, 2, 5, -10, 10, rng);
 	assert (rn() == [0, 0, 0]);
 }

@@ -96,13 +96,18 @@ unittest
 struct HiddenLayer
 {
 	private RandomNeuron[] neurons;
-	bool sig = true; 
+	bool sig = true;
 	
 	this(T)(ulong size, ulong prevSize, double minWeight, double maxWeigth, ref T generator)
+	in
 	{
-		assert (size     >= 1);
-		assert (prevSize >= 1);
+		assert (size     >= 1, "Layer must have at least 1 neuron.");
+		assert (prevSize >= 1, "Layer must have at least 1 neuron.");
 		
+		assert (maxWeigth >= minWeight, "Max neuron weight must be greater or equal than min weight.");
+	}
+	body
+	{
 		neurons = generate(
 			() => RandomNeuron(prevSize, minWeight, maxWeigth, generator)
 		).take(size)
@@ -149,49 +154,5 @@ struct HiddenLayer
 		foreach(i, n; neurons)
 			result ~= n.toString(indent ~ "\t", i);
 		return result;
-	}
-}
-
-struct RandomLayer
-{
-	private HiddenLayer layer;
-	
-	this(T)(ulong maxSize, ulong prevSize, double minWeight, double maxWeigth, ref T generator)
-	{
-		assert (maxSize  >= 1);
-		assert (prevSize >= 1);
-		
-		layer = HiddenLayer(
-			uniform!"[)"(1, maxSize, generator),
-			prevSize,
-			minWeight,
-			maxWeigth,
-			generator
-		);
-	}
-	
-	double opIndex(size_t i)
-	{
-		return layer[i];
-	}
-	
-	double[] opSlice(size_t i, size_t j)
-	{
-		return layer[i..j];
-	}
-	
-	void opCall(T)(T prevLayer)
-	{
-		layer(prevLayer);
-	}
-	
-	@property size_t length()
-	{
-		return layer.length;
-	}
-	
-	@property string toString(string indent = "", ulong num = 0)
-	{
-		return indent ~ "RandomLayer[" ~ num.to!string ~"]:\n" ~ layer.toString(indent ~ "\t");
 	}
 }

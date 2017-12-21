@@ -60,7 +60,8 @@ unittest
 {
 	writeln("InputNeuron...");
 	auto n = InputNeuron(3);
-	assert (n() == 3);
+	assert (n()  == 3);
+	assert (n(5) == 5);
 }
 
 struct RandomNeuron

@@ -22,7 +22,7 @@ import network;
 void main()
 {
 	auto rng = Mt19937_64(unpredictableSeed());
-	auto rn = RandomNetwork(2, 1, 3, 3, -10, 10, rng);
+	auto rn = Network(2, 1, 3, 3, -10, 10, rng);
 	writeln(rn);
 	
 	writeln(rn([4, 6]));
