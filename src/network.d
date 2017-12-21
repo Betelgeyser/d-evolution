@@ -15,62 +15,146 @@
  */
 module network;
 
-import layer;
-	import std.stdio;
+import std.stdio;
 
+import layer;
+
+struct Genome
+{
+	ulong input;
+	double[][][] hidden;
+	double[][] output;
+}
+
+/**
+ * Simple feedforward network.
+ */
 struct Network
 {
-	InputLayer  inputLayer;  /// Input layer.
-	HiddenLayer outputLayer; /// Output layer.
+	/**
+	 * Input layer.
+	 *
+	 * Contains neurons that are simply passes input values to hidden layers.
+	 * Number of neurons must be equal to a number of input values.
+	 */
+	InputLayer  inputLayer;
 	
+	/**
+	 * Output layer.
+	 *
+	 * Contains neurons that produces output values visible from an outside of a network.
+	 * Number of neurons must be equal to a number of input values.
+	 */
+	HiddenLayer outputLayer;
+	
+	/**
+	 * Hidden layers.
+	 *
+	 * Contains pure magic. Each layer propogates its values to a next layer and finelly to the output layer.
+	 */ 
 	private HiddenLayer[] hiddenLayers;
 	
-	this(T)(ulong inputs, ulong outputs, ulong lNumber, ulong nNumber, double minWeight, double maxWeigth, ref T generator)
-	in
+	/**
+	 * Spawns a network from a giver genetic material.
+	 *
+	 * Params:
+	 *     genome = Genetic material of the network consisting of chomosomes.
+	 *              The first cromosome must contain an encoded input layer.
+	 *              The second one must contain encoded hidden layers.
+	 *              And the last one must contain an encoded output layer.
+	 *              Such chomosome structure is essential to propper crossing over and mutating.
+	 */
+	this(Genome genome)
 	{
-		assert (inputs  >= 1, "Network must have at least 1 input neuron.");
-		assert (outputs >= 1, "Network must have at least 1 output neuron.");
-		assert (lNumber >= 1, "Network must have at least 1 hidden layer.");
-		assert (nNumber >= 1, "Each of network's hidden layers must have at least 1 neuron.");
+		inputLayer = InputLayer(genome.input);
 		
-		assert (maxWeigth >= minWeight, "Max neuron weight must be greater or equal than min weight.");
-	}
-	body
-	{
-		inputLayer = InputLayer(inputs);
+		foreach(lGene; genome.hidden)
+		{
+			ulong neurons = lGene.length;
+			ulong weights = lGene[0].length;
+			
+			hiddenLayers ~= HiddenLayer(lGene);
+		}
 		
-		hiddenLayers ~= HiddenLayer(nNumber, inputLayer.length, minWeight, maxWeigth, generator);
-		
-		for(ulong i = 1; i < lNumber; i++)
-			hiddenLayers ~= HiddenLayer(nNumber, hiddenLayers[i - 1].length, minWeight, maxWeigth, generator);
-		
-		outputLayer = HiddenLayer(outputs, hiddenLayers[hiddenLayers.length - 1].length, minWeight, maxWeigth, generator);
+		outputLayer = HiddenLayer(genome.output);
 		outputLayer.sig = false;
 	}
 	
+	/**
+	 * Return network's outputs.
+	 *
+	 * Note:
+	 *     Network.opCall() does NOT reevaluate outputs, it just returns values of the output layer.
+	 */
 	double[] opCall()
 	{
 		return outputLayer();
 	}
 	
+	/**
+	 * Return network's outputs.
+	 *
+	 * Params:
+	 *     input = Input values to work on.
+	 */
 	double[] opCall(double[] input)
+	in
 	{
 		assert (input.length == inputLayer.length);
-		
+	}
+	body
+	{		
 		inputLayer(input);
-		hiddenLayers[0](inputLayer);
 		
-		for (ulong i = 1; i < hiddenLayers.length; i++)
-			hiddenLayers[i](hiddenLayers[i - 1]);
+		foreach (i, ref h; hiddenLayers)
+			if (i == 0)
+				h(inputLayer);
+			else
+				h(hiddenLayers[i - 1]);
 		
-		outputLayer(hiddenLayers[hiddenLayers.length - 1]);
+		outputLayer(hiddenLayers[$ - 1]);
 		
 		return outputLayer();
 	}
 	
+	unittest
+	{
+		writeln("Network");
+		Genome g;
+		
+		g.input = 2;
+		
+		g.hidden = [
+			[ [1, 2, 3   ], [3, 2, 1   ], [1, 0, 1] ],
+			[ [1, 1, 1, 1], [2, 2, 2, 2]         ]
+		];
+		
+		g.output = [ [2, 1, 2] ];
+		
+		Network n = Network(g);
+		assert (n.length             == 2);
+		assert (n.inputLayer.length  == 2);
+		assert (n.outputLayer.length == 1);
+		assert (n()                  == [0]);
+		
+		n([0, 0]);
+		writeln(n);
+	}
+	
+	/**
+	 * Return hidden layers number.
+	 *
+	 * Note:
+	 *     Input and output layers do not count.
+	 */
+	@property ulong length()
+	{
+		return hiddenLayers.length;
+	}
+	
 	@property string toString()
 	{
-		string result = "RandomNetwork:\n";
+		string result = "Network:\n";
 		result ~= inputLayer.toString("\t");
 		foreach(i, h; hiddenLayers)
 			result ~= h.toString("\t", i);
@@ -79,14 +163,3 @@ struct Network
 	}
 }
 
-unittest
-{
-	import std.stdio;
-	writeln("RandomNetwork...");
-	
-	import std.random : Mt19937_64;
-	auto rng = Mt19937_64(0);
-	
-	auto rn = Network(5, 3, 2, 5, -10, 10, rng);
-	assert (rn() == [0, 0, 0]);
-}

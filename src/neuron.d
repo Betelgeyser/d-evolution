@@ -144,7 +144,7 @@ struct Neuron
 	
 	@property string toString(string indent = "", ulong num = 0)
 	{
-		string result = indent ~ "RandomNeuron[" ~ num.to!string ~ "]:\n";
+		string result = indent ~ "Neuron[" ~ num.to!string ~ "]:\n";
 		result ~= indent ~ "\tValue = " ~ value.to!string ~ "\n";
 		result ~= indent ~ "\tBias weight = " ~ bias.to!string ~ "\n";
 		result ~= indent ~ "\tWeights:\n";

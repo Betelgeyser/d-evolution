@@ -21,10 +21,10 @@ import network;
 
 void main()
 {
-	auto rng = Mt19937_64(unpredictableSeed());
-	auto rn = Network(2, 1, 3, 3, -10, 10, rng);
-	writeln(rn);
-	
-	writeln(rn([4, 6]));
-	writeln("Hello World.");
+//	auto rng = Mt19937_64(unpredictableSeed());
+//	auto rn = Network(2, 1, 3, 3, -10, 10, rng);
+//	writeln(rn);
+//	
+//	writeln(rn([4, 6]));
+//	writeln("Hello World.");
 }
