@@ -28,6 +28,11 @@ double sigmoid(double x)
 	return 1 / (1 + exp(-x));
 }
 
+/**
+ * Simple neuron.
+ *
+ * Does no calculations, just returns its value to hidden neurons.
+ */
 struct InputNeuron
 {
 	private double value;
@@ -58,58 +63,73 @@ struct InputNeuron
 
 unittest
 {
-	writeln("InputNeuron...");
+	writeln("InputNeuron");
 	auto n = InputNeuron(3);
 	assert (n()  == 3);
 	assert (n(5) == 5);
 }
 
-struct RandomNeuron
+/**
+ * Basic neuron with bias.
+ */
+struct Neuron
 {
 	private
 	{
-		double   value;
-		double[] weights;
-		double   biasWeight;
-	}
-	
-	this(T)(ulong inputLength, double minWeight, double maxWeight, ref T generator)
-	{
-		value       = 0;
-		biasWeight  = uniform!"[]"(minWeight, maxWeight, generator);
+		immutable double[] weights;
+		immutable double   bias;
 		
-		weights =
-			generate(
-				() => uniform!"[]"(minWeight, maxWeight, generator)
-			).take(inputLength)
-			.array();
+		double value;
 	}
 	
-	double opIndex(size_t i)
+	this(in double[] weights, in double bias)
+	{
+		this.value   = 0;
+		this.bias    = bias;
+		this.weights = weights.idup;
+	}
+	
+	double opIndex(ulong i)
 	{
 		return weights[i];
 	}
 	
-	double[] opSlice(size_t i, size_t j)
+	double[] opSlice(ulong i, ulong j)
 	{
-		return weights[i..j];
+		return weights[i..j].dup;
 	}
 	
+	/**
+	 * Reruen current neuron value.
+	 *
+	 * Note:
+	 *     Neuron.opCall() returns curren neuron value and does NOT calculate it based on inputs.
+	 */
 	double opCall()
 	{
 		return value;
 	}
 	
+	/**
+	 * Calculate neuron value from a given input.
+	 *
+	 * Params:
+	 *     inputs = Array of input data.
+	 *     sig = If set to `true` will applay sigmoid function to the result.
+	 */ 
 	double opCall(double[] inputs, bool sig = true)
+	in
 	{
 		assert(inputs.length == weights.length);
-		
+	}
+	body
+	{
 		value = 0;
 		
 		foreach(i, w; weights)
 			value += w * inputs[i];
 		
-		value += biasWeight;
+		value += bias;
 		
 		if (sig)
 			value = sigmoid(value);
@@ -126,7 +146,7 @@ struct RandomNeuron
 	{
 		string result = indent ~ "RandomNeuron[" ~ num.to!string ~ "]:\n";
 		result ~= indent ~ "\tValue = " ~ value.to!string ~ "\n";
-		result ~= indent ~ "\tBias weight = " ~ biasWeight.to!string ~ "\n";
+		result ~= indent ~ "\tBias weight = " ~ bias.to!string ~ "\n";
 		result ~= indent ~ "\tWeights:\n";
 		
 		weights.each!(
@@ -135,23 +155,5 @@ struct RandomNeuron
 		)();
 		
 		return result;
-	}
-}
-
-unittest
-{
-	writeln("RandomNeuron...");
-	import std.random : Mt19937_64;
-	auto rng = Mt19937_64(0);
-	
-	auto n = RandomNeuron(5, -10, 10, rng);
-	
-	assert (n()      == 0);
-	assert (n.length == 5);
-	
-	foreach (w; n[0 .. n.length - 1])
-	{
-		assert (w <=  10);
-		assert (w >= -10);
 	}
 }
