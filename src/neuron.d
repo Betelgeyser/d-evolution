@@ -15,13 +15,9 @@
  */
 module neuron;
 
-import std.stdio     : writeln;
-import std.random    : uniform;
-import std.range     : generate, take;
 import std.algorithm : each;
 import std.conv      : to;
 import std.math      : exp;
-import std.array;
 
 double sigmoid(double x)
 {
@@ -63,6 +59,7 @@ struct InputNeuron
 
 unittest
 {
+	import std.stdio     : writeln;
 	writeln("InputNeuron");
 	auto n = InputNeuron(3);
 	assert (n()  == 3);

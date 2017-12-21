@@ -15,11 +15,7 @@
  */
 module layer;
 
-import std.random : uniform;
-import std.range  : generate, take;
-import std.conv   : to;
-import std.stdio  : writeln;
-import std.array;
+import std.conv : to;
 
 import neuron;
 
@@ -72,6 +68,7 @@ struct InputLayer
 	
 	unittest
 	{
+		import std.stdio : writeln;
 		writeln("InputLayer.opIndex(size_t i)");
 		InputLayer i = InputLayer([4, 5, 6]);
 		assert (i[2] == 6);
@@ -92,6 +89,7 @@ struct InputLayer
 	
 	unittest
 	{
+		import std.stdio : writeln;
 		writeln("InputLayer.opSlice(size_t i, size_t j)");
 		InputLayer i = InputLayer([4, 5, 6]);
 		assert (i[1..2] == [5]);
@@ -109,6 +107,7 @@ struct InputLayer
 	
 	unittest
 	{
+		import std.stdio : writeln;
 		writeln("InputLayer.opDollar()");
 		InputLayer i = InputLayer([4, 5, 6]);
 		assert (i[0..$] == [4, 5, 6]);
@@ -127,6 +126,7 @@ struct InputLayer
 	
 	unittest
 	{
+		import std.stdio : writeln;
 		writeln("InputLayer.opCall()");
 		InputLayer i = InputLayer([4, 5, 6]);
 		assert (i() == [4, 5, 6]);
@@ -151,6 +151,7 @@ struct InputLayer
 	
 	unittest
 	{
+		import std.stdio : writeln;
 		writeln("InputLayer.opCall(double[] values)");
 		InputLayer i = InputLayer([4, 5, 6]);
 		assert (i([1, 2, 3]) == [1, 2, 3]);
@@ -163,6 +164,7 @@ struct InputLayer
 	
 	unittest
 	{
+		import std.stdio : writeln;
 		writeln("InputLayer.length()");
 		InputLayer i = InputLayer([4, 5, 6]);
 		assert (i.length == 3);

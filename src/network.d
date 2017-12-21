@@ -15,16 +15,8 @@
  */
 module network;
 
-import std.stdio;
-
+import evolution : Genome;
 import layer;
-
-struct Genome
-{
-	ulong input;
-	double[][][] hidden;
-	double[][] output;
-}
 
 /**
  * Simple feedforward network.
@@ -119,6 +111,7 @@ struct Network
 	
 	unittest
 	{
+	import std.stdio : writeln;
 		writeln("Network");
 		Genome g;
 		
@@ -138,7 +131,6 @@ struct Network
 		assert (n()                  == [0]);
 		
 		n([0, 0]);
-		writeln(n);
 	}
 	
 	/**

@@ -16,12 +16,62 @@
 
 import std.stdio;
 import std.random : Mt19937_64, unpredictableSeed;
+import std.random    : uniform;
+import std.range     : generate, take;
+import std.array;
 
 import network;
 
 void main()
 {
-//	auto rng = Mt19937_64(unpredictableSeed());
+	auto rng = Mt19937_64(unpredictableSeed());
+	
+	Genome g;
+	
+	// Input layer
+	g.input = 2;
+	
+	// First hidden layer
+	double[][] tmp_1;
+	for (long i = 0; i < 3; i++)
+	{
+		tmp_1 ~= generate(
+			() => uniform!"[]"(-10.0, 10.0, rng)
+		).take(2 + 1)
+		 .array;
+	}
+	g.hidden ~= tmp_1;
+	
+	for (ulong i = 0; i < 2; i++)
+	{
+		double[][] tmp_2;
+		for (ulong j = 0; j < 3; j++)
+		{
+			tmp_2 ~= generate(
+				() => uniform!"[]"(-10.0, 10.0, rng)
+			).take(3 + 1)
+			 .array;
+		}
+		g.hidden ~= tmp_2;
+	}
+	
+	// First hidden layer
+	double[][] tmp_3;
+	for (long i = 0; i < 1; i++)
+	{
+		tmp_3 ~= generate(
+			() => uniform!"[]"(-10.0, 10.0, rng)
+		).take(2 + 1)
+		 .array;
+	}
+	g.output ~= tmp_3;
+	
+//	g.output ~= generate(
+//		() => uniform!"[]"(-10.0, 10.0, rng)
+//	).take(3 + 1)
+//	 .array;
+	
+	writeln(g);
 //	auto rn = Network(2, 1, 3, 3, -10, 10, rng);
 //	writeln(rn);
 //	
