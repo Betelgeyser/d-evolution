@@ -18,31 +18,71 @@ module layer;
 import std.random : uniform;
 import std.range  : generate, take;
 import std.conv   : to;
+import std.stdio  : writeln;
 import std.array;
 
 import neuron;
 
+/**
+ * Simple layer which only passes input values to a network internals.
+ *
+ * Does no calculations.
+ */
 struct InputLayer
 {
+	/**
+	 * These neurons are just interface to a network.
+	 */
 	private InputNeuron[] neurons;
 	
-	this(ulong size)
+	/**
+	 * Default constructor
+	 *
+	 * Params:
+	 *     length = Number of neurons.
+	 */
+	this(in ulong length)
 	{
-		neurons.length = size;
+		neurons.length = length;
 	}
 	
-	this(double[] values)
+	/**
+	 * Constructor with neuron initilization.
+	 * 
+	 * Generates value.length neurons.
+	 *
+	 * Params:
+	 *     values = Array of input layers.
+	 */
+	this(in double[] values)
 	{
 		foreach (v; values)
 			neurons ~= InputNeuron(v);
 	}
 	
-	double opIndex(size_t i)
+	/**
+	 * Examples:
+	 * -------
+	 * layer[2];
+	 */
+	double opIndex(ulong i)
 	{
 		return neurons[i]();
 	}
 	
-	double[] opSlice(size_t i, size_t j)
+	unittest
+	{
+		writeln("InputLayer.opIndex(size_t i)");
+		InputLayer i = InputLayer([4, 5, 6]);
+		assert (i[2] == 6);
+	}
+	
+	/**
+	 * Examples:
+	 * -------
+	 * layer[2..5];
+	 */
+	double[] opSlice(ulong i, ulong j)
 	{
 		double[] result;
 		for (size_t k = i; k <= j; k++)
@@ -50,22 +90,81 @@ struct InputLayer
 		return result;
 	}
 	
-	double[] opCall()
+	unittest
 	{
-		return this[0 .. this.length - 1];
+		writeln("InputLayer.opSlice(size_t i, size_t j)");
+		InputLayer i = InputLayer([4, 5, 6]);
+		assert (i[1..2] == [5, 6]);
 	}
 	
-	double[] opCall(double[] values)
+	/**
+	 * Examples:
+	 * -------
+	 * layer[0..$];
+	 */
+	size_t opDollar()
+	{
+		return this.length - 1;
+	}
+	
+	unittest
+	{
+		writeln("InputLayer.opDollar()");
+		InputLayer i = InputLayer([4, 5, 6]);
+		assert (i[1..$] == [5, 6]);
+	}
+	
+	/**
+	 * Examples:
+	 * -------
+	 * double[] x = layer();
+	 */
+	double[] opCall()
+	{
+		return this[0..$];
+	}
+	
+	unittest
+	{
+		writeln("InputLayer.opCall()");
+		InputLayer i = InputLayer([4, 5, 6]);
+		assert (i() == [4, 5, 6]);
+	}
+	
+	/**
+	 * Examples:
+	 * -------
+	 * double[] x = layer([1, 2, 3]);
+	 */
+	double[] opCall(in double[] values)
+	in
 	{
 		assert(values.length == neurons.length);
+	}
+	body
+	{
 		foreach(i, ref n; neurons)
 			n(values[i]);
 		return this[0 .. this.length - 1];
 	}
 	
-	@property size_t length()
+	unittest
+	{
+		writeln("InputLayer.opCall(double[] values)");
+		InputLayer i = InputLayer([4, 5, 6]);
+		assert (i([1, 2, 3]) == [1, 2, 3]);
+	}
+	
+	@property ulong length()
 	{
 		return neurons.length;
+	}
+	
+	unittest
+	{
+		writeln("InputLayer.length()");
+		InputLayer i = InputLayer([4, 5, 6]);
+		assert (i.length == 3);
 	}
 	
 	@property string toString(string indent = "")
@@ -75,22 +174,6 @@ struct InputLayer
 			result ~= n.toString(indent ~ "\t", i);
 		return result;
 	}
-}
-
-unittest
-{
-	import std.stdio : writeln;
-	writeln("InputLayer...");
-	
-	auto i1 = InputLayer(6);
-	assert(i1.length == 6);
-	
-	i1([1, 2, 3, 4, 5, 6]);
-	assert (i1[0 .. i1.length - 1] == [1, 2, 3, 4, 5, 6]);
-	
-	auto i2 = InputLayer([1, 2, 3, 4, 5]);
-	assert (i2()                   == [1, 2, 3, 4, 5]);
-	assert (i2[0 .. i2.length - 1] == [1, 2, 3, 4, 5]);
 }
 
 struct HiddenLayer
