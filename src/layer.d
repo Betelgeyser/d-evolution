@@ -85,7 +85,7 @@ struct InputLayer
 	double[] opSlice(ulong i, ulong j)
 	{
 		double[] result;
-		for (size_t k = i; k <= j; k++)
+		for (ulong k = i; k < j; k++)
 			result ~= neurons[k]();
 		return result;
 	}
@@ -94,7 +94,7 @@ struct InputLayer
 	{
 		writeln("InputLayer.opSlice(size_t i, size_t j)");
 		InputLayer i = InputLayer([4, 5, 6]);
-		assert (i[1..2] == [5, 6]);
+		assert (i[1..2] == [5]);
 	}
 	
 	/**
@@ -102,16 +102,17 @@ struct InputLayer
 	 * -------
 	 * layer[0..$];
 	 */
-	size_t opDollar()
+	ulong opDollar()
 	{
-		return this.length - 1;
+		return this.length;
 	}
 	
 	unittest
 	{
 		writeln("InputLayer.opDollar()");
 		InputLayer i = InputLayer([4, 5, 6]);
-		assert (i[1..$] == [5, 6]);
+		assert (i[0..$] == [4, 5, 6]);
+		assert (i[$-1]  ==  6);
 	}
 	
 	/**
@@ -145,7 +146,7 @@ struct InputLayer
 	{
 		foreach(i, ref n; neurons)
 			n(values[i]);
-		return this[0 .. this.length - 1];
+		return this[0..$];
 	}
 	
 	unittest
@@ -176,38 +177,43 @@ struct InputLayer
 	}
 }
 
+/**
+ * Hidden layer.
+ */
 struct HiddenLayer
 {
-	private RandomNeuron[] neurons;
+	private Neuron[] neurons;
+	
+	/**
+	 * This flag determines whether sigmoid applies to results.
+	 *
+	 * It may be usefull if hidden layer is used as output layer.
+	 */
 	bool sig = true;
 	
-	this(T)(ulong size, ulong prevSize, double minWeight, double maxWeigth, ref T generator)
+	this(double[][] chromosome)
 	in
 	{
-		assert (size     >= 1, "Layer must have at least 1 neuron.");
-		assert (prevSize >= 1, "Layer must have at least 1 neuron.");
-		
-		assert (maxWeigth >= minWeight, "Max neuron weight must be greater or equal than min weight.");
+		assert (chromosome.length     >= 1);
+		assert (chromosome[0].length  >= 2); // 1 goes for bias
 	}
 	body
 	{
-		neurons = generate(
-			() => RandomNeuron(prevSize, minWeight, maxWeigth, generator)
-		).take(size)
-		.array();
+		foreach(nGene; chromosome)
+			neurons ~= Neuron(nGene[0..$-1], nGene[$-1]); // The last one is for bias
 	}
 	
-	double opIndex(size_t i)
+	double opIndex(ulong i)
 	{
 		return neurons[i]();
 	}
 	
-	double[] opSlice(size_t i, size_t j)
+	double[] opSlice(ulong i, ulong j)
 	{
 		double[] result;
 		foreach(n; neurons)
 			result ~= n();
-		return result;
+		return result[i..j];
 	}
 	
 	double[] opCall()
@@ -219,11 +225,17 @@ struct HiddenLayer
 	}
 	
 	double[] opCall(T)(T prevLayer)
+		if (is(T == InputLayer) || is(T == HiddenLayer))
 	{
 		double[] result;
 		foreach(ref n; neurons)
-			result ~= n(prevLayer[0 .. prevLayer.length - 1], sig);
+			result ~= n(prevLayer[0 .. $], sig);
 		return result;
+	}
+	
+	ulong opDollar()
+	{
+		return this.neurons.length;
 	}
 	
 	@property size_t length()
