@@ -21,7 +21,7 @@ import std.conv   : to;
 import std.array;
 
 /** Min and max weight value of a neuron connection. */
-struct WeightInterval
+struct WeightBounds
 {
 	double min;
 	double max;
@@ -42,7 +42,7 @@ struct SpecimenParams
 	ulong layers;  /// Number of hidden layers.
 	ulong neurons; /// Number of neurons in every hidden layer.
 	
-	WeightInterval weights; /// Min and max weight value of a neuron connection.
+	WeightBounds weights; /// Min and max weight value of a neuron connection.
 	
 	invariant
 	{
@@ -55,9 +55,9 @@ struct SpecimenParams
 }
 
 /**
- * Genetare random neuron weights.
+ * Genetare random layer chromosomes.
  */
-double[] generateNeuronGenes(T)(in ulong weightNumber, in WeightInterval weight, ref T generator)
+double[][] randomGenes(T)(in ulong nNumber, in ulong wNumber, in WeightInterval wBounds, ref T generator)
 in
 {
 	assert (weightNumber >= 1);
@@ -65,16 +65,24 @@ in
 }
 out (result)
 {
-	assert (result.length == weightNumber + 1); // +1 goes for bias
-	foreach (w; result)
-		assert (w >= weight.min && w <= weight.max);
+	assert (result.length == nNumber);
+	
+	foreach (n; result)
+	{
+		assert (n.length == wNumber + 1); // +1 goes for bias
+		foreach (w; n)
+			assert (w >= weight.min && w <= weight.max);
+	}
 }
 body
 {
-	return generate(
-		() => uniform!"[]"(weight.min, weight.max, generator)
-	).take(weightNumber + 1) // +1 goes for bias
-	 .array;
+	double[][] result;
+	for (long i = 0; i < nNumber; i++)
+		result ~= generate(
+			() => uniform!"[]"(wBounds.min, wBounds.max, generator)
+		).take(wNumber + 1) // +1 goes for bias
+		 .array;
+	return result;
 }
 
 // Force contract call
@@ -84,133 +92,17 @@ unittest
 	
 	auto rng = Mt19937_64(unpredictableSeed());
 	
-	WeightInterval wi;
-	wi.min = -10;
-	wi.max =  10;
+	WeightBounds wb;
+	wb.min = -10;
+	wb.max =  10;
 	
-	double[] g = generateNeuronGenes(5, wi, rng);
-}
-
-struct InputChromosome
-{
-	ulong gene;
-	alias gene this;
-	
-	this(in SpecimenParams params)
-	in
-	{
-		assert (&params);
-	}
-	body
-	{
-		gene = params.inputs;
-	}
-}
-
-struct HiddenChromosome
-{
-	double[][][] genes; // The first index is a layer, the second one is a neuron and the third one is a connection weight.
-	alias genes this;
-	
-	this(T)(in SpecimenParams params, ref T generator)
-	in
-	{
-		assert (&params);
-	}
-	out
-	{
-		assert (genes.length == params.layers);
-		foreach (i, l; genes)
-		{
-			assert (l.length == params.neurons);
-			foreach (n; l)
-			{
-				if (i == 0)
-					assert (n.length == params.inputs + 1);
-				else
-					assert (n.length == params.neurons + 1);
-				
-				foreach (w; n)
-					assert (w >= params.weights.min && w <= params.weights.max);
-			}
-		}
-	}
-	body
-	{
-		// Generate the first hidden layer
-		double[][] tmp_1;
-		for (long i = 0; i < params.neurons; i++)
-			tmp_1 ~= generateNeuronGenes(params.inputs, params.weights, generator);
-		
-		genes ~= tmp_1;
-		
-		// Generating remaining hidden layers
-		for (ulong i = 0; i < params.layers - 1; i++)
-		{
-			double[][] tmp_2;
-			for (ulong j = 0; j < params.neurons; j++)
-				tmp_2 ~= generateNeuronGenes(params.neurons, params.weights, generator);
-			
-			genes ~= tmp_2;
-		}
-	}
-}
-
-struct OutputChromosome
-{
-	double[][] genes; // The first index is a neuron, the second one is a connection weight
-	alias genes this;
-	
-	this(T)(in SpecimenParams params, ref T generator)
-	in
-	{
-		assert (&params);
-	}
-	out
-	{
-		assert (genes.length == params.outputs);
-		
-		foreach (n; genes)
-		{
-			assert (n.length == params.neurons + 1);
-			foreach (w; n)
-				assert (w >= params.weights.min && w <= params.weights.max);
-		}
-	}
-	body
-	{
-		double[][] tmp;
-		for (long i = 0; i < params.outputs; i++)
-			tmp ~= generateNeuronGenes(params.neurons, params.weights, generator);
-		
-		genes = tmp;
-	}
-}
-	
-// Force contracts call HiddenChromosome, OutputChromosome
-unittest
-{
-	import std.random : Mt19937_64, unpredictableSeed;
-	
-	auto rng = Mt19937_64(unpredictableSeed());
-	
-	SpecimenParams sp;
-	sp.inputs  = 3;
-	sp.outputs = 2;
-	sp.layers  = 4;
-	sp.neurons = 5;
-	sp.weights.min = -10;
-	sp.weights.max =  10;
-	
-	HiddenChromosome h = HiddenChromosome(sp, rng);
-	OutputChromosome o = OutputChromosome(sp, rng);
+	double[][] g = generateNeuronGenes(5, 5, wb, rng);
 }
 
 struct Genome
 {
-	InputChromosome  input;
-	HiddenChromosome hidden;
-	OutputChromosome output;
+	ulong        input;
+	double[][][] hidden;
 	
 	private
 	{
@@ -231,20 +123,64 @@ struct Genome
 	 *     params = Parameters of generated network specimen.
 	 *     generator = (Pseudo)random number generator.
 	 */
-	static Genome generateRandom(T)(in SpecimenParams params, ref T generator)
+	this(T)(in SpecimenParams params, ref T generator)
 	in
 	{
 		assert (&params);
 	}
+	out
+	{
+		assert (hidden.length == params.layers + 1);
+		foreach (i, l; hidden)
+		{
+			if (i == hidden.length - 1)
+				assert (l.length == params.outputs);
+			else
+				assert (l.length == params.neurons);
+			
+			foreach (n; l)
+			{
+				if (i == 0)
+					assert (n.length == params.inputs + 1);
+				else
+					assert (n.length == params.neurons + 1);
+				
+				foreach (w; n)
+					assert (w >= params.weights.min && w <= params.weights.max);
+			}
+		}
+	}
 	body
 	{
-		Genome result;
+		input = params.inputs;
 		
-		result.input  = InputChromosome (params);
-		result.hidden = HiddenChromosome(params, generator);
-		result.output = OutputChromosome(params, generator);
+		// Generate the first hidden layer
+		genes ~= randomGenes(params.neurons, params.inputs, params.weights, generator);
 		
-		return result;
+		// Generating remaining hidden layers
+		for (ulong i = 0; i < params.layers - 1; i++)
+			genes ~= randomGenes(params.neurons, params.neurons, params.weights, generator);
+		
+		// Output layer
+		genes ~= randomGenes(params.outputs, params.neurons, params.weights, generator);
+	}
+	
+	// Force contract ckeck
+	unittest
+	{
+		import std.random : Mt19937_64, unpredictableSeed;
+		
+		auto rng = Mt19937_64(unpredictableSeed());
+		
+		SpecimenParams sp;
+		sp.inputs  = 3;
+		sp.outputs = 2;
+		sp.layers  = 4;
+		sp.neurons = 5;
+		sp.weights.min = -10;
+		sp.weights.max =  10;
+		
+		Genome g = Genome(sp, rng);
 	}
 	
 //	/**
