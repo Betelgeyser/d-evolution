@@ -111,7 +111,7 @@ struct Network
 	
 	unittest
 	{
-	import std.stdio : writeln;
+		import std.stdio : writeln;
 		writeln("Network");
 		Genome g;
 		

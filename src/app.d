@@ -21,57 +21,26 @@ import std.range     : generate, take;
 import std.array;
 
 import network;
+import evolution;
 
 void main()
 {
 	auto rng = Mt19937_64(unpredictableSeed());
 	
-	Genome g;
+	SpecimenParams sp;
+	sp.inputs  = 3;
+	sp.outputs = 2;
+	sp.layers  = 4;
+	sp.neurons = 5;
+	sp.minWeight = -10;
+	sp.maxWeight =  10;
 	
-	// Input layer
-	g.input = 2;
+	Genome g = Genome.generateRandom(sp, rng);
 	
-	// First hidden layer
-	double[][] tmp_1;
-	for (long i = 0; i < 3; i++)
-	{
-		tmp_1 ~= generate(
-			() => uniform!"[]"(-10.0, 10.0, rng)
-		).take(2 + 1)
-		 .array;
-	}
-	g.hidden ~= tmp_1;
+	Network n = Network(g);
 	
-	for (ulong i = 0; i < 2; i++)
-	{
-		double[][] tmp_2;
-		for (ulong j = 0; j < 3; j++)
-		{
-			tmp_2 ~= generate(
-				() => uniform!"[]"(-10.0, 10.0, rng)
-			).take(3 + 1)
-			 .array;
-		}
-		g.hidden ~= tmp_2;
-	}
-	
-	// First hidden layer
-	double[][] tmp_3;
-	for (long i = 0; i < 1; i++)
-	{
-		tmp_3 ~= generate(
-			() => uniform!"[]"(-10.0, 10.0, rng)
-		).take(2 + 1)
-		 .array;
-	}
-	g.output ~= tmp_3;
-	
-//	g.output ~= generate(
-//		() => uniform!"[]"(-10.0, 10.0, rng)
-//	).take(3 + 1)
-//	 .array;
-	
-	writeln(g);
+	n([0, 0, 0]);
+	writeln(n);
 //	auto rn = Network(2, 1, 3, 3, -10, 10, rng);
 //	writeln(rn);
 //	
