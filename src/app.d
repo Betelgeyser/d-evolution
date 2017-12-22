@@ -32,8 +32,8 @@ void main()
 	sp.outputs = 2;
 	sp.layers  = 4;
 	sp.neurons = 5;
-	sp.minWeight = -10;
-	sp.maxWeight =  10;
+	sp.weights.min = -10;
+	sp.weights.max =  10;
 	
 	Genome g = Genome.generateRandom(sp, rng);
 	
