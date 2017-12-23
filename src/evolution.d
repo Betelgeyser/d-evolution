@@ -130,14 +130,15 @@ struct Genome
 	
 	private
 	{
-		static immutable double crossoverProbability = 0.5; /// Determines probability of gene exchange.
-		static immutable double alpha                = 0.9; /// Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
+		static immutable double crossoverRate = 0.5;  /// Determines probability of gene exchange.
+		static immutable double alpha         = 0.9;  /// Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
+		static immutable double mutationRate  = 0.05; /// Determines how often genes will mutate.
 	}
 	
 	invariant
 	{
-		assert (crossoverProbability >= 0.0 && crossoverProbability <= 1.0);
-		assert (alpha                >= 0.0 && alpha                <= 1.0);
+		assert (crossoverRate >= 0.0 && crossoverRate <= 1.0);
+		assert (alpha         >= 0.0 && alpha         <= 1.0);
 	}
 	
 	/**
@@ -196,7 +197,10 @@ struct Genome
 	// Force contract ckeck
 	unittest
 	{
+		import std.stdio;
 		import std.random : Mt19937_64, unpredictableSeed;
+		
+		writeln("Genome.random(T)(in SpecimenParams params, ref T generator)");
 		
 		auto rng = Mt19937_64(unpredictableSeed());
 		
@@ -265,8 +269,8 @@ struct Genome
 				for (ulong wi = 0; wi < parents[0].hidden[li][ni].length; wi++)
 				{
 					double roll   = uniform!"[)"(0.0, 1.0, generator);
-					ulong  first  = (roll <  crossoverProbability).to!ulong;
-					ulong  second = (roll >= crossoverProbability).to!ulong;
+					ulong  first  = (roll <  crossoverRate).to!ulong;
+					ulong  second = (roll >= crossoverRate).to!ulong;
 					
 					children[first ].hidden[li][ni][wi] = parents[0].hidden[li][ni][wi] *      alpha;
 					children[second].hidden[li][ni][wi] = parents[0].hidden[li][ni][wi] * (1 - alpha);
@@ -283,7 +287,7 @@ struct Genome
 		import std.stdio : writeln;
 		import std.random : Mt19937_64, unpredictableSeed;
 		
-		writeln("Genome[2] crossover(T)(in Genome[2] g, in ulong splitPoint, in double alpha, ref T generator)");
+		writeln("Genome.crossover(T)(in Genome[2] g, in ulong splitPoint, in double alpha, ref T generator)");
 		
 		auto rng = Mt19937_64(unpredictableSeed());
 		
@@ -297,11 +301,54 @@ struct Genome
 		
 		Genome[2] p = [random(sp, rng), random(sp, rng)];
 		Genome[2] c = crossover(p, rng);
+	}
+	
+	/**
+	 * Mutates a genone.
+	 *
+	 * Randomly changes some genes, which are randomly selected too.
+	 *
+	 * Params:
+	 *     sp = Specimen parameters. Applies the same restriction to mutations like
+	 *          during genome generation.
+	 *     generator = (Pseudo)random generator. Produces radnomnes to decide
+	 *                 what genes and how they are going to mutate.
+	 */
+	void mutate(T)(in SpecimenParams sp, ref T generator)
+	in
+	{
+		assert (&sp);
+		assert (&this);
+	}
+	body
+	{
+		foreach (layer; this.hidden)
+			foreach (neuron; layer)
+				foreach (ref weight; neuron)
+					if (uniform!"[)"(0.0, 1.0, generator) < mutationRate)
+						weight = uniform!"[]"(sp.weights.min, sp.weights.max, generator);
+	}
+	
+	// Don't know how to properly test this...
+	unittest
+	{
+		import std.stdio : writeln;
+		import std.random : Mt19937_64, unpredictableSeed;
 		
-		writeln("Parent 1:", p[0]);
-		writeln("Parent 2:", p[1]);
-		writeln("Child 1:",  c[0]);
-		writeln("Child 2:",  c[1]);
+		writeln("Genome.mutate(T)(in SpecimenParams sp, ref T generator)");
+		
+		auto rng = Mt19937_64(unpredictableSeed());
+		
+		SpecimenParams sp;
+		sp.inputs  = 3;
+		sp.outputs = 2;
+		sp.layers  = 4;
+		sp.neurons = 5;
+		sp.weights.min = -10;
+		sp.weights.max =  10;
+		
+		Genome g = random(sp, rng);
+		g.mutate(sp, rng);
 	}
 }
 
