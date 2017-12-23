@@ -31,20 +31,26 @@ struct Network
 	 */
 	InputLayer  inputLayer;
 	
-	/**
-	 * Output layer.
-	 *
-	 * Contains neurons that produces output values visible from an outside of a network.
-	 * Number of neurons must be equal to a number of input values.
-	 */
-	HiddenLayer outputLayer;
-	
-	/**
-	 * Hidden layers.
-	 *
-	 * Contains pure magic. Each layer propogates its values to a next layer and finelly to the output layer.
-	 */ 
-	private HiddenLayer[] hiddenLayers;
+	private
+	{
+		/**
+		 * Hidden layers.
+		 *
+		 * Contains pure magic. Each layer propogates its values to a next layer and finelly to the output layer.
+		 * The last one is an output layer.
+		 */
+		HiddenLayer[] hiddenLayers;
+		
+		/**
+		 * Genome from which network was spawned.
+		 */
+		Genome genome;
+		
+		@property HiddenLayer outputLayer()
+		{
+			return hiddenLayers[$ - 1];
+		}
+	}
 	
 	/**
 	 * Spawns a network from a giver genetic material.
@@ -58,6 +64,8 @@ struct Network
 	 */
 	this(Genome genome)
 	{
+		this.genome = genome;
+		
 		inputLayer = InputLayer(genome.input);
 		
 		foreach(lGene; genome.hidden)
@@ -68,8 +76,7 @@ struct Network
 			hiddenLayers ~= HiddenLayer(lGene);
 		}
 		
-		outputLayer = HiddenLayer(genome.output);
-		outputLayer.sig = false;
+		hiddenLayers[$ - 1].sig = false;
 	}
 	
 	/**
@@ -80,7 +87,7 @@ struct Network
 	 */
 	double[] opCall()
 	{
-		return outputLayer();
+		return hiddenLayers[$ - 1]();
 	}
 	
 	/**
@@ -104,9 +111,7 @@ struct Network
 			else
 				h(hiddenLayers[i - 1]);
 		
-		outputLayer(hiddenLayers[$ - 1]);
-		
-		return outputLayer();
+		return hiddenLayers[$ - 1]();
 	}
 	
 	unittest
@@ -119,25 +124,20 @@ struct Network
 		
 		g.hidden = [
 			[ [1, 2, 3   ], [3, 2, 1   ], [1, 0, 1] ],
-			[ [1, 1, 1, 1], [2, 2, 2, 2]         ]
+			[ [1, 1, 1, 1], [2, 2, 2, 2]            ],
+			[ [2, 1, 2   ]                          ]
 		];
 		
-		g.output = [ [2, 1, 2] ];
-		
 		Network n = Network(g);
-		assert (n.length             == 2);
+		assert (n.length             == 3);
 		assert (n.inputLayer.length  == 2);
 		assert (n.outputLayer.length == 1);
-		assert (n()                  == [0]);
 		
 		n([0, 0]);
 	}
 	
 	/**
 	 * Return hidden layers number.
-	 *
-	 * Note:
-	 *     Input and output layers do not count.
 	 */
 	@property ulong length()
 	{

@@ -35,15 +35,10 @@ void main()
 	sp.weights.min = -10;
 	sp.weights.max =  10;
 	
-	Genome g = Genome.generateRandom(sp, rng);
+	Genome g = Genome.random(sp, rng);
 	
 	Network n = Network(g);
 	
 	n([0, 0, 0]);
-	writeln(n);
-//	auto rn = Network(2, 1, 3, 3, -10, 10, rng);
-//	writeln(rn);
-//	
-//	writeln(rn([4, 6]));
-//	writeln("Hello World.");
+	writeln(n([0, 0, 0]));
 }
