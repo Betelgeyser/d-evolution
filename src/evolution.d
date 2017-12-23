@@ -56,12 +56,18 @@ struct SpecimenParams
 
 /**
  * Genetare random layer chromosomes.
+ *
+ * Params:
+ *     nNumber = Neurons number;
+ *     wNumber = Number of connections.
+ *     wBounds = Min and max possible connection weight.
+ *     generator = (Pseudo)random number generator.
  */
-double[][] randomGenes(T)(in ulong nNumber, in ulong wNumber, in WeightInterval wBounds, ref T generator)
+double[][] randomGenes(T)(in ulong nNumber, in ulong wNumber, in WeightBounds wBounds, ref T generator)
 in
 {
-	assert (weightNumber >= 1);
-	assert (&weight);
+	assert (wNumber >= 1);
+	assert (&wBounds);
 }
 out (result)
 {
@@ -71,7 +77,7 @@ out (result)
 	{
 		assert (n.length == wNumber + 1); // +1 goes for bias
 		foreach (w; n)
-			assert (w >= weight.min && w <= weight.max);
+			assert (w >= wBounds.min && w <= wBounds.max);
 	}
 }
 body
@@ -96,18 +102,36 @@ unittest
 	wb.min = -10;
 	wb.max =  10;
 	
-	double[][] g = generateNeuronGenes(5, 5, wb, rng);
+	double[][] g = randomGenes(5, 5, wb, rng);
 }
 
+/**
+ * Struct that represents network genome.
+ */
 struct Genome
 {
-	ulong        input;
+	/**
+	 * Input layer chomosome.
+	 *
+	 * Represents number of input neurons.
+	 */
+	ulong input;
+	
+	/**
+	 * Hidden and output layers chromosomes.
+	 *
+	 * The first index is a layer.
+	 * The second one is a neuron.
+	 * And the third one is a connection weight and bias.
+	 *
+	 * The last layer is the output layer.
+	 */
 	double[][][] hidden;
 	
 	private
 	{
 		static immutable double crossoverProbability = 0.5; /// Determines probability of gene exchange.
-		static immutable double alpha                = 1.9; /// Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
+		static immutable double alpha                = 0.9; /// Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
 	}
 	
 	invariant
@@ -123,17 +147,17 @@ struct Genome
 	 *     params = Parameters of generated network specimen.
 	 *     generator = (Pseudo)random number generator.
 	 */
-	this(T)(in SpecimenParams params, ref T generator)
+	static Genome random(T)(in SpecimenParams params, ref T generator)
 	in
 	{
 		assert (&params);
 	}
-	out
+	out (result)
 	{
-		assert (hidden.length == params.layers + 1);
-		foreach (i, l; hidden)
+		assert (result.hidden.length == params.layers + 1);
+		foreach (i, l; result.hidden)
 		{
-			if (i == hidden.length - 1)
+			if (i == result.hidden.length - 1)
 				assert (l.length == params.outputs);
 			else
 				assert (l.length == params.neurons);
@@ -152,17 +176,21 @@ struct Genome
 	}
 	body
 	{
-		input = params.inputs;
+		Genome result;
+		
+		result.input = params.inputs;
 		
 		// Generate the first hidden layer
-		genes ~= randomGenes(params.neurons, params.inputs, params.weights, generator);
+		result.hidden ~= randomGenes(params.neurons, params.inputs, params.weights, generator);
 		
 		// Generating remaining hidden layers
 		for (ulong i = 0; i < params.layers - 1; i++)
-			genes ~= randomGenes(params.neurons, params.neurons, params.weights, generator);
+			result.hidden ~= randomGenes(params.neurons, params.neurons, params.weights, generator);
 		
 		// Output layer
-		genes ~= randomGenes(params.outputs, params.neurons, params.weights, generator);
+		result.hidden ~= randomGenes(params.outputs, params.neurons, params.weights, generator);
+		
+		return result;
 	}
 	
 	// Force contract ckeck
@@ -180,55 +208,100 @@ struct Genome
 		sp.weights.min = -10;
 		sp.weights.max =  10;
 		
-		Genome g = Genome(sp, rng);
+		Genome g = random(sp, rng);
 	}
 	
-//	/**
-//	 * Crossover 2 genomes.
-//	 *
-//	 */
-//	static Genome[2] crossover(T)(in Genome[2] g, ref T generator)
-//	{		
-//		scope double[] probabilities = generate(
-//			() => uniform!"[)"(0.0, 1.0, generator)
-//		).take(parents[0].length)
-//		 .array;
-//		
-//		double[][] children;
-//		foreach (i, p; probabilities)
-//		{
-//			children[(p <  crossoverProbability).to!ulong] ~= parents[0][i] *      alpha;
-//			children[(p >= crossoverProbability).to!ulong] ~= parents[1][i] * (1 - alpha);
-//		}
-//		
-//		return children;
-//	}
-//	
-//	// Don't know how to properly test this...
-//	unittest
-//	{
-//		import std.stdio : writeln;
-//		import std.random : Mt19937_64, unpredictableSeed;
-//		
-//		writeln("Genome[2] crossover(T)(in Genome[2] g, in ulong splitPoint, in double alpha, ref T generator)");
-//		
-//		auto rng = Mt19937_64(unpredictableSeed());
-//		
-//		SpecimenParams sp;
-//		sp.inputs  = 3;
-//		sp.outputs = 2;
-//		sp.layers  = 4;
-//		sp.neurons = 5;
-//		sp.minWeight = -10;
-//		sp.maxWeight =  10;
-//		
-//		Genome[2] p = [generateRandom(sp, rng), generateRandom(sp, rng)];
-//		Genome[2] c = crossover(p, rng);
-//		
-//		writeln("Parent 1:", p[0]);
-//		writeln("Parent 2:", p[1]);
-//		writeln("Child 1:",  c[0]);
-//		writeln("Child 2:",  c[1]);
-//	}
+	/**
+	 * Crossover 2 genomes.
+	 *
+	 * Params:
+	 *     parents = A pair of parents' genomes to crossover.
+	 *     generator = (Pseudo)random generator.
+	 *                 Produces randomnes to chose how genes will be crossed over.
+	 * Returns:
+	 *     Array of exactly 2 genomes, which are results of crossing over 2 parant genomes.
+	 */
+	static Genome[2] crossover(T)(in Genome[2] parents, ref T generator)
+	in
+	{
+		assert (&parents[0]);
+		assert (&parents[1]);
+		
+		assert (parents[0].input         == parents[1].input        );
+		assert (parents[0].hidden.length == parents[1].hidden.length);
+		
+		foreach (li, layer; parents[0].hidden)
+		{
+			assert (layer.length == parents[1].hidden[li].length);
+			foreach (ni, neuron; layer)
+				assert (neuron.length == parents[1].hidden[li][ni].length);
+		}
+	}
+	out (result)
+	{
+		assert (&result[0]);
+		assert (&result[1]);
+	}
+	body
+	{
+		Genome[2] children;
+		
+		children[0].input = parents[0].input;
+		children[1].input = parents[1].input;
+		
+		children[0].hidden.length = parents[0].hidden.length;
+		children[1].hidden.length = parents[1].hidden.length;
+		
+		for (ulong li = 0; li < parents[0].hidden.length; li++)
+		{
+			children[0].hidden[li].length = parents[0].hidden[li].length;
+			children[1].hidden[li].length = parents[1].hidden[li].length;
+			
+			for (ulong ni = 0; ni < parents[0].hidden[li].length; ni++)
+			{
+				children[0].hidden[li][ni].length = parents[0].hidden[li][ni].length;
+				children[1].hidden[li][ni].length = parents[1].hidden[li][ni].length;
+				
+				for (ulong wi = 0; wi < parents[0].hidden[li][ni].length; wi++)
+				{
+					double roll   = uniform!"[)"(0.0, 1.0, generator);
+					ulong  first  = (roll <  crossoverProbability).to!ulong;
+					ulong  second = (roll >= crossoverProbability).to!ulong;
+					
+					children[first ].hidden[li][ni][wi] = parents[0].hidden[li][ni][wi] *      alpha;
+					children[second].hidden[li][ni][wi] = parents[0].hidden[li][ni][wi] * (1 - alpha);
+				}
+			}
+		}
+		
+		return children;
+	}
+	
+	// Don't know how to properly test this...
+	unittest
+	{
+		import std.stdio : writeln;
+		import std.random : Mt19937_64, unpredictableSeed;
+		
+		writeln("Genome[2] crossover(T)(in Genome[2] g, in ulong splitPoint, in double alpha, ref T generator)");
+		
+		auto rng = Mt19937_64(unpredictableSeed());
+		
+		SpecimenParams sp;
+		sp.inputs  = 3;
+		sp.outputs = 2;
+		sp.layers  = 4;
+		sp.neurons = 5;
+		sp.weights.min = -10;
+		sp.weights.max =  10;
+		
+		Genome[2] p = [random(sp, rng), random(sp, rng)];
+		Genome[2] c = crossover(p, rng);
+		
+		writeln("Parent 1:", p[0]);
+		writeln("Parent 2:", p[1]);
+		writeln("Child 1:",  c[0]);
+		writeln("Child 2:",  c[1]);
+	}
 }
 
