@@ -366,8 +366,17 @@ struct DataSet
 {
 	Data[] data;
 	
-	@property length()
-	body
+	@property ulong length()
+	{
+		return data.length;
+	}
+	
+	Data opIndex(ulong i)
+	{
+		return data[i];
+	}
+	
+	ulong opDollar()
 	{
 		return data.length;
 	}
@@ -391,7 +400,7 @@ struct Population(T)
 {
 	ulong size;
 	
-	Data data;
+	DataSet data;
 	
 	T[] organisms;
 	
@@ -408,28 +417,21 @@ struct Population(T)
 		 .array;
 	}
 	
-//	void testGeneration()
-//	in
-//	{
-//		assert (&data);
-//	}
-//	body
-//	{
-//		foreach (thread, val; taskPool.parallel(new int[organisms.length]))
-//		{
-//			fitnesses[organisms[thread]] = 0;
-//			
-//			for (ulong i = 0; i < data.length; i++)
-//				fitnesses[organisms[thread]] += relativeError(
-//					data.output[i][0],
-//					organisms[thread](
-//						data.input[i]
-//					)[0]
-//				);
-//			
-//			fitnesses[organisms[thread]] /= data.length; // mean value
-//		}
-//	}
+	void testGeneration()
+	{
+		foreach (thread_index, val; taskPool.parallel(new int[organisms.length]))
+		{
+			fitnesses[organisms[thread_index]] = 0;
+			
+			foreach (d; data)
+				fitnesses[organisms[thread_index]] += relativeError(
+					d.output[0],
+					organisms[thread_index](d.input)[0]
+				);
+			
+			fitnesses[organisms[thread_index]] /= data.length; // mean value
+		}
+	}
 //	
 //	/**
 //	 * Returns 2 parents' gemones based on fitness of each organism in the popelation.
