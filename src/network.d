@@ -15,6 +15,9 @@
  */
 module network;
 
+import std.math : abs, pow;
+import std.algorithm : map, sum;
+
 import evolution : Genome;
 import layer;
 

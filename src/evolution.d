@@ -15,10 +15,14 @@
  */
 module evolution;
 
-import std.random : uniform;
-import std.range  : generate, take;
-import std.conv   : to;
+import std.random      : uniform;
+import std.range       : generate, take;
+import std.conv        : to;
+import std.parallelism : taskPool;
+import std.algorithm   : cumulativeFold;
 import std.array;
+
+import statistics;
 
 /** Min and max weight value of a neuron connection. */
 struct WeightBounds
@@ -350,5 +354,89 @@ struct Genome
 		Genome g = random(sp, rng);
 		g.mutate(sp, rng);
 	}
+}
+
+struct Data
+{
+	double[] input;
+	double[] output;
+}
+
+struct DataSet
+{
+	Data[] data;
+	
+	@property length()
+	body
+	{
+		return data.length;
+	}
+	
+	// foreach loop
+	int opApply(scope int delegate(ref Data) dg)
+    {
+        int result = 0;
+
+        for (int i = 0; i < data.length; i++)
+        {
+            result = dg(data[i]);
+            if (result)
+                break;
+        }
+        return result;
+    }
+}
+
+struct Population(T)
+{
+	ulong size;
+	
+	Data data;
+	
+	T[] organisms;
+	
+	Genome[double] a;
+	double[T]      fitnesses;
+	
+	this(U)(in SpecimenParams sp, in ulong size, ref U generator)
+	{
+		this.size = size;
+		
+		organisms = generate(
+			() => T(Genome.random(sp, generator))
+		).take(size)
+		 .array;
+	}
+	
+//	void testGeneration()
+//	in
+//	{
+//		assert (&data);
+//	}
+//	body
+//	{
+//		foreach (thread, val; taskPool.parallel(new int[organisms.length]))
+//		{
+//			fitnesses[organisms[thread]] = 0;
+//			
+//			for (ulong i = 0; i < data.length; i++)
+//				fitnesses[organisms[thread]] += relativeError(
+//					data.output[i][0],
+//					organisms[thread](
+//						data.input[i]
+//					)[0]
+//				);
+//			
+//			fitnesses[organisms[thread]] /= data.length; // mean value
+//		}
+//	}
+//	
+//	/**
+//	 * Returns 2 parents' gemones based on fitness of each organism in the popelation.
+//	 */
+//	Genome[2] selectParents()
+//	{
+////		auto a = fitness.sort!( (x, y) => x <= y ).cumulativeFold!( (x, y) => x + y ).array;
+//	}
 }
 
