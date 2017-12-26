@@ -16,61 +16,152 @@
 module statistics;
 
 import std.algorithm : sum, map;
-import std.math      : pow, abs;
+import std.math      : pow, abs, sqrt;
+import std.typecons  : Tuple;
 
 /**
- * Absolute error between real and approximated value.
+ * Vector magnitude in the Euclidean vector space.
  *
  * Params:
- *     xTrue = Real value.
- *     xApprox = Approximation of the same value.
+ *     vector = Vector.
  */
-double absoluteError(double xTrue, double xApprox)
+double magnitude(double[] vector) // Pop, pop!
 {
-	return abs(xApprox - xTrue);
+	return sqrt(
+		vector.map!(x => pow(x, 2)).sum
+	);
 }
 
 unittest
 {
-	import std.math : approxEqual;
+	import std.stdio : writeln;
+	import std.math  : approxEqual;
+	
+	writeln("magnitude(double[] vector)");
 	
 	assert (approxEqual(
-			absoluteError(10_000_000.0, 10_000_000.1),
+			magnitude( [100] ),
+			100,
+			0.000_001
+		));
+	
+	assert (approxEqual(
+			magnitude( [0, 0, 0, 0] ),
+			0,
+			0.000_001
+		));
+	
+	assert (approxEqual(
+			magnitude( [4, 3] ),
+			5,
+			0.000_001
+		));
+}
+
+/**
+ * Absolute error.
+ *
+ * Params:
+ *     xTrue = Real value.
+ *     xApprox = Approximated value.
+ *
+ * Returns:
+ *     Absolute error between real and approximated values.
+ */
+double AE(in double xTrue, in double xApprox)
+{
+	return abs(xApprox - xTrue);
+}
+
+/**
+ * Absolute error.
+ *
+ * Params:
+ *     vTrue = Real vector.
+ *     vApprox = Approximated vector.
+ *
+ * Returns:
+ *     Absolute error between real and approximated vectors
+ */
+double AE(in double[] vTrue, in double[] vApprox)
+{
+	assert (vTrue.length == vApprox.length);
+	
+	double[] diff;
+	diff.length = vTrue.length;
+	diff[] = vApprox[] - vTrue[];
+	
+	return magnitude(diff);
+}
+
+unittest
+{
+	import std.stdio : writeln;
+	import std.math  : approxEqual;
+	
+	writeln("Absolute error (AE)");
+	
+	assert (approxEqual(
+			AE(10_000_000.0, 10_000_000.1),
 			0.1,
 			0.000_001
 		));
 	
 	assert (approxEqual(
-			absoluteError(0.000_000_000_1, 0.000_000_000_101),
+			AE(0.000_000_000_1, 0.000_000_000_101),
 			0.000_000_000_001,
 			0.000_000_000_000_01
+		));
+	
+	assert (approxEqual(
+			AE([1.0, 1.0], [2.0, 2.0]),
+			1.414_21,
+			0.000_01
 		));
 }
 
 /**
- * Relative error between real and approximated value.
+ * Percentage error.
  *
  * Params:
  *     xTrue = Real value.
- *     xApprox = Approximation of the same value. 
+ *     xApprox = Approximation of the same value.
+ *
+ * Returns:
+ *     Percentage error between real and approximated values. 
  */
-double relativeError(double xTrue, double xApprox)
+double PE(double xTrue, double xApprox)
 {
-	return absoluteError(xTrue, xApprox) / xTrue;
+	return AE(xTrue, xApprox) / xTrue;
 }
+
+/**
+ * Percentage error.
+ *
+ * Params:
+ *     vTrue = Real vector.
+ *     vApprox = Approximated vector.
+ *
+ * Returns:
+ *     Percentage error between real and approximated vectors. 
+ */
+//double PE(double[] vTrue, double[] vApprox)
+//{
+//	return AE(xTrue, xApprox) / xTrue;
+//}
 
 unittest
 {
 	import std.math : approxEqual;
 	
 	assert (approxEqual(
-			relativeError(10_000_000, 10_000_001),
+			PE(10_000_000, 10_000_001),
 			0.000_000_1,
 			0.000_000_001
 		));
 	
 	assert (approxEqual(
-			relativeError(0.000_000_000_1, 0.000_000_000_101),
+			PE(0.000_000_000_1, 0.000_000_000_101),
 			0.01,
 			0.000_001
 		));
@@ -80,7 +171,7 @@ unittest
  * Mean value of a given sample.
  *
  * Params:
- *     sample = Data sample.   
+ *     sample = Data sample.
  */
 double mean(double[] sample)
 {
