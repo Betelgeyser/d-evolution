@@ -108,13 +108,13 @@ unittest
 		));
 	
 	assert (approxEqual(
-			AE(0.000_000_000_1, 0.000_000_000_101),
-			0.000_000_000_001,
+			AE(0.000_000_000_100, 0.000_000_000_101),
+			0.000_000_000_001_00,
 			0.000_000_000_000_01
 		));
 	
 	assert (approxEqual(
-			AE([1.0, 1.0], [2.0, 2.0]),
+			AE( [1.0, 1.0], [2.0, 2.0] ),
 			1.414_21,
 			0.000_01
 		));
@@ -145,18 +145,21 @@ double PE(double xTrue, double xApprox)
  * Returns:
  *     Percentage error between real and approximated vectors. 
  */
-//double PE(double[] vTrue, double[] vApprox)
-//{
-//	return AE(xTrue, xApprox) / xTrue;
-//}
+double PE(double[] vTrue, double[] vApprox)
+{
+	return AE(vTrue, vApprox) / magnitude(vTrue);
+}
 
 unittest
 {
+	import std.stdio : writeln;
 	import std.math : approxEqual;
+	
+	writeln("Percentage error (PE)");
 	
 	assert (approxEqual(
 			PE(10_000_000, 10_000_001),
-			0.000_000_1,
+			0.000_000_100,
 			0.000_000_001
 		));
 	
@@ -164,6 +167,12 @@ unittest
 			PE(0.000_000_000_1, 0.000_000_000_101),
 			0.01,
 			0.000_001
+		));
+	
+	assert (approxEqual(
+			PE( [3, 4], [3.000_001, 3.999_999] ),
+			0.000_000_283,
+			0.000_000_001
 		));
 }
 
