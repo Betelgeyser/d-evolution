@@ -17,7 +17,6 @@ module statistics;
 
 import std.algorithm : sum, map;
 import std.math      : pow, abs, sqrt;
-import std.typecons  : Tuple;
 
 /**
  * Vector magnitude in the Euclidean vector space.
@@ -25,7 +24,7 @@ import std.typecons  : Tuple;
  * Params:
  *     vector = Vector.
  */
-double magnitude(double[] vector) // Pop, pop!
+double magnitude(in double[] vector) // Pop, pop!
 {
 	return sqrt(
 		vector.map!(x => pow(x, 2)).sum
@@ -62,11 +61,11 @@ unittest
  * Absolute error.
  *
  * Params:
- *     xTrue = Real value.
+ *     xTrue = Actual value.
  *     xApprox = Approximated value.
  *
  * Returns:
- *     Absolute error between real and approximated values.
+ *     Absolute error between actual and approximated values.
  */
 double AE(in double xTrue, in double xApprox)
 {
@@ -77,11 +76,11 @@ double AE(in double xTrue, in double xApprox)
  * Absolute error.
  *
  * Params:
- *     vTrue = Real vector.
+ *     vTrue = Actual vector.
  *     vApprox = Approximated vector.
  *
  * Returns:
- *     Absolute error between real and approximated vectors
+ *     Absolute error between actual and approximated vectors
  */
 double AE(in double[] vTrue, in double[] vApprox)
 {
@@ -121,31 +120,31 @@ unittest
 }
 
 /**
- * Percentage error.
+ * Relative error.
  *
  * Params:
- *     xTrue = Real value.
- *     xApprox = Approximation of the same value.
+ *     xTrue = Actual value.
+ *     xApprox = Approximated value.
  *
  * Returns:
- *     Percentage error between real and approximated values. 
+ *     Relative error between real and approximated values. 
  */
-double PE(double xTrue, double xApprox)
+double RE(in double xTrue, in double xApprox)
 {
-	return AE(xTrue, xApprox) / xTrue;
+	return abs(AE(xTrue, xApprox) / xTrue);
 }
 
 /**
- * Percentage error.
+ * Relative error.
  *
  * Params:
- *     vTrue = Real vector.
+ *     vTrue = Actual vector.
  *     vApprox = Approximated vector.
  *
  * Returns:
- *     Percentage error between real and approximated vectors. 
+ *     Relative error between actual and approximated vectors. 
  */
-double PE(double[] vTrue, double[] vApprox)
+double RE(in double[] vTrue, in double[] vApprox)
 {
 	return AE(vTrue, vApprox) / magnitude(vTrue);
 }
@@ -155,79 +154,92 @@ unittest
 	import std.stdio : writeln;
 	import std.math : approxEqual;
 	
-	writeln("Percentage error (PE)");
+	writeln("Relative error (RE)");
 	
 	assert (approxEqual(
-			PE(10_000_000, 10_000_001),
+			RE(10_000_000, 10_000_001),
 			0.000_000_100,
 			0.000_000_001
 		));
 	
 	assert (approxEqual(
-			PE(0.000_000_000_1, 0.000_000_000_101),
+			RE(0.000_000_000_1, 0.000_000_000_101),
 			0.01,
 			0.000_001
 		));
 	
 	assert (approxEqual(
-			PE( [3, 4], [3.000_001, 3.999_999] ),
+			RE( [3, 4], [3.000_001, 3.999_999] ),
 			0.000_000_283,
 			0.000_000_001
 		));
 }
 
 /**
- * Mean value of a given sample.
+ * Mean relative error.
  *
  * Params:
- *     sample = Data sample.
+ *     sTrue = Sample of real data.
+ *     sAppox = Sample of approximated data.
+ *
+ * Returns;
+ *     Mean relative error between given data samples.
  */
-double mean(double[] sample)
+double MRE(in double[] sTrue, in double[] sApprox)
 {
-	return sample.map!(x => x / sample.length).sum;
+	assert (sTrue.length == sApprox.length);
+	
+	double[] REs;
+	REs.length = sTrue.length;
+	REs[] = (sTrue[] - sApprox[]) / sTrue[] / sTrue.length;
+	
+	return REs.map!(x => abs(x)).sum;
 }
 
 unittest
 {
+	import std.stdio : writeln;
 	import std.math : approxEqual;
 	
+	writeln("Mean relative error (MRE)");
+	
 	assert (approxEqual(
-			mean([1_000_000_000, 1_000_000_001, 999_999_999]),
-			1_000_000_000,
+			MRE( [1_000_000_000, -2_000_000_000, 3_000_000_000], [1_000_000_000, -2_000_000_001, 2_999_999_999] ),
+			0.000_000_000_278,
+			0.000_000_000_001
+		));
+	
+	assert (approxEqual(
+			MRE( [0.000_000_10, 0.000_000_20, -0.000_000_30], [0.000_000_11, 0.000_000_19, -0.000_000_30] ),
+			0.050_000,
 			0.000_001
 		));
-	
-	assert (approxEqual(
-			mean([0.000_000_1, 0.000_000_99, 0.000_000_11]),
-			0.000_000_1,
-			0.000_000_001
-		));
 }
 
-/**
- * Standard error of a given sample.
- *
- * Params:
- *     sample = Data sample.
- */
-double standardError(double[] sample)
-{
-	return pow(sample.map!(x => pow(x - mean(sample), 2)).sum / sample.length, 0.5);
-}
-	
-unittest
-{
-	import std.math : approxEqual;
-	
-	assert (approxEqual(
-			standardError([1_000_000_000, 1_000_000_001, 999_999_999]),
-			0.8165
-		));
-	
-	assert (approxEqual(
-			standardError([0.000_000_000_1, 0.000_000_000_11, 0.000_000_000_09]),
-			0.000_000_000_008_165,
-			0.000_000_000_000_001
-		));
-}
+///**
+// * Standard error of a given sample.
+// *
+// * Params:
+// *     sample = Data sample.
+// */
+//double standardError(double[] sample)
+//{
+//	return pow(sample.map!(x => pow(x - mean(sample), 2)).sum / sample.length, 0.5);
+//}
+//	
+//unittest
+//{
+//	import std.math : approxEqual;
+//	
+//	assert (approxEqual(
+//			standardError([1_000_000_000, 1_000_000_001, 999_999_999]),
+//			0.8165
+//		));
+//	
+//	assert (approxEqual(
+//			standardError([0.000_000_000_1, 0.000_000_000_11, 0.000_000_000_09]),
+//			0.000_000_000_008_165,
+//			0.000_000_000_000_001
+//		));
+//}
 
