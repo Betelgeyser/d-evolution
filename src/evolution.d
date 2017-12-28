@@ -15,11 +15,13 @@
  */
 module evolution;
 
-import std.random      : uniform;
+import std.random      : uniform, randomSample;
 import std.range       : generate, take;
 import std.conv        : to;
-import std.parallelism : taskPool;
-import std.algorithm   : cumulativeFold;
+import std.parallelism : parallel;
+import std.algorithm   : map;
+import std.typecons    : Tuple;
+import std.math        : cmp;
 import std.array;
 
 import statistics;
@@ -356,89 +358,123 @@ struct Genome
 	}
 }
 
-struct Data
+struct Evolution(T)
 {
-	double[] input;
-	double[] output;
-}
-
-struct DataSet
-{
-	Data[] data;
+	alias Data = Tuple!(double[], "input", double[], "output");
 	
-	@property ulong length()
+	Data[]    trainingData;
+	double[T] fitnessTable;
+	T[]       population;
+	SpecimenParams specimenParams;
+	ulong newGenerationSize;
+	
+	void populate(U)(in ulong size, ref U generate)
 	{
-		return data.length;
-	}
-	
-	Data opIndex(ulong i)
-	{
-		return data[i];
-	}
-	
-	ulong opDollar()
-	{
-		return data.length;
-	}
-	
-	// foreach loop
-	int opApply(scope int delegate(ref Data) dg)
-    {
-        int result = 0;
-
-        for (int i = 0; i < data.length; i++)
-        {
-            result = dg(data[i]);
-            if (result)
-                break;
-        }
-        return result;
-    }
-}
-
-struct Population(T)
-{
-	ulong size;
-	
-	DataSet data;
-	
-	T[] organisms;
-	
-	Genome[double] a;
-	double[T]      fitnesses;
-	
-	this(U)(in SpecimenParams sp, in ulong size, ref U generator)
-	{
-		this.size = size;
-		
-		organisms = generate(
+		population = generate(
 			() => T(Genome.random(sp, generator))
 		).take(size)
 		 .array;
 	}
 	
-	void testGeneration()
+	/**
+	 * Measure and store fitnesses of all organisms.
+	 */
+	double[T] fitness(T[] sample)
 	{
-		foreach (thread_index, val; taskPool.parallel(new int[organisms.length]))
-		{
-			fitnesses[organisms[thread_index]] = 0;
-			
-			foreach (d; data)
-				fitnesses[organisms[thread_index]] += relativeError(
-					d.output[0],
-					organisms[thread_index](d.input)[0]
-				);
-			
-			fitnesses[organisms[thread_index]] /= data.length; // mean value
-		}
+		double[T] result;
+		
+		foreach (organism; sample)
+			result[organism] = 1 / MRE(
+				trainingData.map!(d => magnitude(         d.output)) .array,
+				trainingData.map!(d => magnitude(organism(d.input ))).array
+			);
+		
+		return result;
 	}
-//	
-//	/**
-//	 * Returns 2 parents' gemones based on fitness of each organism in the popelation.
-//	 */
-//	Genome[2] selectParents()
-//	{
-////		auto a = fitness.sort!( (x, y) => x <= y ).cumulativeFold!( (x, y) => x + y ).array;
-//	}
+	enum Selection { best, worst };
+	/**
+	 * A tournament based selection.
+	 */
+	T tournament(Selection s)(ulong groupSize)
+	in
+	{
+		assert (groupSize >= 1);
+	}
+	body
+	{
+		T[] group = randomSample(population, groupSize).array;
+		
+		T winner = group[0];
+		foreach (organism; group)
+			static if (s == Selection.best)
+			{
+				if (fitnessTable[organism] > fitnessTable[winner])
+				{
+					winner = organism;
+				}
+			}
+			static if (s == Selection.worst)
+			{
+				if (fitnessTable[organism] < fitnessTable[winner])
+				{
+					winner = organism;
+				}
+			}
+			else static assert (true);
+		
+		return winner;
+	}
+	
+	/**
+	 * Select two distinct parents.
+	 */
+	Genome[2] selectParents(ulong groupSize)
+	in
+	{
+		assert (groupSize >= 1 && groupSize <= population.length);
+	}
+	body
+	{
+		Genome[2] result;
+		
+		result[0] = tournament!(Selection.best)(groupSize).genome;
+		do
+		{
+			result[1] = tournament!(Selection.best)(groupSize).genome;
+		} while (result[0] != result[1]);
+		
+		return result;
+	}
+	
+	@property ulong tournamentSize()
+	{
+		return population.length / 10;
+	}
+	
+	
+	T[] breed(U)(ulong amount, ref U generator)
+	{
+		T[] result;
+		for (ulong i = 0; i < size; i++)
+			result ~= Genome.crossover(
+				selectParents(tournamentSize),
+				generator
+			).each!mutate.map!(newGenome => T(newGenome));
+		
+		return result;
+	}
+	
+	void kill(U)(ulong amount, ref U generator)
+	{
+		for (ulong i = 0; i < size; i++)
+			population.remove(
+				tournament!(Selection.worst)(tournamentSize)
+			);
+	}
+	
+	void run(U)(ref U generator)
+	{
+		
+	}
 }
 
