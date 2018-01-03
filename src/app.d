@@ -1,5 +1,5 @@
 /**
- * Copyright © 2017 Sergei Iurevich Filippov, All Rights Reserved.
+ * Copyright © 2017 - 2018 Sergei Iurevich Filippov, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,27 +18,49 @@ import std.stdio;
 import std.random : Mt19937_64, unpredictableSeed;
 import std.random    : uniform;
 import std.range     : generate, take;
+import std.csv;
+import std.file;
 import std.array;
+import std.algorithm;
+import std.typecons;
+import std.parallelism;
 
 import network;
 import evolution;
 
 void main()
 {
+	import std.random : Mt19937_64, unpredictableSeed;
 	auto rng = Mt19937_64(unpredictableSeed());
 	
 	SpecimenParams sp;
-	sp.inputs  = 3;
-	sp.outputs = 2;
-	sp.layers  = 4;
-	sp.neurons = 5;
+	sp.inputs  = 2;
+	sp.outputs = 1;
+	sp.layers  = 2;
+	sp.neurons = 2;
 	sp.weights.min = -10;
 	sp.weights.max =  10;
 	
-	Genome g = Genome.random(sp, rng);
+//	Evolution!Network evolution;
 	
-	Network n = Network(g);
+	auto file = File("tests.csv", "r");
 	
-	n([0, 0, 0]);
-	writeln(n([0, 0, 0]));
+//	auto data = file.byLine.joiner("\n").csvReader!(Tuple!(double, double, double, double)).array;
+	
+	double[][] InputData;
+	double[][] OutputData;
+	
+	foreach (row; file.byLine.joiner("\n").csvReader!(Tuple!(double, double, double, double)))
+	{
+		InputData  ~= [ row[0], row[1] ];
+		OutputData ~= [ row[2] ];
+	}
+
+//	foreach (i, val; taskPool.parallel(new int[population.organisms.length]))
+//	{
+//		for (ulong j = 0; j < InputData.length; j++)
+//			population.organisms[i].fitness -= (OutputData[j][0] - population.organisms[i]( InputData[j] )[0]) * (OutputData[j][0] - population.organisms[i](InputData[j])[0]);
+//		
+//		writeln("network = ", population.organisms[i].fitness);
+//	}
 }

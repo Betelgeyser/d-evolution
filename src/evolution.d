@@ -1,5 +1,5 @@
 /**
- * Copyright © 2017 Sergei Iurevich Filippov, All Rights Reserved.
+ * Copyright © 2017 - 2018 Sergei Iurevich Filippov, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -358,122 +358,162 @@ struct Genome
 	}
 }
 
-struct Evolution(T)
+struct Population
 {
-	alias Data = Tuple!(double[], "input", double[], "output");
+	alias Data    = Tuple!(double[], "input",  double[], "output");
+//	alias Fitness = Tuple!(Genome,   "genome", double,   "fitness");
 	
-	Data[]    trainingData;
-	double[T] fitnessTable;
-	T[]       population;
 	SpecimenParams specimenParams;
-	ulong newGenerationSize;
+	Genome[]       population;
+	Data[]         trainingData;
+	double[Genome] fitness;
 	
-	void populate(U)(in ulong size, ref U generate)
+	alias population this;
+	
+	/**
+	 * Create initial population with random genomes.
+	 *
+	 * Params:
+	 *     size = Numder of desired genomes.
+	 *     generator = (Pseudo)random generator.
+	 */
+	void populate(U)(in ulong size, ref U generator)
 	{
 		population = generate(
-			() => T(Genome.random(sp, generator))
+			() => Genome.random(sp, generator)
 		).take(size)
 		 .array;
 	}
 	
 	/**
-	 * Measure and store fitnesses of all organisms.
+	 * Default tournamed group size.
+	 *
+	 * Based on current population size.
 	 */
-	double[T] fitness(T[] sample)
+	@property ulong tournamentSize()
 	{
-		double[T] result;
-		
-		foreach (organism; sample)
-			result[organism] = 1 / MRE(
-				trainingData.map!(d => magnitude(         d.output)) .array,
-				trainingData.map!(d => magnitude(organism(d.input ))).array
-			);
-		
-		return result;
-	}
-	enum Selection { best, worst };
-	/**
-	 * A tournament based selection.
-	 */
-	T tournament(Selection s)(ulong groupSize)
-	in
-	{
-		assert (groupSize >= 1);
-	}
-	body
-	{
-		T[] group = randomSample(population, groupSize).array;
-		
-		T winner = group[0];
-		foreach (organism; group)
-			static if (s == Selection.best)
-			{
-				if (fitnessTable[organism] > fitnessTable[winner])
-				{
-					winner = organism;
-				}
-			}
-			static if (s == Selection.worst)
-			{
-				if (fitnessTable[organism] < fitnessTable[winner])
-				{
-					winner = organism;
-				}
-			}
-			else static assert (true);
-		
-		return winner;
+		return population.length / 10;
 	}
 	
 	/**
-	 * Select two distinct parents.
+	 * Measure and store fitnesses of all organisms.
 	 */
-	Genome[2] selectParents(ulong groupSize)
+	double[Genome] fitness(Genome[] sample)
+	{
+		double[Genome] result;
+		
+//		foreach (organism; sample)
+//			result[organism] = 1 / MARE(
+//				trainingData.map!(d => magnitude(         d.output)) .array,
+//				trainingData.map!(d => magnitude(organism(d.input ))).array
+//			);
+		
+		return result;
+	}
+	
+	/**
+	 * A tournament based selection.
+	 *
+	 * Params:
+	 *     groupSize = Size of a random group to select.
+	 *
+	 * Returns:
+	 *     The best genome from a random group.
+	 */
+	Genome tournament(string op)(ulong groupSize)
+		if (op == "<" || op == ">")
 	in
 	{
 		assert (groupSize >= 1 && groupSize <= population.length);
 	}
 	body
 	{
+		immutable string condition = "fitnessTable[organism]" ~ op ~ "fitnessTable[winner]";
+		
+		scope Genome[] group  = randomSample(population, groupSize).array;
+		Genome winner = group[0];
+		
+		foreach (organism; group)
+			if (mixin(condition))
+			{
+				winner = organism;
+			}
+			
+		return winner;
+	}
+	
+	/**
+	 * Select two distinct parents.
+	 *
+	 * Params:
+	 *     groupSize = Size of a random group to select.
+	 *
+	 * Returns:
+	 *     Two parents' genomes based on their fitnesses.
+	 */
+	Genome[2] selectParents(ulong groupSize)
+	in
+	{
+		assert (groupSize >= 1 && groupSize <= population.length);
+	}
+	out (result)
+	{
+		assert (result[0] != result[1]);
+	}
+	body
+	{
 		Genome[2] result;
 		
-		result[0] = tournament!(Selection.best)(groupSize).genome;
+		result[0] = tournament!"<"(groupSize);
 		do
 		{
-			result[1] = tournament!(Selection.best)(groupSize).genome;
-		} while (result[0] != result[1]);
+			result[1] = tournament!"<"(groupSize);
+		}
+		while (result[0] != result[1]);
 		
 		return result;
 	}
 	
-	@property ulong tournamentSize()
+	/**
+	 * Create new subpopulation.
+	 *
+	 * Params:
+	 *     amount = Size of a new population.
+	 *     groupSize = Size of a tournament selection group. 
+	 *     generator = (Pseudo)random generator.
+	 *
+	 * Returns:
+	 *     Subpopulation of children of the most successeful parents.
+	 */
+	Genome[] breed(U)(ulong amount, ulong groupSize, ref U generator)
 	{
-		return population.length / 10;
-	}
-	
-	
-	T[] breed(U)(ulong amount, ref U generator)
-	{
-		T[] result;
+		Genome[] result;
 		for (ulong i = 0; i < size; i++)
 			result ~= Genome.crossover(
-				selectParents(tournamentSize),
+				selectParents(groupSize),
 				generator
-			).each!mutate.map!(newGenome => T(newGenome));
+			).each!mutate;
 		
 		return result;
 	}
 	
+	/**
+	 * Remove the least successeful orgamisms from popultion.
+	 */
 	void kill(U)(ulong amount, ref U generator)
 	{
 		for (ulong i = 0; i < size; i++)
-			population.remove(
-				tournament!(Selection.worst)(tournamentSize)
-			);
+		{
+			T orgToKill = tournament!(Selection.worst)(tournamentSize);
+			population.remove(orgToKill);
+			fitnessTable.remove(orgToKill);
+		}
 	}
 	
-	void run(U)(ref U generator)
+	void newGeneration(U)(ref U generator)
 	{
+		T[] newPop = breed(tournamentSize);
+		kill(tournamentSize);
 		
 	}
 }

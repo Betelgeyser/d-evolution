@@ -1,5 +1,5 @@
 /**
- * Copyright © 2017 Sergei Iurevich Filippov, All Rights Reserved.
+ * Copyright © 2017 - 2018 Sergei Iurevich Filippov, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,10 +45,8 @@ struct Network
 		HiddenLayer[] hiddenLayers;
 		
 		/**
-		 * Genome from which network was spawned.
+		 * Alias to the last hidden layer which at the same time is the output layer.
 		 */
-		Genome genome;
-		
 		@property HiddenLayer outputLayer()
 		{
 			return hiddenLayers[$ - 1];
@@ -56,7 +54,7 @@ struct Network
 	}
 	
 	/**
-	 * Spawns a network from a giver genetic material.
+	 * Spawns a network from a given genetic material.
 	 *
 	 * Params:
 	 *     genome = Genetic material of the network consisting of chomosomes.
@@ -67,8 +65,6 @@ struct Network
 	 */
 	this(Genome genome)
 	{
-		this.genome = genome;
-		
 		inputLayer = InputLayer(genome.input);
 		
 		foreach(lGene; genome.hidden)
@@ -147,6 +143,9 @@ struct Network
 		return hiddenLayers.length;
 	}
 	
+	/**
+	 * Human-readable string representation.
+	 */
 	@property string toString()
 	{
 		string result = "Network:\n";

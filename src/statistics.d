@@ -1,5 +1,5 @@
 /**
- * Copyright © 2017 Sergei Iurevich Filippov, All Rights Reserved.
+ * Copyright © 2017 - 2018 Sergei Iurevich Filippov, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -176,7 +176,7 @@ unittest
 }
 
 /**
- * Mean relative error.
+ * Mean absolute relative error.
  *
  * Params:
  *     sTrue = Sample of real data.
@@ -185,7 +185,7 @@ unittest
  * Returns;
  *     Mean relative error between given data samples.
  */
-double MRE(in double[] sTrue, in double[] sApprox)
+double MARE(in double[] sTrue, in double[] sApprox)
 {
 	assert (sTrue.length == sApprox.length);
 	
@@ -201,16 +201,16 @@ unittest
 	import std.stdio : writeln;
 	import std.math : approxEqual;
 	
-	writeln("Mean relative error (MRE)");
+	writeln("Mean relative error (MARE)");
 	
 	assert (approxEqual(
-			MRE( [1_000_000_000, -2_000_000_000, 3_000_000_000], [1_000_000_000, -2_000_000_001, 2_999_999_999] ),
+			MARE( [1_000_000_000, -2_000_000_000, 3_000_000_000], [1_000_000_000, -2_000_000_001, 2_999_999_999] ),
 			0.000_000_000_278,
 			0.000_000_000_001
 		));
 	
 	assert (approxEqual(
-			MRE( [0.000_000_10, 0.000_000_20, -0.000_000_30], [0.000_000_11, 0.000_000_19, -0.000_000_30] ),
+			MARE( [0.000_000_10, 0.000_000_20, -0.000_000_30], [0.000_000_11, 0.000_000_19, -0.000_000_30] ),
 			0.050_000,
 			0.000_001
 		));
