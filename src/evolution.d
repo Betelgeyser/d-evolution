@@ -19,7 +19,7 @@ import std.random      : uniform, randomSample;
 import std.range       : generate, take;
 import std.conv        : to;
 import std.parallelism : parallel;
-import std.algorithm   : map;
+import std.algorithm   : map, maxElement, sum;
 import std.typecons    : Tuple;
 import std.math        : cmp;
 import std.array;
@@ -358,17 +358,201 @@ struct Genome
 	}
 }
 
-struct Population
+struct Population(T)
 {
-	alias Data    = Tuple!(double[], "input",  double[], "output");
-//	alias Fitness = Tuple!(Genome,   "genome", double,   "fitness");
+	alias Data       = Tuple!(double[], "input",  double[], "output");
 	
-	SpecimenParams specimenParams;
-	Genome[]       population;
-	Data[]         trainingData;
-	double[Genome] fitness;
+	private
+	{
+		/**
+		 * Parameters to generate new genomes.
+		 */
+		SpecimenParams specimenParams;
+		
+		/**
+		 * Genomes.
+		 */
+		Genome[] population;
+		
+		/**
+		 * Fitnesses of genomes.
+		 */
+		double[Genome] fitness;
+		
+		/**
+		 * Data to train on.
+		 */
+		Data[] trainingData;
+	}
 	
 	alias population this;
+	
+	this(in SpecimenParams sp)
+	{
+		this.specimenParams = sp;
+	}
+	
+	private
+	{
+		/**
+		 * Default tournament group size.
+		 *
+		 * Based on current population size.
+		 */
+		@property ulong tournamentSize()
+		{
+			return population.length / 10;
+		}
+		
+		/**
+		 * Size of new generations.
+		 *
+		 * Based on current population size.
+		 */
+		@property ulong breedSize()
+		{
+			return population.length / 5;
+		}
+		
+		/**
+		 * Evaluate fitness of genome.
+		 *
+		 * Params:
+		 *     genome = Genome to measure fitness on.
+		 */
+		double evaluate(Genome genome)
+		{
+			return MARE(
+				trainingData.map!(d =>           d.output).array,
+				trainingData.map!(d => T(genome)(d.input)).array
+			);
+		}
+		
+		/**
+		 * A tournament based selection.
+		 *
+		 * Params:
+		 *     groupSize = Size of a random group to select.
+		 *     generator = (Pseudo)random generator.
+		 *                 Is required to select a random tournament group.
+		 *
+		 * Returns:
+		 *     The best genome from a random group.
+		 */
+		Genome tournament(string op, U)(ulong groupSize, ref U generator)
+			if (op == "<" || op == ">")
+		in
+		{
+			assert (groupSize >= 1 && groupSize <= population.length);
+		}
+		body
+		{
+			immutable string condition = "fitness[individual]" ~ op ~ "fitness[individual]";
+			
+			scope Genome[] group  = randomSample(population, groupSize, generator).array;
+			Genome winner = group[0];
+			
+			foreach (individual; group)
+				if (mixin(condition))
+					winner = individual;
+				
+			return winner;
+		}
+		
+		/**
+		 * Select two distinct parents.
+		 *
+		 * Params:
+		 *     groupSize = Size of a random group to select.
+		 *     generator = (Pseudo)random generator.
+		 *                 Is required to select a random tournament group.
+		 *
+		 * Returns:
+		 *     Two parent genomes based on their fitnesses.
+		 */
+		Genome[2] selectParents(U)(ulong groupSize, ref U generator)
+		in
+		{
+			assert (groupSize >= 1 && groupSize <= population.length);
+		}
+		out (result)
+		{
+			assert (result[0] != result[1]);
+		}
+		body
+		{
+			Genome[2] result;
+			
+			result[0] = tournament!"<"(groupSize, generator);
+			do
+			{
+				result[1] = tournament!"<"(groupSize, generator);
+			}
+			while (result[0] != result[1]);
+			
+			return result;
+		}
+		
+		/**
+		 * Create new subpopulation.
+		 *
+		 * Params:
+		 *     amount = Size of a new population.
+		 *     groupSize = Size of a tournament selection group. 
+		 *     generator = (Pseudo)random generator.
+		 *                 Is required to select random tournament group
+		 *                 and to provide random mutations.
+		 *
+		 * Returns:
+		 *     Children of the most successeful parents.
+		 */
+		Genome[] breed(U)(ulong amount, ulong groupSize, ref U generator)
+		{
+			Genome[] result;
+			for (ulong i = 0; i < size; i++)
+				result ~= Genome.crossover(
+					selectParents(groupSize, generator),
+					generator
+				).each!mutate(generator);
+			
+			return result;
+		}
+		
+		/**
+		 * Remove the least successeful orgamisms from popultion.
+		 *
+		 * Params:
+		 *     amount = How many individuals to kill.
+		 *     groupSize = Size of a tournament selection group. 
+		 *     generator = (Pseudo)random generator.
+		 *                 Is required to select random tournament group.
+		 */
+		void kill(U)(ulong amount, ulong groupSize, ref U generator)
+		{
+			for (ulong i = 0; i < size; i++)
+			{
+				Genome genomeToDie = tournament!">"(groupSize, generator);
+				population.remove(genomeToDie);
+				fitness.remove(genomeToDie);
+			}
+		}
+	}
+	
+	/**
+	 * Maximum fitness of the population.
+	 */
+	@property double maxFitness()
+	{
+		return fitness.values.maxElement;
+	}
+	
+	/**
+	 * Average fitness of the population.
+	 */
+	@property double avgFitness()
+	{
+		return fitness.values.sum / fitness.length;
+	}
 	
 	/**
 	 * Create initial population with random genomes.
@@ -376,145 +560,29 @@ struct Population
 	 * Params:
 	 *     size = Numder of desired genomes.
 	 *     generator = (Pseudo)random generator.
+	 *                 Is required for generating random genomes.
 	 */
 	void populate(U)(in ulong size, ref U generator)
 	{
-		population = generate(
-			() => Genome.random(sp, generator)
-		).take(size)
-		 .array;
-	}
-	
-	/**
-	 * Default tournamed group size.
-	 *
-	 * Based on current population size.
-	 */
-	@property ulong tournamentSize()
-	{
-		return population.length / 10;
-	}
-	
-	/**
-	 * Measure and store fitnesses of all organisms.
-	 */
-	double[Genome] fitness(Genome[] sample)
-	{
-		double[Genome] result;
+		population.length = size;
 		
-//		foreach (organism; sample)
-//			result[organism] = 1 / MARE(
-//				trainingData.map!(d => magnitude(         d.output)) .array,
-//				trainingData.map!(d => magnitude(organism(d.input ))).array
-//			);
-		
-		return result;
-	}
-	
-	/**
-	 * A tournament based selection.
-	 *
-	 * Params:
-	 *     groupSize = Size of a random group to select.
-	 *
-	 * Returns:
-	 *     The best genome from a random group.
-	 */
-	Genome tournament(string op)(ulong groupSize)
-		if (op == "<" || op == ">")
-	in
-	{
-		assert (groupSize >= 1 && groupSize <= population.length);
-	}
-	body
-	{
-		immutable string condition = "fitnessTable[organism]" ~ op ~ "fitnessTable[winner]";
-		
-		scope Genome[] group  = randomSample(population, groupSize).array;
-		Genome winner = group[0];
-		
-		foreach (organism; group)
-			if (mixin(condition))
-			{
-				winner = organism;
-			}
-			
-		return winner;
-	}
-	
-	/**
-	 * Select two distinct parents.
-	 *
-	 * Params:
-	 *     groupSize = Size of a random group to select.
-	 *
-	 * Returns:
-	 *     Two parents' genomes based on their fitnesses.
-	 */
-	Genome[2] selectParents(ulong groupSize)
-	in
-	{
-		assert (groupSize >= 1 && groupSize <= population.length);
-	}
-	out (result)
-	{
-		assert (result[0] != result[1]);
-	}
-	body
-	{
-		Genome[2] result;
-		
-		result[0] = tournament!"<"(groupSize);
-		do
+		foreach (individual; population)
 		{
-			result[1] = tournament!"<"(groupSize);
-		}
-		while (result[0] != result[1]);
-		
-		return result;
-	}
-	
-	/**
-	 * Create new subpopulation.
-	 *
-	 * Params:
-	 *     amount = Size of a new population.
-	 *     groupSize = Size of a tournament selection group. 
-	 *     generator = (Pseudo)random generator.
-	 *
-	 * Returns:
-	 *     Subpopulation of children of the most successeful parents.
-	 */
-	Genome[] breed(U)(ulong amount, ulong groupSize, ref U generator)
-	{
-		Genome[] result;
-		for (ulong i = 0; i < size; i++)
-			result ~= Genome.crossover(
-				selectParents(groupSize),
-				generator
-			).each!mutate;
-		
-		return result;
-	}
-	
-	/**
-	 * Remove the least successeful orgamisms from popultion.
-	 */
-	void kill(U)(ulong amount, ref U generator)
-	{
-		for (ulong i = 0; i < size; i++)
-		{
-			T orgToKill = tournament!(Selection.worst)(tournamentSize);
-			population.remove(orgToKill);
-			fitnessTable.remove(orgToKill);
+			individual = Genome.random(sp, generator);
+			fitness[individual] = evaluate(individual);
 		}
 	}
 	
-	void newGeneration(U)(ref U generator)
+	void selection(U)(ref U generator)
 	{
-		T[] newPop = breed(tournamentSize);
-		kill(tournamentSize);
+		Genome[] newGeneration = breed(breedSize, tournamentSize, generator);
+		kill(breedSize);
 		
+		foreach (individual; newGeneration)
+		{
+			population ~= individual;
+			fitness[individual] = evaluate(individual);
+		}
 	}
 }
 
