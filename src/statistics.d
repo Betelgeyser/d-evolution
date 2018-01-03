@@ -24,10 +24,10 @@ import std.math      : pow, abs, sqrt;
  * Params:
  *     vector = Vector.
  */
-double magnitude(in double[] vector) // Pop, pop!
+double magnitude(in double[] vector) pure nothrow @safe @nogc // Pop, pop!
 {
 	return sqrt(
-		vector.map!(x => pow(x, 2)).sum
+		vector.map!"pow(a, 2)".sum
 	);
 }
 
@@ -36,7 +36,7 @@ unittest
 	import std.stdio : writeln;
 	import std.math  : approxEqual;
 	
-	writeln("magnitude(double[] vector)");
+	writeln("statistics.magnitude(double[] vector)");
 	
 	assert (approxEqual(
 			magnitude( [100] ),
@@ -61,21 +61,6 @@ unittest
  * Absolute error.
  *
  * Params:
- *     xTrue = Actual value.
- *     xApprox = Approximated value.
- *
- * Returns:
- *     Absolute error between actual and approximated values.
- */
-double AE(in double xTrue, in double xApprox)
-{
-	return abs(xApprox - xTrue);
-}
-
-/**
- * Absolute error.
- *
- * Params:
  *     vTrue = Actual vector.
  *     vApprox = Approximated vector.
  *
@@ -88,7 +73,7 @@ double AE(in double[] vTrue, in double[] vApprox)
 	
 	double[] diff;
 	diff.length = vTrue.length;
-	diff[] = vApprox[] - vTrue[];
+	diff[] = vTrue[] - vApprox[];
 	
 	return magnitude(diff);
 }
@@ -98,16 +83,16 @@ unittest
 	import std.stdio : writeln;
 	import std.math  : approxEqual;
 	
-	writeln("Absolute error (AE)");
+	writeln("statistics.AE(in double[] vTrue, in double[] vApprox)");
 	
 	assert (approxEqual(
-			AE(10_000_000.0, 10_000_000.1),
+			AE([10_000_000.0], [10_000_000.1]),
 			0.1,
 			0.000_001
 		));
 	
 	assert (approxEqual(
-			AE(0.000_000_000_100, 0.000_000_000_101),
+			AE([0.000_000_000_100], [0.000_000_000_101]),
 			0.000_000_000_001_00,
 			0.000_000_000_000_01
 		));
@@ -117,21 +102,6 @@ unittest
 			1.414_21,
 			0.000_01
 		));
-}
-
-/**
- * Relative error.
- *
- * Params:
- *     xTrue = Actual value.
- *     xApprox = Approximated value.
- *
- * Returns:
- *     Relative error between real and approximated values. 
- */
-double RE(in double xTrue, in double xApprox)
-{
-	return abs(AE(xTrue, xApprox) / xTrue);
 }
 
 /**
@@ -154,16 +124,16 @@ unittest
 	import std.stdio : writeln;
 	import std.math : approxEqual;
 	
-	writeln("Relative error (RE)");
+	writeln("statistics.RE(in double[] vTrue, in double[] vApprox)");
 	
 	assert (approxEqual(
-			RE(10_000_000, 10_000_001),
+			RE([10_000_000], [10_000_001]),
 			0.000_000_100,
 			0.000_000_001
 		));
 	
 	assert (approxEqual(
-			RE(0.000_000_000_1, 0.000_000_000_101),
+			RE([0.000_000_000_1], [0.000_000_000_101]),
 			0.01,
 			0.000_001
 		));
@@ -180,20 +150,25 @@ unittest
  *
  * Params:
  *     sTrue = Sample of real data.
- *     sAppox = Sample of approximated data.
+ *     sApprox = Sample of approximated data.
  *
  * Returns;
- *     Mean relative error between given data samples.
+ *     Mean absolute relative error between given data samples.
  */
-double MARE(in double[] sTrue, in double[] sApprox)
+double MARE(in double[][] sTrue, in double[][] sApprox)
+in
 {
 	assert (sTrue.length == sApprox.length);
+	foreach (i, v; sTrue)
+		assert (v.length == sApprox[i].length);
+}
+body
+{
+	scope double[] tmp;
+	for (ulong i = 0; i < sTrue.length; i++)
+		tmp ~= RE(sTrue[i], sApprox[i]);
 	
-	double[] REs;
-	REs.length = sTrue.length;
-	REs[] = (sTrue[] - sApprox[]) / sTrue[] / sTrue.length;
-	
-	return REs.map!(x => abs(x)).sum;
+	return tmp.sum / sTrue.length;
 }
 
 unittest
@@ -201,16 +176,22 @@ unittest
 	import std.stdio : writeln;
 	import std.math : approxEqual;
 	
-	writeln("Mean relative error (MARE)");
+	writeln("statistics.MARE(in double[][] sTrue, in double[][] sApprox)");
 	
 	assert (approxEqual(
-			MARE( [1_000_000_000, -2_000_000_000, 3_000_000_000], [1_000_000_000, -2_000_000_001, 2_999_999_999] ),
+			MARE(
+				[ [1_000_000_000.0], [-2_000_000_000.0], [3_000_000_000.0] ],
+				[ [1_000_000_000.0], [-2_000_000_001.0], [2_999_999_999.0] ]
+			),
 			0.000_000_000_278,
 			0.000_000_000_001
 		));
 	
 	assert (approxEqual(
-			MARE( [0.000_000_10, 0.000_000_20, -0.000_000_30], [0.000_000_11, 0.000_000_19, -0.000_000_30] ),
+			MARE(
+				[ [0.000_000_10], [0.000_000_20], [-0.000_000_30] ],
+				[ [0.000_000_11], [0.000_000_19], [-0.000_000_30] ]
+			),
 			0.050_000,
 			0.000_001
 		));
