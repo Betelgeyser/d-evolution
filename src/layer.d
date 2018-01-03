@@ -58,8 +58,9 @@ struct InputLayer
 	
 	/**
 	 * Examples:
-	 * -------
+	 * ---
 	 * layer[2];
+	 * ---
 	 */
 	double opIndex(ulong i)
 	{
@@ -76,8 +77,9 @@ struct InputLayer
 	
 	/**
 	 * Examples:
-	 * -------
+	 * ---
 	 * layer[2..5];
+	 * ---
 	 */
 	double[] opSlice(ulong i, ulong j)
 	{
@@ -97,8 +99,9 @@ struct InputLayer
 	
 	/**
 	 * Examples:
-	 * -------
+	 * ---
 	 * layer[0..$];
+	 * ---
 	 */
 	ulong opDollar()
 	{
@@ -116,8 +119,9 @@ struct InputLayer
 	
 	/**
 	 * Examples:
-	 * -------
+	 * ---
 	 * double[] x = layer();
+	 * ---
 	 */
 	double[] opCall()
 	{
@@ -134,8 +138,9 @@ struct InputLayer
 	
 	/**
 	 * Examples:
-	 * -------
+	 * ---
 	 * double[] x = layer([1, 2, 3]);
+	 * ---
 	 */
 	double[] opCall(in double[] values)
 	in
