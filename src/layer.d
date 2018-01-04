@@ -15,8 +15,12 @@
  */
 module layer;
 
-import std.conv : to;
+// Standard D modules
+import std.conv      : to;
+import std.algorithm : map;
+import std.array;
 
+// dnn
 import neuron;
 
 /**
@@ -29,7 +33,7 @@ struct InputLayer
 	/**
 	 * These neurons are just interface to a network.
 	 */
-	private InputNeuron[] neurons;
+	private double[] neurons;
 	
 	/**
 	 * Default constructor
@@ -37,7 +41,7 @@ struct InputLayer
 	 * Params:
 	 *     length = Number of neurons.
 	 */
-	this(in ulong length)
+	this(in ulong length) pure nothrow @safe
 	{
 		neurons.length = length;
 	}
@@ -45,26 +49,20 @@ struct InputLayer
 	/**
 	 * Constructor with neuron initilization.
 	 * 
-	 * Generates value.length neurons.
+	 * Generates `value.length` neurons.
 	 *
 	 * Params:
 	 *     values = Array of input layers.
 	 */
-	this(in double[] values)
+	this(in double[] values) pure nothrow @safe
 	{
 		foreach (v; values)
-			neurons ~= InputNeuron(v);
+			neurons ~= v;
 	}
 	
-	/**
-	 * Examples:
-	 * ---
-	 * layer[2];
-	 * ---
-	 */
-	double opIndex(ulong i)
+	double opIndex(size_t i) const pure nothrow @safe @nogc
 	{
-		return neurons[i]();
+		return neurons[i];
 	}
 	
 	unittest
@@ -75,18 +73,9 @@ struct InputLayer
 		assert (i[2] == 6);
 	}
 	
-	/**
-	 * Examples:
-	 * ---
-	 * layer[2..5];
-	 * ---
-	 */
-	double[] opSlice(ulong i, ulong j)
+	const(double[]) opSlice(size_t i, size_t j) const pure nothrow @safe @nogc
 	{
-		double[] result;
-		for (ulong k = i; k < j; k++)
-			result ~= neurons[k]();
-		return result;
+		return neurons[i..j];
 	}
 	
 	unittest
@@ -97,13 +86,7 @@ struct InputLayer
 		assert (i[1..2] == [5]);
 	}
 	
-	/**
-	 * Examples:
-	 * ---
-	 * layer[0..$];
-	 * ---
-	 */
-	ulong opDollar()
+	size_t opDollar() const pure nothrow @safe @nogc
 	{
 		return this.length;
 	}
@@ -118,12 +101,11 @@ struct InputLayer
 	}
 	
 	/**
-	 * Examples:
-	 * ---
-	 * double[] x = layer();
-	 * ---
+	 * Rerurns all neurons values.
+	 *
+	 * Note: does NOT evaluate new values.
 	 */
-	double[] opCall()
+	const(double[]) opCall() const pure nothrow @safe @nogc
 	{
 		return this[0..$];
 	}
@@ -137,12 +119,15 @@ struct InputLayer
 	}
 	
 	/**
-	 * Examples:
-	 * ---
-	 * double[] x = layer([1, 2, 3]);
-	 * ---
+	 * Evaluate neurons' values.
+	 *
+	 * Params:
+	 *     values = Values to work on. Basically are outputs of a previous layer.
+	 *
+	 * Returns:
+	 *     New neurons values.
 	 */
-	double[] opCall(in double[] values)
+	const(double[]) opCall(in double[] values) pure nothrow @safe @nogc
 	in
 	{
 		assert(values.length == neurons.length);
@@ -150,7 +135,7 @@ struct InputLayer
 	body
 	{
 		foreach(i, ref n; neurons)
-			n(values[i]);
+			n = values[i];
 		return this[0..$];
 	}
 	
@@ -162,7 +147,10 @@ struct InputLayer
 		assert (i([1, 2, 3]) == [1, 2, 3]);
 	}
 	
-	@property ulong length()
+	/**
+	 * Returns neurons number.
+	 */
+	@property size_t length() const pure nothrow @safe @nogc
 	{
 		return neurons.length;
 	}
@@ -175,11 +163,15 @@ struct InputLayer
 		assert (i.length == 3);
 	}
 	
-	@property string toString(string indent = "")
+	/**
+	 * Neuron's human-readable string representation.
+	 */
+	@property string toString(string indent = "") const @safe
 	{
 		string result = indent ~ "InputLayer:\n";
 		foreach(i, n; neurons)
-			result ~= n.toString(indent ~ "\t", i);
+			result ~= indent ~ "InputNeuron[" ~ i.to!string ~ "]:\n"
+				~ indent ~ "\tValue = " ~ n.to!string ~ "\n";
 		return result;
 	}
 }
@@ -198,7 +190,7 @@ struct HiddenLayer
 	 */
 	bool sig = true;
 	
-	this(double[][] chromosome)
+	this(in double[][] chromosome) pure nothrow @safe
 	in
 	{
 		assert (chromosome.length     >= 1);
@@ -210,47 +202,50 @@ struct HiddenLayer
 			neurons ~= Neuron(nGene[0..$-1], nGene[$-1]); // The last one is for bias
 	}
 	
-	double opIndex(ulong i)
+	double opIndex(in size_t i) const pure nothrow @safe @nogc
 	{
 		return neurons[i]();
 	}
 	
-	double[] opSlice(ulong i, ulong j)
+	double[] opSlice(in size_t i, in size_t j) const pure nothrow @safe
 	{
 		double[] result;
-		foreach(n; neurons)
-			result ~= n();
-		return result[i..j];
-	}
-	
-	double[] opCall()
-	{
-		double[] result;
-		foreach(n; neurons)
-			result ~= n();
+		for (size_t k = 0; k < j; k++)
+			result ~= neurons[k]();
 		return result;
 	}
 	
-	double[] opCall(T)(T prevLayer)
+	double[] opCall() const pure nothrow @safe
+	{
+		return this[0..$];
+	}
+	
+	double[] opCall(T)(in T prevLayer) pure nothrow @safe
 		if (is(T == InputLayer) || is(T == HiddenLayer))
 	{
 		double[] result;
 		foreach(ref n; neurons)
-			result ~= n(prevLayer[0 .. $], sig);
+			result ~= n(prevLayer[0..$], sig);
 		return result;
 	}
 	
-	ulong opDollar()
+	size_t opDollar() const pure nothrow @safe @nogc
 	{
 		return this.neurons.length;
 	}
 	
-	@property size_t length()
+	/**
+	 * Returns neurons number.
+	 */
+	@property size_t length() const pure nothrow @safe @nogc
 	{
 		return neurons.length;
 	}
 	
-	@property string toString(string indent = "", ulong num = 0)
+	/**
+	 * Neuron's human-readable string representation.
+	 */
+	@property string toString(in string indent = "", in ulong num = 0) const @safe
 	{
 		string result = indent ~ "HiddenLayer[" ~ num.to!string ~ "]:\n";
 		foreach(i, n; neurons)

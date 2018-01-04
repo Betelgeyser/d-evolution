@@ -23,63 +23,6 @@ import std.conv      : to;
 import statistics : sigmoid;
 
 /**
- * Simple neuron.
- *
- * Does no calculations, just propogates its value to hidden neurons.
- */
-struct InputNeuron
-{
-	/**
-	 * Current neuron value.
-	 */
-	private double value;
-	
-	/**
-	 * Default constructor.
-	 */
-	this(double value)
-	{
-		this.value = value;
-	}
-	
-	/**
-	 * Returns current neuron value.
-	 */
-	double opCall() const pure nothrow @safe @nogc
-	{
-		return value;
-	}
-	
-	/**
-	 * Sets neuron value and returns it.
-	 */
-	double opCall(double value) pure nothrow @safe @nogc
-	{
-		this.value = value;
-		return this.value;
-	}
-
-	unittest
-	{
-		import std.stdio : writeln;
-		writeln("InputNeuron.opCall(double value)");
-		auto n = InputNeuron(3);
-		assert (n()  == 3);
-		assert (n(5) == 5);
-	}
-	
-	/**
-	 * Neuron's human-readable string representation.
-	 */
-	@property string toString(string indent = "", ulong num = 0) const @safe
-	{
-		string result = indent ~ "InputNeuron[" ~ num.to!string ~ "]:\n";
-		result ~= indent ~ "\tValue = " ~ value.to!string ~ "\n";
-		return result;
-	}
-}
-
-/**
  * Basic neuron with bias.
  */
 struct Neuron
@@ -99,28 +42,28 @@ struct Neuron
 	 *     weights = Neuron input's weights.
 	 *     bias = Bias constant.
 	 */
-	this(in double[] weights, in double bias)
+	this(in double[] weights, in double bias) pure nothrow @safe
 	{
 		this.value   = 0;
 		this.bias    = bias;
 		this.weights = weights.idup;
 	}
 	 
-	double opIndex(size_t i) const pure nothrow @safe @nogc
+	double opIndex(in size_t i) const pure nothrow @safe @nogc
 	{
 		return weights[i];
 	}
 	
-	double[] opSlice(size_t i, size_t j) const pure nothrow @safe
+	const(double[]) opSlice(in size_t i, in size_t j) const pure nothrow @safe
 	{
-		return weights[i..j].dup;
+		return weights[i..j];
 	}
 	
 	/**
-	 * Reruen current neuron value.
+	 * Return current neuron value.
 	 *
 	 * Note:
-	 *     Neuron.opCall() returns curren neuron value and does NOT calculate it based on inputs.
+	 *     Returns curren neuron value and does NOT calculate it based on inputs.
 	 */
 	double opCall() const pure nothrow @safe @nogc
 	{
@@ -134,7 +77,7 @@ struct Neuron
 	 *     inputs = Array of input data.
 	 *     sig = If set to `true` will applay sigmoid function to the result.
 	 */ 
-	double opCall(double[] inputs, bool sig = true) pure nothrow @safe @nogc
+	double opCall(in double[] inputs, in bool sig = true) pure nothrow @safe @nogc
 	in
 	{
 		assert(inputs.length == weights.length);
@@ -165,7 +108,7 @@ struct Neuron
 	/**
 	 * Neuron's human-readable string representation.
 	 */
-	@property string toString(string indent = "", ulong num = 0) const @safe
+	@property string toString(in string indent = "", in ulong num = 0) const @safe
 	{
 		string result = indent ~ "Neuron[" ~ num.to!string ~ "]:\n";
 		result ~= indent ~ "\tValue = " ~ value.to!string ~ "\n";

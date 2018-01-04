@@ -75,7 +75,7 @@ unittest
  * Returns:
  *     Absolute error between actual and approximated vectors
  */
-double AE(in double[] vTrue, in double[] vApprox)
+double AE(in double[] vTrue, in double[] vApprox) pure nothrow @safe
 {
 	assert (vTrue.length == vApprox.length);
 	
@@ -122,7 +122,7 @@ unittest
  * Returns:
  *     Relative error between actual and approximated vectors. 
  */
-double RE(in double[] vTrue, in double[] vApprox)
+double RE(in double[] vTrue, in double[] vApprox) pure nothrow @safe
 {
 	return AE(vTrue, vApprox) / magnitude(vTrue);
 }
@@ -163,7 +163,7 @@ unittest
  * Returns;
  *     Mean absolute relative error between given data samples.
  */
-double MARE(in double[][] sTrue, in double[][] sApprox)
+double MARE(in double[][] sTrue, in double[][] sApprox) pure nothrow @safe
 in
 {
 	assert (sTrue.length == sApprox.length);

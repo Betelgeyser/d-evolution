@@ -26,16 +26,16 @@ import layer;
  */
 struct Network
 {
-	/**
-	 * Input layer.
-	 *
-	 * Contains neurons that are simply passes input values to hidden layers.
-	 * Number of neurons must be equal to a number of input values.
-	 */
-	InputLayer  inputLayer;
-	
 	private
 	{
+		/**
+		 * Input layer.
+		 *
+		 * Contains neurons that are simply passes input values to hidden layers.
+		 * Number of neurons must be equal to a number of input values.
+		 */
+		InputLayer  inputLayer;
+		
 		/**
 		 * Hidden layers.
 		 *
@@ -47,7 +47,7 @@ struct Network
 		/**
 		 * Alias to the last hidden layer which at the same time is the output layer.
 		 */
-		@property HiddenLayer outputLayer()
+		@property HiddenLayer outputLayer() pure nothrow @safe @nogc
 		{
 			return hiddenLayers[$ - 1];
 		}
@@ -63,7 +63,7 @@ struct Network
 	 *              And the last one must contain an encoded output layer.
 	 *              Such chomosome structure is essential to propper crossing over and mutating.
 	 */
-	this(Genome genome)
+	this(in Genome genome) pure nothrow @safe
 	{
 		inputLayer = InputLayer(genome.input);
 		
@@ -84,7 +84,7 @@ struct Network
 	 * Note:
 	 *     Network.opCall() does NOT reevaluate outputs, it just returns values of the output layer.
 	 */
-	double[] opCall()
+	double[] opCall() const pure nothrow @safe
 	{
 		return hiddenLayers[$ - 1]();
 	}
@@ -95,7 +95,7 @@ struct Network
 	 * Params:
 	 *     input = Input values to work on.
 	 */
-	double[] opCall(double[] input)
+	double[] opCall(in double[] input) pure nothrow @safe
 	in
 	{
 		assert (input.length == inputLayer.length);
@@ -138,7 +138,7 @@ struct Network
 	/**
 	 * Return hidden layers number.
 	 */
-	@property ulong length()
+	@property size_t length() const pure nothrow @safe @nogc
 	{
 		return hiddenLayers.length;
 	}
@@ -146,13 +146,12 @@ struct Network
 	/**
 	 * Human-readable string representation.
 	 */
-	@property string toString()
+	@property string toString() const @safe
 	{
 		string result = "Network:\n";
 		result ~= inputLayer.toString("\t");
 		foreach(i, h; hiddenLayers)
 			result ~= h.toString("\t", i);
-		result ~= outputLayer.toString("\t");
 		return result;
 	}
 }
