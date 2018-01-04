@@ -367,6 +367,17 @@ struct Population(T)
 	 */
 	SpecimenParams specimenParams;
 	
+	double crossoverRate = 0.90; /// Determines probability of gene exchange.
+	double alpha         = 0.90; /// Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
+	double mutationRate  = 0.30; /// Determines how often genes will mutate.
+	
+	invariant
+	{
+		assert (crossoverRate >= 0.0 && crossoverRate <= 1.0);
+		assert (alpha         >= 0.0 && alpha         <= 1.0);
+		assert (mutationRate  >= 0.0 && mutationRate  <= 1.0);
+	}
+	
 	private
 	{
 		/**
@@ -383,18 +394,13 @@ struct Population(T)
 		 * Fitnesses of genomes.
 		 */
 		double[Genome] fitness;
-	}
-	
-	alias population this;
-	
-	private
-	{
+
 		/**
 		 * Default tournament group size.
 		 *
 		 * Based on current population size.
 		 */
-		@property ulong tournamentSize()
+		@property ulong tournamentSize() const pure nothrow @safe @nogc
 		{
 			return lrint(population.length * 0.5);
 		}
@@ -404,7 +410,7 @@ struct Population(T)
 		 *
 		 * Based on current population size.
 		 */
-		@property ulong breedSize()
+		@property ulong breedSize() const pure nothrow @safe @nogc
 		{
 			return lrint(population.length * 0.2);
 		}
@@ -415,7 +421,7 @@ struct Population(T)
 		 * Params:
 		 *     genome = Genome to measure fitness on.
 		 */
-		double evaluate(Genome genome)
+		double evaluate(Genome genome) const pure nothrow @safe
 		{
 			return MARE(
 				trainingData.map!(d =>           d.output).array,
@@ -444,7 +450,7 @@ struct Population(T)
 		{
 			immutable string condition = "fitness[individual]" ~ op ~ "fitness[winner]";
 			
-			Genome[] group = randomSample(population, groupSize, &generator).array;
+			scope Genome[] group = randomSample(population, groupSize, &generator).array;
 			Genome winner = group[0];
 			
 			foreach (individual; group)
@@ -508,11 +514,13 @@ struct Population(T)
 			{
 				result ~= Genome.crossover(
 					selectParents(groupSize, generator),
+					crossoverRate,
+					alpha,
 					generator
 				);
 				
-				result[$ - 1].mutate(specimenParams, generator);
-				result[$ - 2].mutate(specimenParams, generator);
+				result[$ - 1].mutate(specimenParams, mutationRate, generator);
+				result[$ - 2].mutate(specimenParams, mutationRate, generator);
 			}
 			
 			return result;
@@ -544,7 +552,7 @@ struct Population(T)
 	/**
 	 * Best fitness of the population.
 	 */
-	@property double bestFitness()
+	@property double bestFitness() const pure nothrow
 	{
 		return fitness.values.minElement;
 	}
@@ -552,7 +560,7 @@ struct Population(T)
 	/**
 	 * Best fitness of the population.
 	 */
-	@property double worstFitness()
+	@property double worstFitness() const pure nothrow
 	{
 		return fitness.values.maxElement;
 	}
@@ -560,7 +568,7 @@ struct Population(T)
 	/**
 	 * Average fitness of the population.
 	 */
-	@property double avgFitness()
+	@property double avgFitness() const pure nothrow
 	{
 		return fitness.values.sum / fitness.length;
 	}
@@ -568,7 +576,7 @@ struct Population(T)
 	/**
 	 * Load data.
 	 */
-	void loadData(in double[][] inputs, in double[][] outputs)
+	void loadData(in double[][] inputs, in double[][] outputs) pure nothrow @safe
 	in
 	{
 		assert (inputs.length == outputs.length);
@@ -606,19 +614,6 @@ struct Population(T)
 	{
 		Genome[] newGeneration = breed(breedSize, tournamentSize, generator);
 		replace(newGeneration, tournamentSize, generator);
-	}
-	
-	private
-	{
-		static immutable double crossoverRate = 0.90; /// Determines probability of gene exchange.
-		static immutable double alpha         = 0.90; /// Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
-		static immutable double mutationRate  = 0.30; /// Determines how often genes will mutate.
-	}
-	
-	invariant
-	{
-		assert (crossoverRate >= 0.0 && crossoverRate <= 1.0);
-		assert (alpha         >= 0.0 && alpha         <= 1.0);
 	}
 }
 
