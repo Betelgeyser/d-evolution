@@ -26,6 +26,8 @@ import std.array;
 
 import statistics;
 
+immutable biasLength = 1;
+
 /** Min and max weight value of a neuron connection. */
 struct WeightBounds
 {
@@ -61,57 +63,6 @@ struct SpecimenParams
 }
 
 /**
- * Genetare random layer chromosomes.
- *
- * Params:
- *     nNumber = Neurons number;
- *     wNumber = Number of connections.
- *     wBounds = Min and max possible connection weight.
- *     generator = (Pseudo)random number generator.
- */
-double[][] randomGenes(T)(in ulong nNumber, in ulong wNumber, in WeightBounds wBounds, ref T generator)
-in
-{
-	assert (wNumber >= 1);
-	assert (&wBounds);
-}
-out (result)
-{
-	assert (result.length == nNumber);
-	
-	foreach (n; result)
-	{
-		assert (n.length == wNumber + 1); // +1 goes for bias
-		foreach (w; n)
-			assert (w >= wBounds.min && w <= wBounds.max);
-	}
-}
-body
-{
-	double[][] result;
-	for (long i = 0; i < nNumber; i++)
-		result ~= generate(
-			() => uniform!"[]"(wBounds.min, wBounds.max, generator)
-		).take(wNumber + 1) // +1 goes for bias
-		 .array;
-	return result;
-}
-
-// Force contract call
-unittest
-{
-	import std.random : Mt19937_64, unpredictableSeed;
-	
-	auto rng = Mt19937_64(unpredictableSeed());
-	
-	WeightBounds wb;
-	wb.min = -10;
-	wb.max =  10;
-	
-	double[][] g = randomGenes(5, 5, wb, rng);
-}
-
-/**
  * Struct that represents network genome.
  */
 struct Genome
@@ -134,17 +85,55 @@ struct Genome
 	 */
 	double[][][] hidden;
 	
-	private
+	/**
+	 * Genetare random layer chromosomes.
+	 *
+	 * Params:
+	 *     nNumber = Neurons number;
+	 *     wNumber = Number of connections.
+	 *     wBounds = Min and max possible connection weight.
+	 *     generator = (Pseudo)random number generator.
+	 */
+	private static double[][] randomGenes(T)(in ulong nNumber, in ulong wNumber, in WeightBounds wBounds, ref T generator)
+	in
 	{
-		static immutable double crossoverRate = 0.90; /// Determines probability of gene exchange.
-		static immutable double alpha         = 0.90; /// Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
-		static immutable double mutationRate  = 0.30; /// Determines how often genes will mutate.
+		assert (wNumber >= 1);
+		assert (&wBounds);
+	}
+	out (result)
+	{
+		assert (result.length == nNumber);
+		
+		foreach (n; result)
+		{
+			assert (n.length == wNumber + biasLength);
+			foreach (w; n)
+				assert (w >= wBounds.min && w <= wBounds.max);
+		}
+	}
+	body
+	{
+		double[][] result;
+		for (long i = 0; i < nNumber; i++)
+			result ~= generate(
+				() => uniform!"[]"(wBounds.min, wBounds.max, generator)
+			).take(wNumber + biasLength)
+			 .array;
+		return result;
 	}
 	
-	invariant
+	// Force contract call
+	unittest
 	{
-		assert (crossoverRate >= 0.0 && crossoverRate <= 1.0);
-		assert (alpha         >= 0.0 && alpha         <= 1.0);
+		import std.random : Mt19937_64;
+		
+		auto rng = Mt19937_64(0);
+		
+		WeightBounds wb;
+		wb.min = -10;
+		wb.max =  10;
+		
+		double[][] g = Genome.randomGenes(5, 5, wb, rng);
 	}
 	
 	/**
@@ -204,11 +193,11 @@ struct Genome
 	unittest
 	{
 		import std.stdio;
-		import std.random : Mt19937_64, unpredictableSeed;
+		import std.random : Mt19937_64;
 		
 		writeln("Genome.random(T)(in SpecimenParams params, ref T generator)");
 		
-		auto rng = Mt19937_64(unpredictableSeed());
+		auto rng = Mt19937_64(0);
 		
 		SpecimenParams sp;
 		sp.inputs  = 3;
@@ -226,12 +215,15 @@ struct Genome
 	 *
 	 * Params:
 	 *     parents = A pair of parents' genomes to crossover.
+	 *     crossoverRate = Determines probability of gene exchange.
+	 *     alpha = Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
 	 *     generator = (Pseudo)random generator.
 	 *                 Produces randomnes to chose how genes will be crossed over.
+	 *
 	 * Returns:
 	 *     Array of exactly 2 genomes, which are results of crossing over 2 parant genomes.
 	 */
-	static Genome[2] crossover(T)(in Genome[2] parents, ref T generator)
+	static Genome[2] crossover(T)(in Genome[2] parents, in double crossoverRate, in double alpha, ref T generator)
 	in
 	{
 		assert (&parents[0]);
@@ -291,11 +283,11 @@ struct Genome
 	unittest
 	{
 		import std.stdio : writeln;
-		import std.random : Mt19937_64, unpredictableSeed;
+		import std.random : Mt19937_64;
 		
 		writeln("Genome.crossover(T)(in Genome[2] parents, ref T generator)");
 		
-		auto rng = Mt19937_64(unpredictableSeed());
+		auto rng = Mt19937_64(0);
 		
 		SpecimenParams sp;
 		sp.inputs  = 3;
@@ -306,7 +298,12 @@ struct Genome
 		sp.weights.max =  10;
 		
 		Genome[2] p = [random(sp, rng), random(sp, rng)];
-		Genome[2] c = crossover(p, rng);
+		Genome[2] c = crossover(p, 0.5, 0.9, rng);
+		
+		writeln(">>> Parent[0] = ", p[0]);
+		writeln(">>> Parent[1] = ", p[1]);
+		writeln(">>> Child [0] = ", c[0]);
+		writeln(">>> Child [1] = ", c[1]);
 	}
 	
 	/**
@@ -317,10 +314,11 @@ struct Genome
 	 * Params:
 	 *     sp = Specimen parameters. Applies the same restriction to mutations like
 	 *          during genome generation.
+	 *     mutationRate = Determines how often genes will mutate.
 	 *     generator = (Pseudo)random generator. Produces radnomnes to decide
 	 *                 what genes and how they are going to mutate.
 	 */
-	void mutate(T)(in SpecimenParams sp, ref T generator)
+	void mutate(T)(in SpecimenParams sp, in double mutationRate, ref T generator)
 	in
 	{
 		assert (&sp);
@@ -339,11 +337,11 @@ struct Genome
 	unittest
 	{
 		import std.stdio : writeln;
-		import std.random : Mt19937_64, unpredictableSeed;
+		import std.random : Mt19937_64;
 		
 		writeln("Genome.mutate(T)(in SpecimenParams sp, ref T generator)");
 		
-		auto rng = Mt19937_64(unpredictableSeed());
+		auto rng = Mt19937_64(0);
 		
 		SpecimenParams sp;
 		sp.inputs  = 3;
@@ -354,7 +352,9 @@ struct Genome
 		sp.weights.max =  10;
 		
 		Genome g = random(sp, rng);
-		g.mutate(sp, rng);
+		writeln("Before mutation = ", g);
+		g.mutate(sp, 0.05, rng);
+		writeln("After mutation  = ", g);
 	}
 }
 
@@ -606,6 +606,19 @@ struct Population(T)
 	{
 		Genome[] newGeneration = breed(breedSize, tournamentSize, generator);
 		replace(newGeneration, tournamentSize, generator);
+	}
+	
+	private
+	{
+		static immutable double crossoverRate = 0.90; /// Determines probability of gene exchange.
+		static immutable double alpha         = 0.90; /// Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
+		static immutable double mutationRate  = 0.30; /// Determines how often genes will mutate.
+	}
+	
+	invariant
+	{
+		assert (crossoverRate >= 0.0 && crossoverRate <= 1.0);
+		assert (alpha         >= 0.0 && alpha         <= 1.0);
 	}
 }
 
