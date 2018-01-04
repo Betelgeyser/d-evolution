@@ -15,22 +15,23 @@
  */
 module neuron;
 
+// Standard D modules
 import std.algorithm : each;
 import std.conv      : to;
-import std.math      : exp;
 
-double sigmoid(double x)
-{
-	return 1 / (1 + exp(-x));
-}
+// dnn
+import statistics : sigmoid;
 
 /**
  * Simple neuron.
  *
- * Does no calculations, just returns its value to hidden neurons.
+ * Does no calculations, just propogates its value to hidden neurons.
  */
 struct InputNeuron
 {
+	/**
+	 * Current neuron value.
+	 */
 	private double value;
 	
 	this(double value)
@@ -38,32 +39,41 @@ struct InputNeuron
 		this.value = value;
 	}
 	
+	/**
+	 * Returns current neuron value.
+	 */
 	double opCall()
 	{
 		return value;
 	}
 	
+	/**
+	 * Sets neuron value and returns it.
+	 */
 	double opCall(double value)
 	{
 		this.value = value;
 		return this.value;
 	}
+
+	unittest
+	{
+		import std.stdio : writeln;
+		writeln("InputNeuron.opCall(double value)");
+		auto n = InputNeuron(3);
+		assert (n()  == 3);
+		assert (n(5) == 5);
+	}
 	
+	/**
+	 * Neuron's human-readable string representation.
+	 */
 	@property string toString(string indent = "", ulong num = 0)
 	{
 		string result = indent ~ "InputNeuron[" ~ num.to!string ~ "]:\n";
 		result ~= indent ~ "\tValue = " ~ value.to!string ~ "\n";
 		return result;
 	}
-}
-
-unittest
-{
-	import std.stdio     : writeln;
-	writeln("InputNeuron");
-	auto n = InputNeuron(3);
-	assert (n()  == 3);
-	assert (n(5) == 5);
 }
 
 /**
@@ -73,10 +83,10 @@ struct Neuron
 {
 	private
 	{
-		immutable double[] weights;
-		immutable double   bias;
+		immutable double[] weights; /// Neuron's weigths.
+		immutable double   bias;    /// Bias constant.
 		
-		double value;
+		double value; /// Current neuron's value.
 	}
 	
 	this(in double[] weights, in double bias)

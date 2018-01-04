@@ -16,7 +16,15 @@
 module statistics;
 
 import std.algorithm : sum, map;
-import std.math      : pow, abs, sqrt;
+import std.math      : pow, abs, sqrt, exp;
+
+/**
+ * Sigmoid function.
+ */
+double sigmoid(double x)
+{
+	return 1 / (1 + exp(-x));
+}
 
 /**
  * Vector magnitude in the Euclidean vector space.
