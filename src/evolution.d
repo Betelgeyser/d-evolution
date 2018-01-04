@@ -293,7 +293,7 @@ struct Genome
 		import std.stdio : writeln;
 		import std.random : Mt19937_64, unpredictableSeed;
 		
-		writeln("Genome.crossover(T)(in Genome[2] g, in ulong splitPoint, in double alpha, ref T generator)");
+		writeln("Genome.crossover(T)(in Genome[2] parents, ref T generator)");
 		
 		auto rng = Mt19937_64(unpredictableSeed());
 		
@@ -444,13 +444,13 @@ struct Population(T)
 		{
 			immutable string condition = "fitness[individual]" ~ op ~ "fitness[individual]";
 			
-			scope Genome[] group = randomSample(population, groupSize, generator).array;
+			scope Genome[] group = randomSample(population, groupSize, &generator).array;
 			Genome winner = group[0];
 			
 			foreach (individual; group)
 				if (mixin(condition))
 					winner = individual;
-				
+			
 			return winner;
 		}
 		
@@ -483,7 +483,7 @@ struct Population(T)
 			{
 				result[1] = tournament!"<"(groupSize, generator);
 			}
-			while (result[0] != result[1]);
+			while (result[0] == result[1]);
 			
 			return result;
 		}
@@ -527,15 +527,16 @@ struct Population(T)
 		 *     generator = (Pseudo)random generator.
 		 *                 Is required to select random tournament group.
 		 */
-		void kill(U)(ulong amount, ulong groupSize, ref U generator)
+		void replace(U)(Genome[] newPopulation, ulong groupSize, ref U generator)
 		{
-			for (ulong i = 0; i < amount; i++)
+			foreach (newIndiv; newPopulation)
 			{
 				Genome genomeToDie = tournament!">"(groupSize, generator);
-				foreach (j, individual; population)
+				foreach (i, ref individual; population)
 					if (individual == genomeToDie)
-						population.remove(j);
+						individual = newIndiv;
 				fitness.remove(genomeToDie);
+				fitness[newIndiv] = evaluate(newIndiv);
 			}
 		}
 	}
@@ -596,13 +597,7 @@ struct Population(T)
 	void selection(U)(ref U generator)
 	{
 		Genome[] newGeneration = breed(breedSize, tournamentSize, generator);
-		kill(breedSize, tournamentSize, generator);
-		
-		foreach (individual; newGeneration)
-		{
-			population ~= individual;
-			fitness[individual] = evaluate(individual);
-		}
+		replace(newGeneration, tournamentSize, generator);
 	}
 }
 
