@@ -34,6 +34,9 @@ struct InputNeuron
 	 */
 	private double value;
 	
+	/**
+	 * Default constructor.
+	 */
 	this(double value)
 	{
 		this.value = value;
@@ -42,7 +45,7 @@ struct InputNeuron
 	/**
 	 * Returns current neuron value.
 	 */
-	double opCall()
+	double opCall() const pure nothrow @safe @nogc
 	{
 		return value;
 	}
@@ -50,7 +53,7 @@ struct InputNeuron
 	/**
 	 * Sets neuron value and returns it.
 	 */
-	double opCall(double value)
+	double opCall(double value) pure nothrow @safe @nogc
 	{
 		this.value = value;
 		return this.value;
@@ -68,7 +71,7 @@ struct InputNeuron
 	/**
 	 * Neuron's human-readable string representation.
 	 */
-	@property string toString(string indent = "", ulong num = 0)
+	@property string toString(string indent = "", ulong num = 0) const @safe
 	{
 		string result = indent ~ "InputNeuron[" ~ num.to!string ~ "]:\n";
 		result ~= indent ~ "\tValue = " ~ value.to!string ~ "\n";
@@ -89,19 +92,26 @@ struct Neuron
 		double value; /// Current neuron's value.
 	}
 	
+	/**
+	 * Default constructor.
+	 *
+	 * Params:
+	 *     weights = Neuron input's weights.
+	 *     bias = Bias constant.
+	 */
 	this(in double[] weights, in double bias)
 	{
 		this.value   = 0;
 		this.bias    = bias;
 		this.weights = weights.idup;
 	}
-	
-	double opIndex(ulong i)
+	 
+	double opIndex(size_t i) const pure nothrow @safe @nogc
 	{
 		return weights[i];
 	}
 	
-	double[] opSlice(ulong i, ulong j)
+	double[] opSlice(size_t i, size_t j) const pure nothrow @safe
 	{
 		return weights[i..j].dup;
 	}
@@ -112,7 +122,7 @@ struct Neuron
 	 * Note:
 	 *     Neuron.opCall() returns curren neuron value and does NOT calculate it based on inputs.
 	 */
-	double opCall()
+	double opCall() const pure nothrow @safe @nogc
 	{
 		return value;
 	}
@@ -124,7 +134,7 @@ struct Neuron
 	 *     inputs = Array of input data.
 	 *     sig = If set to `true` will applay sigmoid function to the result.
 	 */ 
-	double opCall(double[] inputs, bool sig = true)
+	double opCall(double[] inputs, bool sig = true) pure nothrow @safe @nogc
 	in
 	{
 		assert(inputs.length == weights.length);
@@ -144,12 +154,18 @@ struct Neuron
 		return value;
 	}
 	
-	@property size_t length()
+	/**
+	 * Neuron's length which is number of neuron's inputs.
+	 */
+	@property size_t length() const pure nothrow @safe @nogc
 	{
 		return weights.length;
 	}
 	
-	@property string toString(string indent = "", ulong num = 0)
+	/**
+	 * Neuron's human-readable string representation.
+	 */
+	@property string toString(string indent = "", ulong num = 0) const @safe
 	{
 		string result = indent ~ "Neuron[" ~ num.to!string ~ "]:\n";
 		result ~= indent ~ "\tValue = " ~ value.to!string ~ "\n";

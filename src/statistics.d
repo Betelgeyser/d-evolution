@@ -21,7 +21,7 @@ import std.math      : pow, abs, sqrt, exp;
 /**
  * Sigmoid function.
  */
-double sigmoid(double x)
+double sigmoid(double x) pure nothrow @safe @nogc
 {
 	return 1 / (1 + exp(-x));
 }
