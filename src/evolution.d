@@ -19,9 +19,9 @@ import std.random      : uniform, randomSample;
 import std.range       : generate, take;
 import std.conv        : to;
 import std.parallelism : parallel;
-import std.algorithm   : map, sum, minElement, remove;
+import std.algorithm   : map, sum, minElement, maxElement;
 import std.typecons    : Tuple;
-import std.math        : cmp;
+import std.math        : lrint;
 import std.array;
 
 import statistics;
@@ -136,9 +136,9 @@ struct Genome
 	
 	private
 	{
-		static immutable double crossoverRate = 0.5;  /// Determines probability of gene exchange.
-		static immutable double alpha         = 0.9;  /// Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
-		static immutable double mutationRate  = 0.05; /// Determines how often genes will mutate.
+		static immutable double crossoverRate = 0.90; /// Determines probability of gene exchange.
+		static immutable double alpha         = 0.90; /// Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
+		static immutable double mutationRate  = 0.30; /// Determines how often genes will mutate.
 	}
 	
 	invariant
@@ -396,7 +396,7 @@ struct Population(T)
 		 */
 		@property ulong tournamentSize()
 		{
-			return population.length / 10;
+			return lrint(population.length * 0.5);
 		}
 		
 		/**
@@ -406,7 +406,7 @@ struct Population(T)
 		 */
 		@property ulong breedSize()
 		{
-			return population.length / 5;
+			return lrint(population.length * 0.2);
 		}
 		
 		/**
@@ -442,9 +442,9 @@ struct Population(T)
 		}
 		body
 		{
-			immutable string condition = "fitness[individual]" ~ op ~ "fitness[individual]";
+			immutable string condition = "fitness[individual]" ~ op ~ "fitness[winner]";
 			
-			scope Genome[] group = randomSample(population, groupSize, &generator).array;
+			Genome[] group = randomSample(population, groupSize, &generator).array;
 			Genome winner = group[0];
 			
 			foreach (individual; group)
@@ -547,6 +547,14 @@ struct Population(T)
 	@property double bestFitness()
 	{
 		return fitness.values.minElement;
+	}
+	
+	/**
+	 * Best fitness of the population.
+	 */
+	@property double worstFitness()
+	{
+		return fitness.values.maxElement;
 	}
 	
 	/**

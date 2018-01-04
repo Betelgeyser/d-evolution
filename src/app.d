@@ -34,33 +34,41 @@ void main()
 	auto rng = Mt19937_64(unpredictableSeed());
 	
 	SpecimenParams sp;
-	sp.inputs  = 2;
+	sp.inputs  = 1;
 	sp.outputs = 1;
-	sp.layers  = 2;
-	sp.neurons = 2;
-	sp.weights.min = -10;
-	sp.weights.max =  10;
+	sp.layers  = 3;
+	sp.neurons = 3;
+	sp.weights.min = -100;
+	sp.weights.max =  100;
 	
-//	Evolution!Network evolution;
+	Population!Network population;
 	
 	auto file = File("tests.csv", "r");
 	
-//	auto data = file.byLine.joiner("\n").csvReader!(Tuple!(double, double, double, double)).array;
+	double[][] inputData;
+	double[][] outputData;
 	
-	double[][] InputData;
-	double[][] OutputData;
-	
-	foreach (row; file.byLine.joiner("\n").csvReader!(Tuple!(double, double, double, double)))
+	foreach (row; file.byLine.joiner("\n").csvReader!(Tuple!(double, double)))
 	{
-		InputData  ~= [ row[0], row[1] ];
-		OutputData ~= [ row[2] ];
+		inputData  ~= [ row[0] ];
+		outputData ~= [ row[1] ];
 	}
-
-//	foreach (i, val; taskPool.parallel(new int[population.organisms.length]))
-//	{
-//		for (ulong j = 0; j < InputData.length; j++)
-//			population.organisms[i].fitness -= (OutputData[j][0] - population.organisms[i]( InputData[j] )[0]) * (OutputData[j][0] - population.organisms[i](InputData[j])[0]);
-//		
-//		writeln("network = ", population.organisms[i].fitness);
-//	}
+	
+	population.loadData(inputData, outputData);
+	population.specimenParams = sp;
+	
+	population.populate(1000, rng);
+	writeln("Initial population:");
+//	writeln(">>> population.fitness.values = ", population.fitness.values);
+	writeln(">>> Best fitness = ", population.bestFitness, "; avg fitness = ", population.avgFitness);
+	
+	ulong counter;
+	do
+	{
+		counter++;
+		population.selection(rng);
+		writeln("Generation ", counter, ":");
+//		writeln(">>> population.fitness.values = ", population.fitness.values);
+		writeln(">>> Best = ", population.bestFitness, "; worst = ", population.worstFitness, "; avg = ", population.avgFitness);
+	} while (population.bestFitness > 0.01);
 }
