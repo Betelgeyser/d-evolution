@@ -3,4 +3,8 @@ syntax: glob
 .dub/*
 .project
 .settings/*
+docs/*
+trace.log
+trace.def
+profilegc.log
 dnn

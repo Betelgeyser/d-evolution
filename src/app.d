@@ -23,7 +23,7 @@ import std.file;
 import std.array;
 import std.algorithm;
 import std.typecons;
-import std.parallelism;
+import std.datetime;
 
 import network;
 import evolution;
@@ -31,15 +31,15 @@ import evolution;
 void main()
 {
 	import std.random : Mt19937_64, unpredictableSeed;
-	auto rng = Mt19937_64(unpredictableSeed());
+	auto rng = Mt19937_64(0);
 	
 	SpecimenParams sp;
 	sp.inputs  = 1;
 	sp.outputs = 1;
-	sp.layers  = 3;
-	sp.neurons = 3;
-	sp.weights.min = -100;
-	sp.weights.max =  100;
+	sp.layers  = 10;
+	sp.neurons = 10;
+	sp.weights.min = -1_000_000_000;
+	sp.weights.max =  1_000_000_000;
 	
 	Population!Network population;
 	
@@ -48,19 +48,22 @@ void main()
 	double[][] inputData;
 	double[][] outputData;
 	
-	foreach (row; file.byLine.joiner("\n").csvReader!(Tuple!(double, double)))
+	foreach (row; file.byLine.joiner("\n").csvReader!(Tuple!(double, double, double, double, double)))
 	{
 		inputData  ~= [ row[0] ];
-		outputData ~= [ row[1] ];
+		outputData ~= [ row[3] ];
 	}
 	
 	population.loadData(inputData, outputData);
 	population.specimenParams = sp;
 	
+	StopWatch sw;
+	sw.start();
 	population.populate(1000, rng);
 	writeln("Initial population:");
-//	writeln(">>> population.fitness.values = ", population.fitness.values);
 	writeln(">>> Best fitness = ", population.bestFitness, "; avg fitness = ", population.avgFitness);
+	
+	writeln(sw.peek().msecs(), " msec");
 	
 	ulong counter;
 	do
@@ -68,7 +71,9 @@ void main()
 		counter++;
 		population.selection(rng);
 		writeln("Generation ", counter, ":");
-//		writeln(">>> population.fitness.values = ", population.fitness.values);
 		writeln(">>> Best = ", population.bestFitness, "; worst = ", population.worstFitness, "; avg = ", population.avgFitness);
-	} while (population.bestFitness > 0.01);
+	
+		writeln(sw.peek().msecs(), " msec");
+	} while (population.bestFitness > 1);
+	sw.stop();
 }

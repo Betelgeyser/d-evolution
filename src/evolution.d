@@ -361,15 +361,16 @@ struct Genome
 struct Population(T)
 {
 	alias Data = Tuple!(double[], "input",  double[], "output");
+	alias Individual = Tuple!(Genome, "genome",  double, "fitness");
 	
 	/**
 	 * Parameters to generate new genomes.
 	 */
 	SpecimenParams specimenParams;
 	
-	double crossoverRate = 0.90; /// Determines probability of gene exchange.
+	double crossoverRate = 0.50; /// Determines probability of gene exchange.
 	double alpha         = 0.90; /// Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
-	double mutationRate  = 0.30; /// Determines how often genes will mutate.
+	double mutationRate  = 0.05; /// Determines how often genes will mutate.
 	
 	invariant
 	{
@@ -387,13 +388,10 @@ struct Population(T)
 		
 		/**
 		 * Genomes.
+		 *
+		 * Cunny hack.
 		 */
-		Genome[] population;
-		
-		/**
-		 * Fitnesses of genomes.
-		 */
-		double[Genome] fitness;
+		Individual[Genome] population;
 
 		/**
 		 * Default tournament group size.
@@ -401,6 +399,11 @@ struct Population(T)
 		 * Based on current population size.
 		 */
 		@property ulong tournamentSize() const pure nothrow @safe @nogc
+		out (result)
+		{
+			assert (result >= 2);
+		}
+		body
 		{
 			return lrint(population.length * 0.5);
 		}
@@ -411,6 +414,12 @@ struct Population(T)
 		 * Based on current population size.
 		 */
 		@property ulong breedSize() const pure nothrow @safe @nogc
+		out (result)
+		{
+			assert (result >= 2);
+			assert (result % 2 == 0);
+		}
+		body
 		{
 			return lrint(population.length * 0.2);
 		}
@@ -448,9 +457,9 @@ struct Population(T)
 		}
 		body
 		{
-			immutable string condition = "fitness[individual]" ~ op ~ "fitness[winner]";
+			immutable string condition = "population[individual].fitness" ~ op ~ "population[winner].fitness";
 			
-			scope Genome[] group = randomSample(population, groupSize, &generator).array;
+			scope Genome[] group = randomSample(population.values.map!"a.genome", groupSize, &generator).array;
 			Genome winner = group[0];
 			
 			foreach (individual; group)
@@ -471,6 +480,8 @@ struct Population(T)
 		 * Returns:
 		 *     Two parent genomes based on their fitnesses.
 		 */
+		// Проверить, чтобы дети не были аналогами родителей.
+		// Часто происходит при низком проценте обмена генами
 		Genome[2] selectParents(U)(ulong groupSize, ref U generator)
 		in
 		{
@@ -508,9 +519,14 @@ struct Population(T)
 		 *     Children of the most successeful parents.
 		 */
 		Genome[] breed(U)(ulong amount, ulong groupSize, ref U generator)
+		in
+		{
+			assert (amount % 2 == 0);
+		}
+		body
 		{
 			Genome[] result;
-			for (ulong i = 0; i < amount; i++)
+			for (ulong i = 0; i < amount / 2; i++)
 			{
 				result ~= Genome.crossover(
 					selectParents(groupSize, generator),
@@ -535,16 +551,12 @@ struct Population(T)
 		 *     generator = (Pseudo)random generator.
 		 *                 Is required to select random tournament group.
 		 */
-		void replace(U)(Genome[] newPopulation, ulong groupSize, ref U generator)
+		void kill(U)(in ulong amount, in ulong groupSize, ref U generator)
 		{
-			foreach (newIndiv; newPopulation)
+			for (ulong i = 0; i < amount; i++)
 			{
 				Genome genomeToDie = tournament!">"(groupSize, generator);
-				foreach (i, ref individual; population)
-					if (individual == genomeToDie)
-						individual = newIndiv;
-				fitness.remove(genomeToDie);
-				fitness[newIndiv] = evaluate(newIndiv);
+				population.remove(genomeToDie);
 			}
 		}
 	}
@@ -554,7 +566,7 @@ struct Population(T)
 	 */
 	@property double bestFitness() const pure nothrow
 	{
-		return fitness.values.minElement;
+		return population.values.map!"a.fitness".minElement;
 	}
 	
 	/**
@@ -562,7 +574,7 @@ struct Population(T)
 	 */
 	@property double worstFitness() const pure nothrow
 	{
-		return fitness.values.maxElement;
+		return population.values.map!"a.fitness".maxElement;
 	}
 	
 	/**
@@ -570,7 +582,7 @@ struct Population(T)
 	 */
 	@property double avgFitness() const pure nothrow
 	{
-		return fitness.values.sum / fitness.length;
+		return population.values.map!"a.fitness".sum / population.length;
 	}
 	
 	/**
@@ -601,19 +613,20 @@ struct Population(T)
 	 */
 	void populate(U)(in ulong size, ref U generator)
 	{
-		population.length = size;
-		
-		foreach (ref individual; population)
+		for (ulong i = 0; i < size; i++)
 		{
-			individual = Genome.random(specimenParams, generator);
-			fitness[individual] = evaluate(individual);
+			Genome individual = Genome.random(specimenParams, generator);
+			population[individual] = Individual(individual, evaluate(individual));
 		}
 	}
 	
 	void selection(U)(ref U generator)
 	{
 		Genome[] newGeneration = breed(breedSize, tournamentSize, generator);
-		replace(newGeneration, tournamentSize, generator);
+		kill(breedSize, tournamentSize, generator);
+		
+		foreach (individual; newGeneration)
+			population[individual] = Individual(individual, evaluate(individual));
 	}
 }
 
