@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-module neuron;
+module dnn.nn.neuron;
 
 // Standard D modules
 import std.algorithm : each;
 import std.conv      : to;
 
 // dnn
-import statistics : sigmoid;
+import dnn.math : sigmoid;
 
 /**
  * Basic neuron with bias.

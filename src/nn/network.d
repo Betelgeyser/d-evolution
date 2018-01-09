@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-module network;
+module dnn.nn.network;
 
 import std.math : abs, pow;
 import std.algorithm : map, sum;
 
-import evolution : Genome;
-import layer;
+import dnn.ga.genome;
+import dnn.nn.layer;
 
 /**
  * Simple feedforward network.

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-module layer;
+module dnn.nn.layer;
 
 // Standard D modules
 import std.conv      : to;
@@ -21,7 +21,7 @@ import std.algorithm : map;
 import std.array;
 
 // dnn
-import neuron;
+import dnn.nn.neuron;
 
 /**
  * Simple layer which only passes input values to a network internals.

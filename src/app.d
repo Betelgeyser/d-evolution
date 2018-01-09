@@ -25,19 +25,17 @@ import std.algorithm;
 import std.typecons;
 import std.datetime;
 
-import network;
-import evolution;
+import dnn.nn.network;
+import dnn.ga.genome;
+import dnn.ga.population;
 
 void main()
 {
-	import std.random : Mt19937_64, unpredictableSeed;
-	auto rng = Mt19937_64(0);
-	
 	SpecimenParams sp;
 	sp.inputs  = 1;
 	sp.outputs = 1;
-	sp.layers  = 10;
-	sp.neurons = 10;
+	sp.layers  = 3;
+	sp.neurons = 3;
 	sp.weights.min = -1_000_000_000;
 	sp.weights.max =  1_000_000_000;
 	
@@ -51,7 +49,7 @@ void main()
 	foreach (row; file.byLine.joiner("\n").csvReader!(Tuple!(double, double, double, double, double)))
 	{
 		inputData  ~= [ row[0] ];
-		outputData ~= [ row[3] ];
+		outputData ~= [ row[4] ];
 	}
 	
 	population.loadData(inputData, outputData);
@@ -59,7 +57,7 @@ void main()
 	
 	StopWatch sw;
 	sw.start();
-	population.populate(1000, rng);
+	population.populate(1000);
 	writeln("Initial population:");
 	writeln(">>> Best fitness = ", population.bestFitness, "; avg fitness = ", population.avgFitness);
 	
@@ -69,11 +67,11 @@ void main()
 	do
 	{
 		counter++;
-		population.selection(rng);
+		population.selection();
 		writeln("Generation ", counter, ":");
 		writeln(">>> Best = ", population.bestFitness, "; worst = ", population.worstFitness, "; avg = ", population.avgFitness);
 	
 		writeln(sw.peek().msecs(), " msec");
-	} while (population.bestFitness > 1);
+	} while (population.bestFitness > 0.01 && counter < 10_000);
 	sw.stop();
 }

@@ -4,7 +4,9 @@ syntax: glob
 .project
 .settings/*
 docs/*
+data/*
 trace.log
 trace.def
 profilegc.log
+log
 dnn
