@@ -4,6 +4,5 @@
 	"authors" : ["Sergei Iurevich Filippov"],
 	"copyright" : "Copyright © 2017 Sergei Iurevich Filippov, All Rights Reserved.",
 	"license" : "Apache-2.0",
-	"dependencies" : {
-	}
+	"libs": ["cudart", "cublas"]
 }
