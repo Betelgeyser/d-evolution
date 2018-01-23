@@ -16,11 +16,10 @@
 
 module neural.network;
 
-// C libs
+// C modules
 import core.stdc.stdlib;
-import std.exception;
-import std.conv;
-import std.traits;
+
+// D modules
 import std.random : unpredictableSeed;
 
 // CUDA modules
@@ -28,25 +27,28 @@ import cuda.cudaruntimeapi;
 import cuda.curand;
 import cuda.cublas;
 
-// DNN modules
-import neural.layer;
-
-void fun(float* x)
-{
-	for (int i = 0; i < 100; i++)
-//		x[i] += y[i];
-		x[i] = i;
-}
-
 /**
  * Simple feedforward network.
+ *
+ * Currently supports only two layers, excluding output layer.
  */
 struct Network
 {
-	Layer inputLayer;
-	Layer hiddenLayer;
-	Layer outputLayer;
+	Layer inputLayer;  /// First of the two layers.
+	Layer hiddenLayer; /// Second of the two layers.
+	Layer outputLayer; /// Output layer.
+	                   /// The only difference with previous two is that activation function does not appy to the output layer.
 	
+	/**
+	 * Generate random population.
+	 *
+	 * Params:
+	 *     params = Parameters for network generation.
+	 *     size = Number of individuals in a population.
+	 *
+	 * Returns:
+	 *     Reference to a pointer to a population array.
+	 */
 	static void randomPopulation(ref Network* population, in NetworkParams params, in uint size)
 	in
 	{
@@ -54,8 +56,7 @@ struct Network
 	}
 	body
 	{
-		import std.stdio;
-		curandStatus_t curandStatus;
+		population = cast(Network*)malloc(size * Network.sizeof);
 		
 		curandGenerator_t generator;
 		enforceCurand(curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT));
@@ -67,15 +68,16 @@ struct Network
 		scope(failure) free(population);
 		
 		for (int i = 0; i < size; i++)
-		{
-			population[i].inputLayer  = Layer(params.inputs,  params.neurons);
-			population[i].hiddenLayer = Layer(params.neurons, params.neurons);
-			population[i].outputLayer = Layer(params.neurons, params.outputs);
-			
-			enforceCurand(curandGenerate(generator, population[i].inputLayer,  params.inputs  * params.neurons));
-			enforceCurand(curandGenerate(generator, population[i].hiddenLayer, params.neurons * params.neurons));
-			enforceCurand(curandGenerate(generator, population[i].outputLayer, params.outputs * params.neurons));
-		}
+			with (population[i])
+			{
+				inputLayer  = Layer(params.inputs,  params.neurons);
+				hiddenLayer = Layer(params.neurons, params.neurons);
+				outputLayer = Layer(params.neurons, params.outputs);
+				
+				enforceCurand(curandGenerate(generator, inputLayer,  inputLayer.length));
+				enforceCurand(curandGenerate(generator, hiddenLayer, hiddenLayer.length));
+				enforceCurand(curandGenerate(generator, outputLayer, outputLayer.length));
+			}
 	}
 	
 	unittest
@@ -85,8 +87,8 @@ struct Network
 		writeln("Network.randomPopulation(ref Network* population, in NetworkParams params, in uint size)");
 		
 		NetworkParams params;
-		params.inputs  = 1;
-		params.neurons = 2;
+		params.inputs  = 2;
+		params.neurons = 3;
 		params.outputs = 1;
 		
 		uint number = 1;
@@ -231,33 +233,48 @@ struct Layer
 {
 	alias weights this;
 	
-	float* weights;
-	int    weightsPerNeuron;
-	int    neuronsNum;
+	static immutable biasLength = 1; /// Number of bias weights per neuron.
+	
+	float* weights;          /// Array of neurons weights.
+	uint   weightsPerNeuron; /// Number of weights of each neuron.
+	uint   neuronsNum;       /// Number of neurons in the layer.
 	
 	/**
 	 * Default constructor.
 	 *
 	 * Params:
-	 *     length = Number of neurons.
+	 *     weightsPerNeuron = Number of weights per neuron.
+	 *     neuronsNum = Number of neurons in the layer.
 	 */
-	this(int weightsPerNeuron, int neuronsNum) nothrow @nogc
+	this(uint weightsPerNeuron, uint neuronsNum) nothrow @nogc
 	{
 		this.weightsPerNeuron = weightsPerNeuron;
 		this.neuronsNum       = neuronsNum;
 		cudaMalloc(weights, this.length);
 	}
 	
-	~this() { cudaFree(weights); }
-	
-	@property length()
+	/**
+	 * Free memory.
+	 */
+	~this()
 	{
-		return weightsPerNeuron * neuronsNum;
+		cudaFree(weights);
 	}
 	
+	/**
+	 * Number of elements in the weights array.
+	 */
+	@property length()
+	{
+		return (weightsPerNeuron + biasLength) * neuronsNum;
+	}
+	
+	/**
+	 * Size of the weights array in bytes.
+	 */
 	@property size()
 	{
-		return weightsPerNeuron * neuronsNum * float.sizeof;
+		return this.length * float.sizeof;
 	}
 	
 	unittest
@@ -276,35 +293,23 @@ struct Layer
  */
 struct NetworkParams
 {
-	private struct Weights
-	{
-		float min = -float.max;
-		float max =  float.max;
-		
-		invariant { assert (min <= max); }
-		
-		@property string toString()
-		{
-			return "Weights(min = " ~ min.to!string ~ ", max = " ~ max.to!string ~ ")";
-		}
-	}
 	uint    inputs;  /// Number of network's inputs.
 	uint    outputs; /// Number of network's outputs.
 	uint    neurons; /// Number of neurons in every hidden layer.
-	Weights weights; /// Allowed neuron weights bounds.
 	
 	invariant
 	{
 		assert (inputs  >= 1);
 		assert (outputs >= 1);
 		assert (neurons >= 1);
-		
-		assert(&weights);
 	}
 	
+	/**
+	 * String representation.
+	 */
 	@property string toString()
 	{
-		return "NetworkParams(inputs = " ~ inputs.to!string ~ ", outputs = " ~ outputs.to!string ~ ", neurons = " ~ neurons.to!string ~ ", weights = " ~ weights.to!string ~ ")";
+		return "NetworkParams(inputs = " ~ inputs.to!string ~ ", outputs = " ~ outputs.to!string ~ ", neurons = " ~ neurons.to!string ~ ")";
 	}
 }
 
