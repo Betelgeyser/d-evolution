@@ -15,16 +15,32 @@
  */
 module cuda.curand.functions;
 
+import cuda.common;
 import cuda.curand.types;
+static import curand = cuda.curand.exp;
 
-extern(C):
-	curandStatus_t curandCreateGenerator(ref curandGenerator_t generator, curandRngType_t rng_type) nothrow @nogc;
-	curandStatus_t curandCreateGeneratorHost(ref curandGenerator_t generator, curandRngType_t rng_type) nothrow @nogc;
-	curandStatus_t curandDestroyGenerator(curandGenerator_t generator) nothrow @nogc;
-	
-	curandStatus_t curandSetPseudoRandomGeneratorSeed(curandGenerator_t generator, ulong seed) nothrow @nogc;
-	
-	curandStatus_t curandGenerate(curandGenerator_t generator, float* outputPtr, size_t num) nothrow @nogc;
-	curandStatus_t curandGenerateUniform(curandGenerator_t generator, float* outputPtr, size_t num) nothrow @nogc;
+void curandCreateGenerator(ref curandGenerator_t generator, curandRngType_t rng_type) nothrow @nogc
+{
+	enforceCurand(curand.curandCreateGenerator(&generator, rng_type));
+}
 
-	curandStatus_t curandGetVersion(int* v) nothrow @nogc;
+void curandDestroyGenerator(curandGenerator_t generator) nothrow @nogc
+{
+	enforceCurand(curand.curandDestroyGenerator(generator));
+}
+
+void curandSetPseudoRandomGeneratorSeed(curandGenerator_t generator, ulong seed) nothrow @nogc
+{
+	enforceCurand(curand.curandSetPseudoRandomGeneratorSeed(generator, seed));
+}
+
+void curandGenerate(curandGenerator_t generator, ref float* outputPtr, size_t num) nothrow @nogc
+{
+	enforceCurand(curand.curandGenerate(generator, outputPtr, num));
+}
+
+package void enforceCurand(curandStatus_t error) pure nothrow @safe @nogc
+{
+	assert (error == curandStatus_t.CURAND_STATUS_SUCCESS, error.toString);
+}
+

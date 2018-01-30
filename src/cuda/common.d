@@ -13,27 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-module cuda.curand.error;
-
-import std.conv      : to;
-import std.exception : Error;
-
-import cuda.curand.types;
-
-class CurandError : Error
-{
-	this(curandStatus_t curandStatus, string file = __FILE__, size_t line = __LINE__)
-	{
-		super(curandStatus.to!string, file, line);
-	}
-}
+module cuda.common;
 
 /**
- * D-style cuRAND error check.
+ * Simple replacement for std.conv : to, which is pure nothrow @safe @nocg.
  */
-pragma(inline, true) void enforceCurand(curandStatus_t curandStatus, string file = __FILE__, size_t line = __LINE__)
+string toString(T)(T enumMember) pure nothrow @safe @nogc
 {
-	if (curandStatus != curandStatus_t.CURAND_STATUS_SUCCESS)
-		throw new CurandError(curandStatus, file, line);
+	final switch (enumMember)
+	{
+		foreach (m; __traits(allMembers, T))
+			case __traits(getMember, T, m):
+				return m;
+	}
 }
-

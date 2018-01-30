@@ -12,11 +12,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * This package provides access to CUDA cuRAND.
  */
-module cuda.curand;
+module cuda.curand.exp;
 
-public import cuda.curand.types;
-public import cuda.curand.functions;
+import cuda.curand.types;
 
+extern(C) package nothrow @nogc:
+	curandStatus_t curandCreateGenerator(curandGenerator_t* generator, curandRngType_t rng_type);
+	curandStatus_t curandDestroyGenerator(curandGenerator_t generator);
+	
+	curandStatus_t curandSetPseudoRandomGeneratorSeed(curandGenerator_t generator, ulong seed);
+	
+	curandStatus_t curandGenerate(curandGenerator_t generator, float* outputPtr, size_t num);
+//	curandStatus_t curandGenerateUniform(curandGenerator_t generator, float* outputPtr, size_t num) nothrow @nogc;
+//
+//	curandStatus_t curandGetVersion(int* v) nothrow @nogc;
+	
+	

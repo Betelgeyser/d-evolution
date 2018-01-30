@@ -12,6 +12,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Cuda runtime API types.
  */
 module cuda.cudaruntimeapi.types;
 
@@ -110,8 +112,8 @@ enum cudaMemcpyKind
     cudaMemcpyDefault        = 4
 }
 
-private struct CUstream_st;
 alias cudaStream_t = CUstream_st*;
+private struct CUstream_st;
 
 struct dim3
 {

@@ -16,7 +16,7 @@
 module cuda.curand.types;
 
 alias curandGenerator_t = curandGenerator*;
-package struct curandGenerator;
+private struct curandGenerator;
 
 enum curandStatus_t
 {

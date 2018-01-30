@@ -12,34 +12,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Higher-level wrappers around CUDA cuBLAS.
+ *
+ * This module allows to use CUDA cuBLAS calls in a D-style using features like templates and error checking through asserts.
  */
 module cuda.cublas.functions;
 
+import cuda.common;
 import cuda.cublas.types;
+static import cublas = cuda.cublas.exp;
 
-//package
-//{
-	extern(C) cublasStatus_t cublasCreate_v2(ref cublasHandle_t handle);
-	extern(C) cublasStatus_t cublasDestroy_v2(ref cublasHandle_t handle);
-	extern(C) cublasStatus_t cublasSgemm_v2(
-		cublasHandle_t handle,
-		cublasOperation_t transa,
-		cublasOperation_t transb,
-		int m,
-		int n,
-		int k,
-		const float *alpha,
-		const float *A,
-		int lda,
-		const float *B,
-		int ldb,
-		const float *beta,
-		float *C,
-		int ldc
-	);
-//}
+void cublasCreate(ref cublasHandle_t handle) nothrow @nogc
+{
+	enforceCublas(cublas.cublasCreate(&handle));
+}
 
-alias cublasCreate  = cublasCreate_v2;
-alias cublasDestroy = cublasDestroy_v2;
-alias cublasSgemm   = cublasSgemm_v2;
+package void enforceCublas(cublasStatus_t error) pure nothrow @safe @nogc
+{
+	assert (error == cublasStatus_t.CUBLAS_STATUS_SUCCESS, error.toString);
+}
 

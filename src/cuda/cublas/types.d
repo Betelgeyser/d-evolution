@@ -50,5 +50,5 @@ enum cublasOperation_t
  * Read more at: http://docs.nvidia.com/cuda/cublas/index.html#ixzz53yDMI41e
  */
 alias cublasHandle_t = cublasContext*;
-struct cublasContext;
+private struct cublasContext;
 

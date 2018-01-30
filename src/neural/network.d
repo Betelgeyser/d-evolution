@@ -13,19 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 module neural.network;
 
 // C modules
 import core.stdc.stdlib;
 
 // D modules
+import std.conv   : to;
 import std.random : unpredictableSeed;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.curand;
 import cuda.cublas;
+
+import std.traits;
 
 /**
  * Simple feedforward network.
@@ -34,10 +36,21 @@ import cuda.cublas;
  */
 struct Network
 {
+	static const(Data)* trainingData;
+	static cublasHandle_t cublasHandle;
+	
 	Layer inputLayer;  /// First of the two layers.
 	Layer hiddenLayer; /// Second of the two layers.
 	Layer outputLayer; /// Output layer.
 	                   /// The only difference with previous two is that activation function does not appy to the output layer.
+	
+	
+	void freeMem() nothrow @nogc
+	{
+		inputLayer.freeMem();
+		hiddenLayer.freeMem();
+		outputLayer.freeMem();
+	}
 	
 	/**
 	 * Generate random population.
@@ -49,23 +62,33 @@ struct Network
 	 * Returns:
 	 *     Reference to a pointer to a population array.
 	 */
-	static void randomPopulation(ref Network* population, in NetworkParams params, in uint size)
+	static void randomPopulation(ref Network* population, in NetworkParams params, in uint size, in Data* trainingData = null)
 	in
 	{
 		assert (&params);
 	}
 	body
 	{
-		population = cast(Network*)malloc(size * Network.sizeof);
+		Network.trainingData = trainingData;
 		
+		// Create a handle for cuBLAS
+		cublasCreate(Network.cublasHandle);
+		
+		// Initialize cuRAND generator.
 		curandGenerator_t generator;
-		enforceCurand(curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT));
-		enforceCurand(curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed()));
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
 		
-		scope(exit) enforceCurand(curandDestroyGenerator(generator));
+		scope(exit) curandDestroyGenerator(generator);
 		
+		// Allocate memory for population.
 		population = cast(Network*)malloc(size * Network.sizeof);
-		scope(failure) free(population);
+		scope(failure)
+		{
+			for (int i = 0; i < size; i++)
+				population[i].freeMem();
+			free(population);
+		}
 		
 		for (int i = 0; i < size; i++)
 			with (population[i])
@@ -74,9 +97,9 @@ struct Network
 				hiddenLayer = Layer(params.neurons, params.neurons);
 				outputLayer = Layer(params.neurons, params.outputs);
 				
-				enforceCurand(curandGenerate(generator, inputLayer,  inputLayer.length));
-				enforceCurand(curandGenerate(generator, hiddenLayer, hiddenLayer.length));
-				enforceCurand(curandGenerate(generator, outputLayer, outputLayer.length));
+				curandGenerate(generator, inputLayer,  inputLayer.length);
+				curandGenerate(generator, hiddenLayer, hiddenLayer.length);
+				curandGenerate(generator, outputLayer, outputLayer.length);
 			}
 	}
 	
@@ -91,13 +114,18 @@ struct Network
 		params.neurons = 3;
 		params.outputs = 1;
 		
-		uint number = 1;
+		uint size = 1;
 		
 		Network* population;
-		scope(exit) free(population);
+		scope(exit)
+		{
+			for(int i = 0; i < size; i++)
+				population[i].freeMem();
+			free(population);
+		}
 		
-		writeln(">>> Generating random population of ", number, " networks with parameters: ", params);
-		randomPopulation(population, params, number);
+		writeln(">>> Generating random population of ", size, " networks with parameters: ", params);
+		randomPopulation(population, params, size);
 		
 		float* input;  scope(exit) free(input);
 		float* hidden; scope(exit) free(hidden);
@@ -112,7 +140,7 @@ struct Network
 			cudaMemcpy(input,  inputLayer,  inputLayer.size, cudaMemcpyKind.cudaMemcpyDeviceToHost);
 			cudaMemcpy(hidden, hiddenLayer, hiddenLayer.size, cudaMemcpyKind.cudaMemcpyDeviceToHost);
 			cudaMemcpy(output, outputLayer, outputLayer.size, cudaMemcpyKind.cudaMemcpyDeviceToHost);
-		
+			
 			write(">>> Resulting input  layer = [");
 			for (uint i = 0; i < inputLayer.length; i++)
 				if (i != inputLayer.length - 1)
@@ -134,6 +162,46 @@ struct Network
 				else
 					writefln("% e]", output[i]);
 		}
+	}
+	
+	void evaluate() const nothrow @nogc
+	{
+		//		int lda=m,ldb=k,ldc=m;
+		assert (trainingData.vectorLength == inputLayer.weightsPerNeuron);
+		
+		const float alpha = 1;
+		const float beta  = 0;
+		
+		float* layerResult;
+//		layerResult = 
+//		
+//		cublasSgemm(
+//			cublasHandle,
+//			cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
+//			trainingData.dataLength, trainingData.vectorLength, inputLayer.neuronsNum,
+//			&alpha,
+//			trainingData, trainingData.dataLength,
+//			inputLayer, inputLayer.weightsPerNeuron,
+//			&beta,
+//			C, ldc);
+	//	
+//	// Destroy the handle
+//	cublasDestroy(handle);
+//		cublasSgemm(handle,
+//		cublasOperation_t transa,
+//		cublasOperation_t transb,
+//		int m,
+//		int n,
+//		int k,
+//		const float *alpha,
+//		const float *A,
+//		int lda,
+//		const float *B,
+//		int ldb,
+//		const float *beta,
+//		float *C,
+//		int ldc
+//	);
 	}
 	
 	/**
@@ -229,6 +297,15 @@ struct Network
 //	}
 }
 
+struct Data
+{
+	alias data this;
+	
+	float* data;         /// Pointer to the data array itself.
+	uint   vectorLength; /// Size of an input vector.
+	uint   dataLength;   /// Number of measurements.
+}
+
 struct Layer
 {
 	alias weights this;
@@ -236,7 +313,7 @@ struct Layer
 	static immutable biasLength = 1; /// Number of bias weights per neuron.
 	
 	float* weights;          /// Array of neurons weights.
-	uint   weightsPerNeuron; /// Number of weights of each neuron.
+	uint   weightsPerNeuron; /// Number of weights per neuron.
 	uint   neuronsNum;       /// Number of neurons in the layer.
 	
 	/**
@@ -250,29 +327,30 @@ struct Layer
 	{
 		this.weightsPerNeuron = weightsPerNeuron;
 		this.neuronsNum       = neuronsNum;
-		cudaMalloc(weights, this.length);
+		cudaMalloc(weights, length);
 	}
 	
 	/**
 	 * Free memory.
 	 */
-	~this()
+	void freeMem() nothrow @nogc
 	{
-		cudaFree(weights);
+		if (weights !is null)
+			cudaFree(weights);
 	}
 	
 	/**
 	 * Number of elements in the weights array.
 	 */
-	@property length()
+	@property ulong length() pure const nothrow @safe @nogc
 	{
-		return (weightsPerNeuron + biasLength) * neuronsNum;
+		return (this.weightsPerNeuron + this.biasLength) * this.neuronsNum;
 	}
 	
 	/**
 	 * Size of the weights array in bytes.
 	 */
-	@property size()
+	@property ulong size() pure const nothrow @safe @nogc
 	{
 		return this.length * float.sizeof;
 	}
@@ -280,10 +358,8 @@ struct Layer
 	unittest
 	{
 		import std.stdio;
-		import core.stdc.stdlib;
 		
-		writeln("Layer.this(float* weights, int weightsPerNeuron, int neuronsNum) pure nothrow @safe @nogc");
-		
+		writeln("Layer.this(uint weightsPerNeuron, uint neuronsNum) nothrow @nogc");
 		auto l = Layer(1, 1);
 	}
 }
@@ -307,7 +383,7 @@ struct NetworkParams
 	/**
 	 * String representation.
 	 */
-	@property string toString()
+	@property string toString() pure const @safe
 	{
 		return "NetworkParams(inputs = " ~ inputs.to!string ~ ", outputs = " ~ outputs.to!string ~ ", neurons = " ~ neurons.to!string ~ ")";
 	}

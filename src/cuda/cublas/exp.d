@@ -13,10 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * This package provides access to CUDA cuRAND.
+ * CUDA cuBLAS exported functions.
  */
-module cuda.curand;
+module cuda.cublas.exp;
 
-public import cuda.curand.types;
-public import cuda.curand.functions;
+import cuda.cublas.types;
+
+package:
+	extern(C) nothrow @nogc
+	{
+		cublasStatus_t cublasCreate_v2(cublasHandle_t* handle);
+		cublasStatus_t cublasDestroy_v2(cublasHandle_t handle);
+		cublasStatus_t cublasSgemm_v2(
+			cublasHandle_t handle,
+			cublasOperation_t transa, cublasOperation_t transb,
+			int m, int n, int k,
+			const float* alpha,
+			const float* A, int lda,
+			const float* B, int ldb,
+			const float* beta,
+			float* C, int ldc
+		);
+	}
+	
+	alias cublasCreate  = cublasCreate_v2;
+	alias cublasDestroy = cublasDestroy_v2;
+	alias cublasSgemm   = cublasSgemm_v2;
 

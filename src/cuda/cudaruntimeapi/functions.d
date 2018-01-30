@@ -12,29 +12,39 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Higher-level wrappers around CUDA runtime API.
+ *
+ * This module allows to use CUDA runtime API calls in a D-style using features like templates and error checking through asserts.
  */
 module cuda.cudaruntimeapi.functions;
 
+import cuda.common;
 import cuda.cudaruntimeapi.types;
+static import cudart = cuda.cudaruntimeapi.exp;
 
-private extern(C) cudaError_t cudaMalloc(void** devPtr, size_t size) nothrow @nogc;
-
-extern(C) cudaError_t cudaFree(void* devPtr) nothrow @nogc;
-extern(C) cudaError_t cudaMemcpy(void* dst, const void* src, size_t count, cudaMemcpyKind kind) nothrow @nogc;
-extern(C) cudaError_t cudaGetLastError() nothrow @nogc;
-extern(C) const(char)* cudaGetErrorString(cudaError_t error) nothrow @nogc;
-
-extern(C) cudaError_t cudaLaunchKernel(const void* func, dim3 gridDim, dim3 blockDim, void** args, size_t sharedMem = 0, cudaStream_t stream = null) nothrow @nogc;
-
-
-/**
- * Higher level wrapper around cudaMalloc.
- */
-cudaError_t cudaMalloc(T)(ref T* devPtr, ulong nitems) nothrow @nogc
+void cudaMalloc(T)(ref T* devPtr, ulong nitems) nothrow @nogc
 {
 	void* tmp;
-	cudaError_t err = cudaMalloc(&tmp, nitems * T.sizeof);
+	enforceCuda(cudart.cudaMalloc(&tmp, nitems * T.sizeof));
 	devPtr = cast(T*)tmp;
-	return err;
+}
+
+void cudaFree(void* devPtr) nothrow @nogc
+{
+	enforceCuda(cudart.cudaFree(devPtr));
+}
+
+void cudaMemcpy(void* dst, const void* src, size_t count, cudaMemcpyKind kind) nothrow @nogc
+{
+	enforceCuda(cudart.cudaMemcpy(dst, src, count, kind));
+}
+
+/**
+ * Utility wrapper to enforce error check for cuda functions.
+ */
+package void enforceCuda(cudaError_t error) pure nothrow @safe @nogc
+{
+	assert (error == cudaError_t.cudaSuccess, error.toString);
 }
 

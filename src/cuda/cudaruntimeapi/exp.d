@@ -13,10 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * This package provides access to CUDA cuRAND.
+ * Cuda runtime API exported functions.
  */
-module cuda.curand;
+module cuda.cudaruntimeapi.exp;
 
-public import cuda.curand.types;
-public import cuda.curand.functions;
+import cuda.cudaruntimeapi.types;
+
+extern(C) package nothrow @nogc:
+	cudaError_t cudaMalloc(void** devPtr, size_t size);
+	cudaError_t cudaFree(void* devPtr);
+	cudaError_t cudaMemcpy(void* dst, const void* src, size_t count, cudaMemcpyKind kind);
 
