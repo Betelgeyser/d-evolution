@@ -40,16 +40,24 @@ struct Network
 	static const(Data)* trainingData;
 	static cublasHandle_t cublasHandle;
 	
-	Layer inputLayer;  /// First of the two layers.
-	Layer hiddenLayer; /// Second of the two layers.
-	Layer outputLayer; /// Output layer.
-	                   /// The only difference with previous two is that activation function does not appy to the output layer.
+	Layer  inputLayer;   /// Self explaining.
+	Layer* hiddenLayers; /// Ditto.
+	Layer  outputLayer;  /// Ditto.
+	
+	uint hiddenNumber; /// Number of hidden layers (input and output does not count).
 	
 	void freeMem() nothrow @nogc
 	{
-//		inputLayer.freeMem();
-//		hiddenLayer.freeMem();
-//		outputLayer.freeMem();
+		inputLayer.freeMem();
+		outputLayer.freeMem();
+		
+		if (hiddenLayers !is null)
+		{
+			for (uint i = 0; i < hiddenNumber; i++)
+				hiddenLayers[i].freeMem();
+		
+			free(hiddenLayers);
+		}
 	}
 	
 	/**
@@ -93,35 +101,41 @@ struct Network
 		for (int i = 0; i < size; i++)
 			with (population[i])
 			{
+				hiddenNumber = params.layers;
+				
 				inputLayer  = Layer(params.inputs,  params.neurons, generator);
-				hiddenLayer = Layer(params.neurons, params.neurons, generator);
 				outputLayer = Layer(params.neurons, params.outputs, generator);
+				
+				hiddenLayers = cast(Layer*)malloc(hiddenNumber * Layer.sizeof);
+				for (uint j = 0; j < hiddenNumber; j++)
+					hiddenLayers[j] = Layer(params.neurons, params.neurons, generator);
 			}
 	}
 	
 	unittest
 	{
-//		import std.stdio;
-//		
-//		writeln("Network.randomPopulation(ref Network* population, in NetworkParams params, in uint size)");
-//		
-//		NetworkParams params;
-//		params.inputs  = 2;
-//		params.neurons = 3;
-//		params.outputs = 1;
-//		
-//		uint size = 1;
-//		
-//		Network* population;
-//		scope(exit)
-//		{
-//			for(int i = 0; i < size; i++)
-//				population[i].freeMem();
-//			free(population);
-//		}
-//		
-//		writeln(">>> Generating random population of ", size, " networks with parameters: ", params);
-//		randomPopulation(population, params, size);
+		import std.stdio;
+		
+		writeln("Network.randomPopulation(ref Network* population, in NetworkParams params, in uint size)");
+		
+		NetworkParams params;
+		params.inputs  = 2;
+		params.layers  = 2;
+		params.neurons = 3;
+		params.outputs = 1;
+		
+		uint size = 1;
+		
+		Network* population;
+		scope(exit)
+		{
+			for(int i = 0; i < size; i++)
+				population[i].freeMem();
+			free(population);
+		}
+		
+		writeln(">>> Generating random population of ", size, " networks with parameters: ", params);
+		randomPopulation(population, params, size);
 //		
 //		float* input;  scope(exit) free(input);
 //		float* hidden; scope(exit) free(hidden);
@@ -313,6 +327,12 @@ struct Layer
 	uint   weightsPerNeuron; /// Number of weights per neuron.
 	uint   neuronsNumber;    /// Number of neurons in the layer.
 	
+	invariant
+	{
+		assert (weightsPerNeuron >= 1);
+		assert (neuronsNumber    >= 1);
+	}
+	
 	/**
 	 * Default constructor.
 	 *
@@ -321,6 +341,12 @@ struct Layer
 	 *     neuronsNum = Number of neurons in the layer.
 	 */
 	this(uint weightsPerNeuron, uint neuronsNumber, curandGenerator_t generator) nothrow @nogc
+	in
+	{
+		assert (weightsPerNeuron >= 1);
+		assert (neuronsNumber    >= 1);
+	}
+	body
 	{
 		this.weightsPerNeuron = weightsPerNeuron;
 		this.neuronsNumber    = neuronsNumber;
@@ -357,6 +383,9 @@ struct Layer
 	
 	/**
 	 * Size of the weights array in bytes.
+	 *
+	 * Note:
+	 *     Not to be confused with .sizeof property. TODO BUG
 	 */
 	@property ulong size() pure const nothrow @safe @nogc
 	{
@@ -394,7 +423,7 @@ struct Layer
 	
 unittest
 {
-	import std.stdio;		
+	import std.stdio;
 	writeln("Layer.this(uint weightsPerNeuron, uint neuronsNum) nothrow @nogc");
 	
 	// Initialize cuRAND generator.
@@ -414,15 +443,17 @@ unittest
  */
 struct NetworkParams
 {
-	uint    inputs;  /// Number of network's inputs.
-	uint    outputs; /// Number of network's outputs.
-	uint    neurons; /// Number of neurons in every hidden layer.
+	uint inputs;  /// Number of network's inputs.
+	uint outputs; /// Number of network's outputs.
+	uint layers;  /// Number of hidden layers (excluding input and output layers).
+	uint neurons; /// Number of neurons in every hidden layer.
 	
 	invariant
 	{
 		assert (inputs  >= 1);
 		assert (outputs >= 1);
 		assert (neurons >= 1);
+		assert (layers  >= 0);
 	}
 	
 	/**
