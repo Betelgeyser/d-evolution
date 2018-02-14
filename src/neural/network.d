@@ -23,12 +23,14 @@ import std.conv   : to;
 import std.random : unpredictableSeed;
 import std.format;
 
+debug import std.stdio;
+
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.curand;
 import cuda.cublas;
 
-import std.traits;
+//import std.traits;
 
 /**
  * Simple feedforward network.
@@ -114,28 +116,28 @@ struct Network
 	
 	unittest
 	{
-		import std.stdio;
-		
-		writeln("Network.randomPopulation(ref Network* population, in NetworkParams params, in uint size)");
-		
-		NetworkParams params;
-		params.inputs  = 2;
-		params.layers  = 2;
-		params.neurons = 3;
-		params.outputs = 1;
-		
-		uint size = 1;
-		
-		Network* population;
-		scope(exit)
-		{
-			for(int i = 0; i < size; i++)
-				population[i].freeMem();
-			free(population);
-		}
-		
-		writeln(">>> Generating random population of ", size, " networks with parameters: ", params);
-		randomPopulation(population, params, size);
+//		import std.stdio;
+//		
+//		writeln("Network.randomPopulation(ref Network* population, in NetworkParams params, in uint size)");
+//		
+//		NetworkParams params;
+//		params.inputs  = 2;
+//		params.layers  = 2;
+//		params.neurons = 3;
+//		params.outputs = 1;
+//		
+//		uint size = 1;
+//		
+//		Network* population;
+//		scope(exit)
+//		{
+//			for(int i = 0; i < size; i++)
+//				population[i].freeMem();
+//			free(population);
+//		}
+//		
+//		writeln(">>> Generating random population of ", size, " networks with parameters: ", params);
+//		randomPopulation(population, params, size);
 //		
 //		float* input;  scope(exit) free(input);
 //		float* hidden; scope(exit) free(hidden);
@@ -176,13 +178,13 @@ struct Network
 	
 	void evaluate() const nothrow @nogc
 	{
-		//		int lda=m,ldb=k,ldc=m;
-		assert (trainingData.vectorLength == inputLayer.weightsPerNeuron);
-		
-		const float alpha = 1;
-		const float beta  = 0;
-		
-		float* layerResult;
+//		//		int lda=m,ldb=k,ldc=m;
+//		assert (trainingData.vectorLength == inputLayer.weightsPerNeuron);
+//		
+//		const float alpha = 1;
+//		const float beta  = 0;
+//		
+//		float* layerResult;
 //		layerResult = 
 //		
 //		cublasSgemm(
@@ -318,46 +320,105 @@ struct Data
 
 struct Layer
 {
-	static immutable biasLength = 1; /// Number of bias weights per neuron.
+	private struct WeightGroup
+	{
+		alias weights this;
+		
+		float* weights;
+		
+		uint weightsNumber;
+		uint neuronsNumber;
+		
+		static immutable biasLength = 1; /// Number of bias weights per neuron.
+		
+		invariant
+		{
+			assert (weightsNumber >= 1);
+			assert (neuronsNumber >= 1);
+		}
+		
+		this(in uint weightsNumber, in uint neuronsNumber, ref curandGenerator_t generator) nothrow @nogc
+		{
+			this.weightsNumber = weightsNumber;
+			this.neuronsNumber = neuronsNumber;
+			
+			cudaMalloc(weights, length);
+			curandGenerate(generator, weights, length);
+		}
+		
+		void freeMem() nothrow @nogc
+		{
+			if (weights !is null)
+				cudaFree(weights);
+		}
+		
+		@property ulong length() const pure nothrow @safe @nogc
+		{
+			return weightsNumber * neuronsNumber + biasLength;
+		}
+		
+		/**
+		 * Size of the weights array in bytes.
+		 *
+		 * Note:
+		 *     Not to be confused with .sizeof property.
+		 *     sizeof return size of the struct itself in the memory whether size() returns size of memory allocated for weights array.
+		 */
+		@property ulong size() const pure nothrow @safe @nogc
+		{
+			return length() * float.sizeof;
+		}
+		
+		@property string toString() const
+		{
+			float* w; scope(exit) free(w);
+			
+			w = cast(float*)malloc(size);
+			cudaMemcpy(w, weights, size, cudaMemcpyKind.cudaMemcpyDeviceToHost);
+			
+			string result = "WeightGroup(weightsNumber = %d, neuronsNumber = %d, weights = [".format(weightsNumber, neuronsNumber);
+			for (uint i = 0; i < length; i++)
+				if (i == length - 1)
+					result ~= "% e".format(w[i]);
+				else
+					result ~= "% e, ".format(w[i]);
+			
+			return result ~ "])";
+		}
+	}
 	
-	float* forwardWeights;   /// Array of connections weights for forwartd propagation.
-	float* reccurentWeights; /// Array of recurrent weights.
-	float* backwardWeights;  /// Array of connections weights for backward propagation.
+	WeightGroup forward;   /// Array of connections weights for forwartd propagation.
+	WeightGroup recurrent; /// Array of recurrent weights.
+	WeightGroup backward;  /// Array of connections weights for backward propagation.
 	
-	uint   weightsPerNeuron; /// Number of weights per neuron.
-	uint   neuronsNumber;    /// Number of neurons in the layer.
+	uint neuronsNumber
 	
 	invariant
 	{
-		assert (weightsPerNeuron >= 1);
-		assert (neuronsNumber    >= 1);
+		assert (&forward);
+		assert (&recurrent);
+		assert (&backward);
 	}
 	
 	/**
 	 * Default constructor.
 	 *
 	 * Params:
-	 *     weightsPerNeuron = Number of weights per neuron.
-	 *     neuronsNum = Number of neurons in the layer.
+	 *     forwardNumber = Number of forward weights per neuron.
+	 *     neuronsNumber = Number of neurons in the layer.
+	 *     generator = Pseudorandom number generator.
 	 */
-	this(uint weightsPerNeuron, uint neuronsNumber, curandGenerator_t generator) nothrow @nogc
+	this(uint forwardNumber, uint neuronsNumber, curandGenerator_t generator) nothrow @nogc
 	in
 	{
-		assert (weightsPerNeuron >= 1);
-		assert (neuronsNumber    >= 1);
+		assert (forwardNumber >= 1);
+		assert (neuronsNumber >= 1);
 	}
 	body
 	{
-		this.weightsPerNeuron = weightsPerNeuron;
-		this.neuronsNumber    = neuronsNumber;
-		
-		cudaMalloc(forwardWeights,   length);
-		cudaMalloc(reccurentWeights, length);
-		cudaMalloc(backwardWeights,  length);
-		
-		curandGenerate(generator, forwardWeights,   length);
-		curandGenerate(generator, reccurentWeights, length);
-		curandGenerate(generator, backwardWeights,  length);
+		forward   = WeightGroup(forwardNumber, neuronsNumber, generator);
+		recurrent = WeightGroup(neuronsNumber, neuronsNumber, generator);
+		backward  = WeightGroup(neuronsNumber, neuronsNumber, generator);
 	}
 	
 	/**
@@ -365,65 +426,23 @@ struct Layer
 	 */
 	void freeMem() nothrow @nogc
 	{
-		if (forwardWeights !is null)
-			cudaFree(forwardWeights);
-		if (reccurentWeights !is null)
-			cudaFree(reccurentWeights);
-		if (backwardWeights !is null)
-			cudaFree(backwardWeights);
+		forward.freeMem();
+		recurrent.freeMem();
+		backward.freeMem();
 	}
 	
-	/**
-	 * Number of elements in the weights array.
-	 */
-	@property ulong length() pure const nothrow @safe @nogc
+	debug @property string toString() const
 	{
-		return (this.weightsPerNeuron + this.biasLength) * this.neuronsNumber;
-	}
-	
-	/**
-	 * Size of the weights array in bytes.
-	 *
-	 * Note:
-	 *     Not to be confused with .sizeof property. TODO BUG
-	 */
-	@property ulong size() pure const nothrow @safe @nogc
-	{
-		return this.length * float.sizeof;
-	}
-	
-	@property string toString() const
-	{
-		float* forward;   scope(exit) free(forward);
-		float* reccurent; scope(exit) free(reccurent);
-		float* backward;  scope(exit) free(backward);
-		
-		forward   = cast(float*)malloc(size);
-		reccurent = cast(float*)malloc(size);
-		backward  = cast(float*)malloc(size);
-		
-		cudaMemcpy(forward,   forwardWeights,   size, cudaMemcpyKind.cudaMemcpyDeviceToHost);
-		cudaMemcpy(reccurent, reccurentWeights, size, cudaMemcpyKind.cudaMemcpyDeviceToHost);
-		cudaMemcpy(backward,  backwardWeights,  size, cudaMemcpyKind.cudaMemcpyDeviceToHost);
-		
-		string result = "Layer(weightsPerNeuron = %d, neuronsNumber = %d, forwardWeights = [ ".format(weightsPerNeuron, neuronsNumber);
-		for (int i = 0; i < length; i++)
-			result ~= "% e ".format(forward[i]);
-		
-		result ~= "], reccurentWeights = [ ";
-		for (int i = 0; i < length; i++)
-			result ~= "% e ".format(reccurent[i]);
-		
-		result ~= "], backwardWeights = [ ";
-		for (int i = 0; i < length; i++)
-			result ~= "% e ".format(backward[i]);
-		return result ~ "])";
+		return "Layer(neuronsNumber = %d".format(neuro)
+			~ ", forward = " ~ forward.toString()
+			~ ", recurrent = " ~ recurrent.toString()
+			~ ", backward = " ~ backward.toString()
+			~ ")";
 	}
 }
 	
 unittest
 {
-	import std.stdio;
 	writeln("Layer.this(uint weightsPerNeuron, uint neuronsNum) nothrow @nogc");
 	
 	// Initialize cuRAND generator.
@@ -433,9 +452,9 @@ unittest
 	
 	scope(exit) curandDestroyGenerator(generator);
 	
-	Layer l = Layer(2, 3, generator); scope(exit) l.freeMem();
+	Layer l = Layer(3, 2, generator); scope(exit) l.freeMem();
 	
-	write(">>> Resulting layer = ", l.toString);
+	writeln(">>> Resulting layer = ", l.toString);
 }
 
 /**
