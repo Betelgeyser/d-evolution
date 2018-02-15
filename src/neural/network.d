@@ -30,7 +30,119 @@ import cuda.cudaruntimeapi;
 import cuda.curand;
 import cuda.cublas;
 
-import std.traits;
+
+/**
+ * Random network generation parameters.
+ */
+struct NetworkParams
+{
+	uint inputs;  /// Number of network's inputs.
+	uint outputs; /// Number of network's outputs.
+	uint layers;  /// Number of hidden layers (excluding input and output layers).
+	uint neurons; /// Number of neurons in every hidden layer.
+	
+	invariant
+	{
+		assert (inputs  >= 1);
+		assert (outputs >= 1);
+		assert (neurons >= 1);
+		assert (layers  >= 0);
+	}
+	
+	/**
+	 * String representation.
+	 */
+	@property string toString() pure const @safe
+	{
+		return "NetworkParams(inputs = %d, outputs = %d, neurons = %d)".format(
+			inputs,
+			outputs,
+			neurons
+		);
+	}
+}
+
+struct Data
+{
+	alias data this;
+	
+	float* data;         /// Pointer to the data array itself.
+	uint   vectorLength; /// Size of an input vector.
+	uint   dataLength;   /// Number of measurements.
+}
+
+struct Layer
+{
+	static immutable biasLength = 1; /// Number of bias weights per neuron.
+	
+	float* weights; /// Array of neurons weights.
+	uint   inputs;  /// Number of weights per neuron.
+	uint   neurons; /// Number of neurons in the layer.
+	
+	/**
+	 * Default constructor.
+	 *
+	 * Params:
+	 *     inputs = Number of weights per neuron.
+	 *     neurons = Number of neurons in the layer.
+	 *     generator = Pseudorandom number generator.
+	 */
+	this(uint inputs, uint neurons, ref curandGenerator_t generator) nothrow @nogc
+	in
+	{
+		assert (inputs  >= 1);
+		assert (neurons >= 1);
+	}
+	body
+	{
+		scope(failure) freeMem();
+		
+		this.inputs  = inputs;
+		this.neurons = neurons;
+		
+		cudaMalloc(weights, length);
+		curandGenerate(generator, weights, length);
+	}
+	
+	/**
+	 * Free memory.
+	 */
+	void freeMem() nothrow @nogc
+	{
+		if (weights !is null)
+			cudaFree(weights);
+	}
+	
+	/**
+	 * Number of elements in the weights array.
+	 */
+	@property ulong length() pure const nothrow @safe @nogc
+	{
+		return (inputs + biasLength) * neurons;
+	}
+	
+	/**
+	 * Size of the weights array in bytes.
+	 */
+	@property ulong size() pure const nothrow @safe @nogc
+	{
+		return length * float.sizeof;
+	}
+	
+	unittest
+	{
+		writeln("Layer.this(uint weightsPerNeuron, uint neuronsNum) nothrow @nogc");
+		
+		// Initialize cuRAND generator.
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
+		
+		scope(exit) curandDestroyGenerator(generator);
+		
+		Layer l = Layer(3, 2, generator); scope(exit) l.freeMem();
+	}
+}
 
 /**
  * Simple feedforward network.
@@ -42,127 +154,65 @@ struct Network
 	static const(Data)* trainingData;
 	static cublasHandle_t cublasHandle;
 	
-	Layer inputLayer;  /// First of the two layers.
-	Layer hiddenLayer; /// Second of the two layers.
-	Layer outputLayer; /// Output layer.
-	                   /// The only difference with previous two is that activation function does not appy to the output layer.
+	Layer  inputLayer;   /// Self explaining.
+	Layer* hiddenLayers; /// Ditto.
+	Layer  outputLayer;  /// Ditto.
 	
+	uint depth; /// Number of hidden layers (input and output does not count).
+	
+	/**
+	 * Free memory.
+	 */
 	void freeMem() nothrow @nogc
 	{
 		inputLayer.freeMem();
-		hiddenLayer.freeMem();
 		outputLayer.freeMem();
+		
+		if (hiddenLayers !is null)
+		{
+			for (uint i = 0; i < depth; i++)
+				hiddenLayers[i].freeMem();
+		
+			free(hiddenLayers);
+		}
 	}
 	
-	/**
-	 * Generate random population.
-	 *
-	 * Params:
-	 *     params = Parameters for network generation.
-	 *     size = Number of individuals in a population.
-	 *
-	 * Returns:
-	 *     Reference to a pointer to a population array.
-	 */
-	static void randomPopulation(ref Network* population, in NetworkParams params, in uint size, in Data* trainingData = null)
+	this(in NetworkParams params, ref curandGenerator_t generator) nothrow @nogc
 	in
 	{
 		assert (&params);
 	}
 	body
 	{
-//		Network.trainingData = trainingData;
-//		
-//		// Create a handle for cuBLAS
-//		cublasCreate(Network.cublasHandle);
-//		
-//		// Initialize cuRAND generator.
-//		curandGenerator_t generator;
-//		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-//		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
-//		
-//		scope(exit) curandDestroyGenerator(generator);
-//		
-//		// Allocate memory for population.
-//		population = cast(Network*)malloc(size * Network.sizeof);
-//		scope(failure)
-//		{
-//			for (int i = 0; i < size; i++)
-//				population[i].freeMem();
-//			free(population);
-//		}
-//		
-//		for (int i = 0; i < size; i++)
-//			with (population[i])
-//			{
-//				inputLayer  = Layer(params.inputs,  params.neurons);
-//				hiddenLayer = Layer(params.neurons, params.neurons);
-//				outputLayer = Layer(params.neurons, params.outputs);
-//				
-//				curandGenerate(generator, hiddenLayer, hiddenLayer.length);
-//				curandGenerate(generator, outputLayer, outputLayer.length);
-//			}
+		scope(failure) freeMem();
+				
+		inputLayer  = Layer(params.inputs,  params.neurons, generator);
+		outputLayer = Layer(params.neurons, params.outputs, generator);
+		
+		depth = params.layers;
+		hiddenLayers = cast(Layer*)malloc(depth * Layer.sizeof);
+		for (uint i = 0; i < depth; i++)
+			hiddenLayers[i] = Layer(params.neurons, params.neurons, generator);
 	}
-	
+		
 	unittest
 	{
-//		import std.stdio;
-//		
-//		writeln("Network.randomPopulation(ref Network* population, in NetworkParams params, in uint size)");
-//		
-//		NetworkParams params;
-//		params.inputs  = 2;
-//		params.neurons = 3;
-//		params.outputs = 1;
-//		
-//		uint size = 1;
-//		
-//		Network* population;
-//		scope(exit)
-//		{
-//			for(int i = 0; i < size; i++)
-//				population[i].freeMem();
-//			free(population);
-//		}
-//		
-//		writeln(">>> Generating random population of ", size, " networks with parameters: ", params);
-//		randomPopulation(population, params, size);
-//		
-//		float* input;  scope(exit) free(input);
-//		float* hidden; scope(exit) free(hidden);
-//		float* output; scope(exit) free(output);
-//		
-//		with(population[0])
-//		{
-//			input  = cast(float*)malloc(inputLayer.size);
-//			hidden = cast(float*)malloc(hiddenLayer.size);
-//			output = cast(float*)malloc(outputLayer.size);
-//			
-//			cudaMemcpy(input,  inputLayer,  inputLayer.size, cudaMemcpyKind.cudaMemcpyDeviceToHost);
-//			cudaMemcpy(hidden, hiddenLayer, hiddenLayer.size, cudaMemcpyKind.cudaMemcpyDeviceToHost);
-//			cudaMemcpy(output, outputLayer, outputLayer.size, cudaMemcpyKind.cudaMemcpyDeviceToHost);
-//			
-//			write(">>> Resulting input  layer = [");
-//			for (uint i = 0; i < inputLayer.length; i++)
-//				if (i != inputLayer.length - 1)
-//					writef("% e, ", input[i]);
-//				else
-//					writefln("% e]", input[i]);
-//			
-//			write(">>> Resulting hidden layer = [");
-//			for (uint i = 0; i < hiddenLayer.length; i++)
-//				if (i != hiddenLayer.length - 1)
-//					writef("% e, ", hidden[i]);
-//				else
-//					writefln("% e]", hidden[i]);
-//			
-//			write(">>> Resulting output layer = [");
-//			for (uint i = 0; i < outputLayer.length; i++)
-//				if (i != outputLayer.length - 1)
-//					writef("% e, ", output[i]);
-//				else
-//					writefln("% e]", output[i]);
-//		}
+		writeln("Network.this(in NetworkParams params, ref curandGenerator_t generator) nothrow @nogc");
+		
+		NetworkParams params;
+		params.inputs  = 2;
+		params.layers  = 2;
+		params.neurons = 3;
+		params.outputs = 1;
+		
+		// Initialize cuRAND generator.
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
+		
+		scope(exit) curandDestroyGenerator(generator);
+		
+		Network n = Network(params, generator); scope(exit) n.freeMem();
 	}
 	
 	void evaluate() const nothrow @nogc
@@ -296,114 +346,5 @@ struct Network
 //			result ~= h.toString("\t", i);
 //		return result;
 //	}
-}
-
-struct Data
-{
-	alias data this;
-	
-	float* data;         /// Pointer to the data array itself.
-	uint   vectorLength; /// Size of an input vector.
-	uint   dataLength;   /// Number of measurements.
-}
-
-struct Layer
-{
-	static immutable biasLength = 1; /// Number of bias weights per neuron.
-	
-	float* weights; /// Array of neurons weights.
-	uint   inputs;  /// Number of weights per neuron.
-	uint   neurons; /// Number of neurons in the layer.
-	
-	/**
-	 * Default constructor.
-	 *
-	 * Params:
-	 *     inputs = Number of weights per neuron.
-	 *     neurons = Number of neurons in the layer.
-	 *     generator = Pseudorandom number generator.
-	 */
-	this(uint inputs, uint neurons, ref curandGenerator_t generator) nothrow @nogc
-	in
-	{
-		assert (inputs  >= 1);
-		assert (neurons >= 1);
-	}
-	body
-	{
-		this.inputs  = inputs;
-		this.neurons = neurons;
-		
-		cudaMalloc(weights, length);
-		curandGenerate(generator, weights, length);
-	}
-	
-	/**
-	 * Free memory.
-	 */
-	void freeMem() nothrow @nogc
-	{
-		if (weights !is null)
-			cudaFree(weights);
-	}
-	
-	/**
-	 * Number of elements in the weights array.
-	 */
-	@property ulong length() pure const nothrow @safe @nogc
-	{
-		return (inputs + biasLength) * neurons;
-	}
-	
-	/**
-	 * Size of the weights array in bytes.
-	 */
-	@property ulong size() pure const nothrow @safe @nogc
-	{
-		return length * float.sizeof;
-	}
-	
-	unittest
-	{
-		writeln("Layer.this(uint weightsPerNeuron, uint neuronsNum) nothrow @nogc");
-		
-		// Initialize cuRAND generator.
-		curandGenerator_t generator;
-		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
-		
-		scope(exit) curandDestroyGenerator(generator);
-		
-		Layer l = Layer(3, 2, generator); scope(exit) l.freeMem();
-	}
-}
-
-/**
- * Random network generation parameters.
- */
-struct NetworkParams
-{
-	uint inputs;  /// Number of network's inputs.
-	uint outputs; /// Number of network's outputs.
-	uint neurons; /// Number of neurons in every hidden layer.
-	
-	invariant
-	{
-		assert (inputs  >= 1);
-		assert (outputs >= 1);
-		assert (neurons >= 1);
-	}
-	
-	/**
-	 * String representation.
-	 */
-	@property string toString() pure const @safe
-	{
-		return "NetworkParams(inputs = %d, outputs = %d, neurons = %d)".format(
-			inputs,
-			outputs,
-			neurons
-		);
-	}
 }
 
