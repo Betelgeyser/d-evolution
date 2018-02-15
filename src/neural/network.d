@@ -81,12 +81,12 @@ struct Layer
 {
 	static immutable biasLength = 1; /// Number of bias weights per neuron.
 	
-	float* weights; /// Array of neurons weights.
+	float* weights; /// (Device) Array of neurons weights.
 	uint   inputs;  /// Number of weights per neuron.
 	uint   neurons; /// Number of neurons in the layer.
 	
 	/**
-	 * Default constructor.
+	 * Random layer.
 	 *
 	 * Params:
 	 *     inputs = Number of weights per neuron.
@@ -122,6 +122,11 @@ struct Layer
 		scope(exit) curandDestroyGenerator(generator);
 		
 		Layer l = Layer(3, 2, generator); scope(exit) l.freeMem();
+		
+		assert (l.inputs  == 3);
+		assert (l.neurons == 2);
+		assert (l.length  == 8);
+		assert (l.size    == 32);
 	}
 	
 	/**
@@ -202,6 +207,15 @@ struct Network
 		scope(exit) curandDestroyGenerator(generator);
 		
 		Network n = Network(params, generator); scope(exit) n.freeMem();
+		
+		assert (n.depth == params.layers);
+		
+		assert (n.inputLayer.length  == (params.inputs  + 1) * params.neurons);
+		assert (n.outputLayer.length == (params.neurons + 1) * params.outputs);
+		
+		// Check memory
+		assert (n.hiddenLayers[0].length == (params.neurons + 1) * params.neurons);
+		assert (n.hiddenLayers[params.layers - 1].length == (params.neurons + 1) * params.neurons);
 	}
 	
 	/**
@@ -216,7 +230,6 @@ struct Network
 		{
 			for (uint i = 0; i < depth; i++)
 				hiddenLayers[i].freeMem();
-		
 			free(hiddenLayers);
 		}
 	}
