@@ -15,275 +15,76 @@
  */
 module evolution.population;
 
-import std.random      : uniform, randomSample;
-import std.range       : generate, take;
-import std.conv        : to;
-import std.parallelism : parallel;
-//import std.algorithm   : map, sum, minElement, maxElement;
-import std.typecons    : Tuple;
-import std.math        : lrint;
-import std.container;
-import std.array;
+// C modules
+import core.stdc.stdlib;
 
-import evolution.genome;
-//import dnn.math;
-
-struct Population(T)
+// D modules
+version (unittest)
 {
-	alias Data = Tuple!(double[], "input",  double[], "output");
-	
-	/**
-	 * Parameters to generate new genomes.
-	 */
-	SpecimenParams specimenParams;
-	
-	double crossoverRate = 0.50; /// Determines probability of gene exchange.
-	double alpha         = 0.90; /// Determines weigth of gene exchange. x1 = (1 - alpha) * y1 | x2 = alpha * y2
-	double mutationRate  = 0.05; /// Determines how often genes will mutate.
-	
-	invariant
-	{
-		assert (crossoverRate >= 0.0 && crossoverRate <= 1.0);
-		assert (alpha         >= 0.0 && alpha         <= 1.0);
-		assert (mutationRate  >= 0.0 && mutationRate  <= 1.0);
-	}
-	
-	private
-	{
-		/**
-		 * Data to train on.
-		 */
-		Array!Data trainingData;
-		
-		/**
-		 * Genomes.
-		 *
-		 * Cunny hack.
-		 */
-		Array!Genome population;
+	import std.stdio;
+	import std.random : unpredictableSeed;
+}
 
-		/**
-		 * Default tournament group size.
-		 *
-		 * Based on current population size.
-		 */
-		@property ulong tournamentSize() const pure nothrow @safe @nogc
-		out (result)
-		{
-			assert (result >= 2);
-		}
-		body
-		{
-			return lrint(population.length * 0.5);
-		}
-		
-		/**
-		 * Size of new generations.
-		 *
-		 * Based on current population size.
-		 */
-		@property ulong breedSize() const pure nothrow @safe @nogc
-		out (result)
-		{
-			assert (result >= 2);
-			assert (result % 2 == 0);
-		}
-		body
-		{
-			return lrint(population.length * 0.2);
-		}
-		
-		/**
-		 * Evaluate fitness of genome.
-		 *
-		 * Params:
-		 *     genome = Genome to measure fitness on.
-		 */
-//		double evaluate(Genome genome) const pure nothrow @safe
-//		{
-//			return MARE(
-//				trainingData.map!(d =>           d.output).array,
-//				trainingData.map!(d => T(genome)(d.input)).array
-//			);
-//		}
-		
-		/**
-		 * A tournament based selection.
-		 *
-		 * Params:
-		 *     groupSize = Size of a random group to select.
-		 *
-		 * Returns:
-		 *     The best genome from a random group.
-		 */
-//		Genome tournament(string op)(ulong groupSize)
-//			if (op == "<" || op == ">")
-//		in
-//		{
-//			assert (groupSize >= 1 && groupSize <= population.length);
-//		}
-//		body
-//		{
-//			immutable string condition = "population[individual].fitness" ~ op ~ "population[winner].fitness";
-//			
-//			scope Genome[] group = randomSample(population.values.map!"a.genome", groupSize).array;
-//			Genome winner = group[0];
-//			
-//			foreach (individual; group)
-//				if (mixin(condition))
-//					winner = individual;
-//			
-//			return winner;
-//		}
-		
-		/**
-		 * Select two distinct parents.
-		 *
-		 * Params:
-		 *     groupSize = Size of a random group to select.
-		 *
-		 * Returns:
-		 *     Two parent genomes based on their fitnesses.
-		 */
-//		Genome[2] selectParents(ulong groupSize)
-//		in
-//		{
-//			assert (groupSize >= 1 && groupSize <= population.length);
-//		}
-//		out (result)
-//		{
-//			assert (result[0] != result[1]);
-//		}
-//		body
-//		{
-//			Genome[2] result;
-//			
-//			result[0] = tournament!"<"(groupSize);
-//			do
-//			{
-//				result[1] = tournament!"<"(groupSize);
-//			}
-//			while (result[0] == result[1]);
-//			
-//			return result;
-//		}
-		
-		/**
-		 * Create new subpopulation.
-		 *
-		 * Params:
-		 *     amount = Size of a new population.
-		 *     groupSize = Size of a tournament selection group.
-		 *
-		 * Returns:
-		 *     Children of the most successeful parents.
-		 */
-//		Genome[] breed(ulong amount, ulong groupSize)
-//		in
-//		{
-//			assert (amount % 2 == 0);
-//		}
-//		body
-//		{
-//			Genome[] result;
-//			for (ulong i = 0; i < amount / 2; i++)
-//			{
-//				result ~= Genome.crossover(
-//					selectParents(groupSize),
-//					crossoverRate,
-//					alpha
-//				);
-//				
-//				result[$ - 1].mutate(specimenParams, mutationRate);
-//				result[$ - 2].mutate(specimenParams, mutationRate);
-//			}
-//			
-//			return result;
-//		}
-		
-		/**
-		 * Remove the least successeful orgamisms from popultion.
-		 *
-		 * Params:
-		 *     amount = How many individuals to kill.
-		 *     groupSize = Size of a tournament selection group. 
-		 *     generator = (Pseudo)random generator.
-		 *                 Is required to select random tournament group.
-		 */
-//		void kill(in ulong amount, in ulong groupSize)
-//		{
-//			for (ulong i = 0; i < amount; i++)
-//			{
-//				Genome genomeToDie = tournament!">"(groupSize);
-//				population.remove(genomeToDie);
-//			}
-//		}
-	}
+// CUDA modules
+import cuda.curand;
+
+// DNN modules
+import common;
+import neural.network;
+
+
+struct Population
+{
+	ulong size;
 	
-//	/**
-//	 * Best fitness of the population.
-//	 */
-//	@property double bestFitness() const pure nothrow
-//	{
-//		return population.values.map!"a.fitness".minElement;
-//	}
-//	
-//	/**
-//	 * Best fitness of the population.
-//	 */
-//	@property double worstFitness() const pure nothrow
-//	{
-//		return population.values.map!"a.fitness".maxElement;
-//	}
-//	
-//	/**
-//	 * Average fitness of the population.
-//	 */
-//	@property double avgFitness() const pure nothrow
-//	{
-//		return population.values.map!"a.fitness".sum / population.length;
-//	}
+	Network* population;
 	
-	/**
-	 * Load data.
-	 */
-	void loadData(in double[][] inputs, in double[][] outputs) pure nothrow @safe
-	in
+	this(in NetworkParams params, in ulong size, ref curandGenerator_t generator) nothrow @nogc
 	{
-		assert (inputs.length == outputs.length);
-	}
-	body
-	{
-		trainingData.reserve(inputs.length);
-//		foreach (ref data; trainingData)
-//		{
-//			data.input  = inputs [i].dup;
-//			data.output = outputs[i].dup;
-//		}
-	}
-	
-	/**
-	 * Create initial population with random genomes.
-	 *
-	 * Params:
-	 *     size = Desired genomes number.
-	 */
-	void populate(in ulong size)
-	{
+		scope(failure) freeMem();
+		
+		this.size = size;
+		
+		population = cast(Network*)malloc(size * Network.sizeof);
 		for (ulong i = 0; i < size; i++)
-		{
-			Genome individual = Genome.random(specimenParams);
-			population[individual] = Individual(individual, evaluate(individual));
-		}
+			population[i] = Network(params, generator);
 	}
 	
-	void selection()
+	unittest
 	{
-		Genome[] newGeneration = breed(breedSize, tournamentSize);
-		kill(breedSize, tournamentSize);
+		mixin(writetest!__ctor);
 		
-		foreach (individual; newGeneration)
-			population[individual] = Individual(individual, evaluate(individual));
+		NetworkParams params;
+		params.inputs  = 2;
+		params.layers  = 2;
+		params.neurons = 3;
+		params.outputs = 1;
+		
+		// Initialize cuRAND generator.
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
+		
+		scope(exit) curandDestroyGenerator(generator);
+		
+		Population p = Population(params, 10, generator); scope(exit) p.freeMem();
+		
+		assert (p.size == 10);
+		
+		// Check memory
+		assert (p.population[0].depth == params.layers);
+		assert (p.population[9].depth == params.layers);
+		assert (p.population[9].hiddenLayers[params.layers - 1].length == (params.neurons + 1) * params.neurons);
+	}
+	
+	void freeMem() nothrow @nogc
+	{
+		if (population !is null)
+		{
+			for (ulong i = 0; i < size; i++)
+				population[i].freeMem();
+			free(population);
+		}
 	}
 }
 
