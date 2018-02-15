@@ -20,15 +20,21 @@ import core.stdc.stdlib;
 
 // D modules
 import std.format;
-import std.conv   : to;
-import std.random : unpredictableSeed;
+import std.conv : to;
 
-debug import std.stdio;
+version (unittest)
+{
+	import std.stdio;
+	import std.random : unpredictableSeed;
+}
 
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.curand;
 import cuda.cublas;
+
+// DNN modules
+import common;
 
 
 /**
@@ -104,6 +110,20 @@ struct Layer
 		curandGenerate(generator, weights, length);
 	}
 	
+	unittest
+	{
+		mixin(writetest!__ctor);
+		
+		// Initialize cuRAND generator.
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
+		
+		scope(exit) curandDestroyGenerator(generator);
+		
+		Layer l = Layer(3, 2, generator); scope(exit) l.freeMem();
+	}
+	
 	/**
 	 * Free memory.
 	 */
@@ -128,20 +148,6 @@ struct Layer
 	{
 		return length * float.sizeof;
 	}
-	
-	unittest
-	{
-		writeln("Layer.this(uint weightsPerNeuron, uint neuronsNum) nothrow @nogc");
-		
-		// Initialize cuRAND generator.
-		curandGenerator_t generator;
-		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
-		
-		scope(exit) curandDestroyGenerator(generator);
-		
-		Layer l = Layer(3, 2, generator); scope(exit) l.freeMem();
-	}
 }
 
 /**
@@ -159,23 +165,6 @@ struct Network
 	Layer  outputLayer;  /// Ditto.
 	
 	uint depth; /// Number of hidden layers (input and output does not count).
-	
-	/**
-	 * Free memory.
-	 */
-	void freeMem() nothrow @nogc
-	{
-		inputLayer.freeMem();
-		outputLayer.freeMem();
-		
-		if (hiddenLayers !is null)
-		{
-			for (uint i = 0; i < depth; i++)
-				hiddenLayers[i].freeMem();
-		
-			free(hiddenLayers);
-		}
-	}
 	
 	this(in NetworkParams params, ref curandGenerator_t generator) nothrow @nogc
 	in
@@ -197,7 +186,7 @@ struct Network
 		
 	unittest
 	{
-		writeln("Network.this(in NetworkParams params, ref curandGenerator_t generator) nothrow @nogc");
+		mixin(writetest!__ctor);
 		
 		NetworkParams params;
 		params.inputs  = 2;
@@ -213,6 +202,23 @@ struct Network
 		scope(exit) curandDestroyGenerator(generator);
 		
 		Network n = Network(params, generator); scope(exit) n.freeMem();
+	}
+	
+	/**
+	 * Free memory.
+	 */
+	void freeMem() nothrow @nogc
+	{
+		inputLayer.freeMem();
+		outputLayer.freeMem();
+		
+		if (hiddenLayers !is null)
+		{
+			for (uint i = 0; i < depth; i++)
+				hiddenLayers[i].freeMem();
+		
+			free(hiddenLayers);
+		}
 	}
 	
 	void evaluate() const nothrow @nogc
