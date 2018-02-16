@@ -30,6 +30,13 @@ void cudaMalloc(T)(ref T* devPtr, ulong nitems) nothrow @nogc
 	devPtr = cast(T*)tmp;
 }
 
+void cudaMallocManaged(T)(ref T* devPtr, ulong nitems, uint flags = cudaMemAttachGlobal) nothrow @nogc
+{
+	void* tmp;
+	enforceCuda(cudart.cudaMallocManaged(&tmp, nitems * T.sizeof, flags));
+	devPtr = cast(T*)tmp;
+}
+
 void cudaFree(void* devPtr) nothrow @nogc
 {
 	enforceCuda(cudart.cudaFree(devPtr));

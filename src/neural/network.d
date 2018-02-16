@@ -42,10 +42,10 @@ import common;
  */
 struct NetworkParams
 {
-	uint inputs;  /// Number of network's inputs.
-	uint outputs; /// Number of network's outputs.
-	uint layers;  /// Number of hidden layers (excluding input and output layers).
-	uint neurons; /// Number of neurons in every hidden layer.
+	ushort inputs;  /// Number of network's inputs.
+	ushort outputs; /// Number of network's outputs.
+	ushort layers;  /// Number of hidden layers (excluding input and output layers).
+	ushort neurons; /// Number of neurons in every hidden layer.
 	
 	invariant
 	{
@@ -79,11 +79,11 @@ struct Data
 
 struct Layer
 {
-	static immutable biasLength = 1; /// Number of bias weights per neuron.
+	static immutable ushort biasLength = 1; /// Number of bias weights per neuron.
 	
-	float* weights; /// (Device) Array of neurons weights.
-	uint   inputs;  /// Number of weights per neuron.
-	uint   neurons; /// Number of neurons in the layer.
+	float*  weights;     /// Array of neurons weights.
+	ushort* connections; /// Number of weights per neuron.
+	ushort* neurons;     /// Number of neurons in the layer.
 	
 	/**
 	 * Random layer.
@@ -93,7 +93,7 @@ struct Layer
 	 *     neurons = Number of neurons in the layer.
 	 *     generator = Pseudorandom number generator.
 	 */
-	this(uint inputs, uint neurons, ref curandGenerator_t generator) nothrow @nogc
+	this(in ushort inputs, in ushort neurons, ref curandGenerator_t generator) nothrow @nogc
 	in
 	{
 		assert (inputs  >= 1);
@@ -103,10 +103,14 @@ struct Layer
 	{
 		scope(failure) freeMem();
 		
-		this.inputs  = inputs;
-		this.neurons = neurons;
+		cudaMallocManaged(this.connections, 1);
+		cudaMallocManaged(this.neurons,     1);
 		
-		cudaMalloc(weights, length);
+		*this.connections = cast(ushort)(inputs + biasLength); // WTF? Error: cannot implicitly convert expression (cast(int)inputs + 1) of type int to ushort
+		*this.neurons     = neurons;
+		
+		cudaMallocManaged(this.weights, length);
+		
 		curandGenerate(generator, weights, length);
 	}
 	
@@ -123,10 +127,14 @@ struct Layer
 		
 		Layer l = Layer(3, 2, generator); scope(exit) l.freeMem();
 		
-		assert (l.inputs  == 3);
-		assert (l.neurons == 2);
-		assert (l.length  == 8);
-		assert (l.size    == 32);
+		
+		assert (*l.connections == 3 + biasLength);
+		assert (*l.neurons     == 2);
+		assert ( l.length      == 8);
+		assert ( l.size        == 32);
+		
+		assert (l.weights[0           ] == l.weights[0           ]);
+		assert (l.weights[l.length - 1] == l.weights[l.length - 1]);
 	}
 	
 	/**
@@ -136,20 +144,80 @@ struct Layer
 	{
 		if (weights !is null)
 			cudaFree(weights);
+		if (connections !is null)
+			cudaFree(connections);
+		if (neurons !is null)
+			cudaFree(neurons);
+	}
+	
+	void opCall(in float* data, ref cublasHandle_t cublasHandle) const nothrow @nogc
+	{
+//		int N = cols * rows;
+//	
+//	float* x_h;
+//	float* y_h;
+//	float* z_h;
+//	
+//	float* x_d;
+//	float* y_d;
+//	float* z_d;
+//	
+//	dudaMalloc(x_d, N);
+//	dudaMalloc(y_d, N);
+//	dudaMalloc(z_d, N);
+//	x_h = cast(float*)malloc(N * float.sizeof);
+//	y_h = cast(float*)malloc(N * float.sizeof);
+//	z_h = cast(float*)malloc(N * float.sizeof);
+//	
+//	for (int i = 0; i < cols; i++)
+//	{
+//		for (int j = 0; j < rows; j++)
+//		{
+//			x_h[j + rows * i] = i + j;
+//			y_h[j + rows * i] = i + j;
+////			writeln("i = ", i, "; j = ", j, "; x_h[", j + rows * i, "] = ", x_h[j + rows * i]);
+//		}
+//	}
+//	
+//	cudaMemcpy(x_d, x_h, N * float.sizeof, cudaMemcpyKind.cudaMemcpyHostToDevice);
+//	cudaMemcpy(y_d, y_h, N * float.sizeof, cudaMemcpyKind.cudaMemcpyHostToDevice);
+//	
+//	gpu_blas_mmul(x_d, y_d, z_d, 3, 3, 3);
+//	
+//	cudaMemcpy(z_h, z_d, N * float.sizeof, cudaMemcpyKind.cudaMemcpyDeviceToHost);
+//	
+////	for (int i = 0; i < N; i++)
+////		writeln(z_h[i]);
+//	
+//	// Free memory
+//	scope(exit)
+//	{
+//		cudaFree(x_d);
+//		cudaFree(y_d);
+//		cudaFree(z_d);
+//		free(x_h);
+//		free(y_h);
+//		free(z_h);
+//	}
 	}
 	
 	/**
 	 * Number of elements in the weights array.
 	 */
-	@property ulong length() pure const nothrow @safe @nogc
+	@property ushort length() pure const nothrow @nogc
 	{
-		return (inputs + biasLength) * neurons;
+		return cast(ushort) (*connections * *neurons);
+	}
+	
+	@property ushort opDollar() pure const nothrow @nogc
+	{
+		return length;
 	}
 	
 	/**
 	 * Size of the weights array in bytes.
 	 */
-	@property ulong size() pure const nothrow @safe @nogc
+	@property ulong size() pure const nothrow @nogc
 	{
 		return length * float.sizeof;
 	}
@@ -171,7 +239,7 @@ struct Network
 	
 	uint depth; /// Number of hidden layers (input and output does not count).
 	
-	this(in NetworkParams params, ref curandGenerator_t generator) nothrow @nogc
+	this(in NetworkParams params, ref curandGenerator_t generator)// nothrow @nogc
 	in
 	{
 		assert (&params);

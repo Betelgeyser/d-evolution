@@ -21,6 +21,7 @@ import cuda.cudaruntimeapi.types;
 
 extern(C) package nothrow @nogc:
 	cudaError_t cudaMalloc(void** devPtr, size_t size);
+	cudaError_t cudaMallocManaged(void** devPtr, size_t size, uint flags = cudaMemAttachGlobal); 
 	cudaError_t cudaFree(void* devPtr);
 	cudaError_t cudaMemcpy(void* dst, const void* src, size_t count, cudaMemcpyKind kind);
 

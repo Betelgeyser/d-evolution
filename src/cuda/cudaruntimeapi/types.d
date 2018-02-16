@@ -115,6 +115,9 @@ enum cudaMemcpyKind
 alias cudaStream_t = CUstream_st*;
 private struct CUstream_st;
 
+immutable uint cudaMemAttachGlobal = 0x01;
+immutable uint cudaMemAttachHost   = 0x02;
+
 struct dim3
 {
     uint x = 1;

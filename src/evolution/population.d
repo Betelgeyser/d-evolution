@@ -39,7 +39,7 @@ struct Population
 	
 	Network* population;
 	
-	this(in NetworkParams params, in ulong size, ref curandGenerator_t generator) nothrow @nogc
+	this(in NetworkParams params, in ulong size, ref curandGenerator_t generator)// nothrow @nogc
 	{
 		scope(failure) freeMem();
 		
