@@ -35,6 +35,7 @@ import cuda.cublas;
 
 // DNN modules
 import common;
+import math;
 
 
 /**
@@ -68,22 +69,43 @@ struct NetworkParams
 	}
 }
 
-struct Data
-{
-	alias data this;
-	
-	float* data;         /// Pointer to the data array itself.
-	uint   vectorLength; /// Size of an input vector.
-	uint   dataLength;   /// Number of measurements.
-}
-
 struct Layer
 {
 	static immutable ushort biasLength = 1; /// Number of bias weights per neuron.
 	
-	float*  weights;     /// Array of neurons weights.
-	ushort* connections; /// Number of weights per neuron.
-	ushort* neurons;     /// Number of neurons in the layer.
+	private
+	{
+		Matrix _weights; /// Connections' weights of every neuron.
+	
+		/// Number of connections per neuron (including bias).
+		@property void connections(in ushort val) pure nothrow @safe @nogc
+		{
+			_weights.rows = val;
+		}
+		
+		/// Number of neurons in the layer.
+		@property void neurons(in ushort val) pure nothrow @safe @nogc
+		{
+			_weights.cols = val;
+		}
+	}
+	
+	@property float* weights() pure nothrow @safe @nogc
+	{
+		return _weights.values;
+	}
+	
+	/// Number of connections per neuron (including bias).
+	@property ushort connections() const pure nothrow @safe @nogc
+	{
+		return _weights.rows;
+	}
+	
+	/// Number of neurons in the layer.
+	@property ushort neurons() const pure nothrow @safe @nogc
+	{
+		return _weights.cols;
+	}
 	
 	/**
 	 * Random layer.
@@ -103,11 +125,8 @@ struct Layer
 	{
 		scope(failure) freeMem();
 		
-		cudaMallocManaged(this.connections, 1);
-		cudaMallocManaged(this.neurons,     1);
-		
-		*this.connections = cast(ushort)(inputs + biasLength); // WTF? Error: cannot implicitly convert expression (cast(int)inputs + 1) of type int to ushort
-		*this.neurons     = neurons;
+		this.connections = cast(ushort)(inputs + biasLength); // WTF? Error: cannot implicitly convert expression (cast(int)inputs + 1) of type int to ushort
+		this.neurons     = neurons;
 		
 		cudaMallocManaged(this.weights, length);
 		
@@ -128,10 +147,10 @@ struct Layer
 		Layer l = Layer(3, 2, generator); scope(exit) l.freeMem();
 		
 		
-		assert (*l.connections == 3 + biasLength);
-		assert (*l.neurons     == 2);
-		assert ( l.length      == 8);
-		assert ( l.size        == 32);
+		assert (l.connections == 3 + biasLength);
+		assert (l.neurons     == 2);
+		assert (l.length      == 8);
+		assert (l.size        == 32);
 		
 		assert (l.weights[0           ] == l.weights[0           ]);
 		assert (l.weights[l.length - 1] == l.weights[l.length - 1]);
@@ -144,61 +163,33 @@ struct Layer
 	{
 		if (weights !is null)
 			cudaFree(weights);
-		if (connections !is null)
-			cudaFree(connections);
-		if (neurons !is null)
-			cudaFree(neurons);
 	}
 	
-	void opCall(in float* data, ref cublasHandle_t cublasHandle) const nothrow @nogc
+	void opCall(in float* data, ref float* result) const nothrow @nogc
 	{
-//		int N = cols * rows;
-//	
-//	float* x_h;
-//	float* y_h;
-//	float* z_h;
-//	
-//	float* x_d;
-//	float* y_d;
-//	float* z_d;
-//	
-//	dudaMalloc(x_d, N);
-//	dudaMalloc(y_d, N);
-//	dudaMalloc(z_d, N);
-//	x_h = cast(float*)malloc(N * float.sizeof);
-//	y_h = cast(float*)malloc(N * float.sizeof);
-//	z_h = cast(float*)malloc(N * float.sizeof);
-//	
-//	for (int i = 0; i < cols; i++)
-//	{
-//		for (int j = 0; j < rows; j++)
-//		{
-//			x_h[j + rows * i] = i + j;
-//			y_h[j + rows * i] = i + j;
-////			writeln("i = ", i, "; j = ", j, "; x_h[", j + rows * i, "] = ", x_h[j + rows * i]);
-//		}
-//	}
-//	
-//	cudaMemcpy(x_d, x_h, N * float.sizeof, cudaMemcpyKind.cudaMemcpyHostToDevice);
-//	cudaMemcpy(y_d, y_h, N * float.sizeof, cudaMemcpyKind.cudaMemcpyHostToDevice);
-//	
-//	gpu_blas_mmul(x_d, y_d, z_d, 3, 3, 3);
-//	
-//	cudaMemcpy(z_h, z_d, N * float.sizeof, cudaMemcpyKind.cudaMemcpyDeviceToHost);
-//	
-////	for (int i = 0; i < N; i++)
-////		writeln(z_h[i]);
-//	
-//	// Free memory
-//	scope(exit)
-//	{
-//		cudaFree(x_d);
-//		cudaFree(y_d);
-//		cudaFree(z_d);
-//		free(x_h);
-//		free(y_h);
-//		free(z_h);
-//	}
+		cublasHandle_t handle;
+		cublasCreate(handle);
+		scope(exit) cublasDestroy(handle);
+		
+		opCall(data, result, handle);
+	}
+	
+	void opCall(in ref Layer inputs, ref cublasHandle_t cublasHandle) const nothrow @nogc
+	{
+//		assert (? == connections);
+		
+		immutable int alpha = 1;
+		immutable int beta  = 1;
+		
+		cublasSgemm(
+			cublasHandle,
+			cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
+			m, neurons, connections,
+			&alpha,
+			inputs.values, inputs,
+			weights, connections,
+			&beta,
+			C, m);
 	}
 	
 	/**
@@ -206,12 +197,7 @@ struct Layer
 	 */
 	@property ushort length() pure const nothrow @nogc
 	{
-		return cast(ushort) (*connections * *neurons);
-	}
-	
-	@property ushort opDollar() pure const nothrow @nogc
-	{
-		return length;
+		return cast(ushort) (connections * neurons);
 	}
 	
 	/**
@@ -230,7 +216,7 @@ struct Layer
  */
 struct Network
 {
-	static const(Data)* trainingData;
+//	static const(Data)* trainingData;
 	static cublasHandle_t cublasHandle;
 	
 	Layer  inputLayer;   /// Self explaining.
