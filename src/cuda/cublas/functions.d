@@ -28,6 +28,36 @@ void cublasCreate(ref cublasHandle_t handle) nothrow @nogc
 	enforceCublas(cublas.cublasCreate(&handle));
 }
 
+void cublasDestroy(cublasHandle_t handle) nothrow @nogc
+{
+	enforceCublas(cublas.cublasDestroy(handle));
+}
+
+void cublasSgemm(
+	cublasHandle_t handle,
+	cublasOperation_t transa, cublasOperation_t transb,
+	int m, int n, int k,
+	const(float)* alpha,
+	const(float)* A, int lda,
+	const(float)* B, int ldb,
+	const(float)* beta,
+	float* C, int ldc
+) nothrow @nogc
+{
+	enforceCublas(
+		cublas.cublasSgemm(
+			handle,
+			transa, transb,
+			m, n, k,
+			alpha,
+			A, lda,
+			B, ldb,
+			beta,
+			C, ldc
+		)
+	);
+}
+
 package void enforceCublas(cublasStatus_t error) pure nothrow @safe @nogc
 {
 	assert (error == cublasStatus_t.CUBLAS_STATUS_SUCCESS, error.toString);
