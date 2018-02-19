@@ -42,9 +42,14 @@ void cudaFree(void* devPtr) nothrow @nogc
 	enforceCuda(cudart.cudaFree(devPtr));
 }
 
-void cudaMemcpy(void* dst, const void* src, size_t count, cudaMemcpyKind kind) nothrow @nogc
+void cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind) nothrow @nogc
 {
 	enforceCuda(cudart.cudaMemcpy(dst, src, count, kind));
+}
+
+void cudaDeviceSynchronize()
+{
+	enforceCuda(cudart.cudaDeviceSynchronize());
 }
 
 /**
