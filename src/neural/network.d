@@ -38,6 +38,9 @@ import common;
 import math;
 
 
+extern(C++) void kernel_tanh(float* x, int n);// nothrow @nogc;
+
+
 /**
  * Random network generation parameters.
  */
@@ -156,7 +159,7 @@ struct Layer
 		cudaFree(weights);
 	}
 	
-	void opCall(in Matrix inputs, Matrix outputs) const nothrow @nogc
+	void opCall(in Matrix inputs, Matrix outputs)// const nothrow @nogc
 	{
 		cublasHandle_t handle;
 		cublasCreate(handle);
@@ -165,7 +168,7 @@ struct Layer
 		opCall(inputs, outputs, handle);
 	}
 	
-	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const nothrow @nogc
+	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle)// const nothrow @nogc
 	{
 		assert (inputs.cols == connections);
 		assert (inputs.rows == outputs.rows);
@@ -184,6 +187,10 @@ struct Layer
 			&beta,
 			outputs, inputs.rows
 		);
+		cudaDeviceSynchronize();
+		writeln("asd");
+		
+		kernel_tanh(outputs, outputs.rows * outputs.cols);
 	}
 	
 	unittest
