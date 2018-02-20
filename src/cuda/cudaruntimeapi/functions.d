@@ -52,6 +52,11 @@ void cudaDeviceSynchronize()
 	enforceCuda(cudart.cudaDeviceSynchronize());
 }
 
+void cudaLaunchKernel(const(void*) func, dim3 gridDim, dim3 blockDim, void** args, size_t sharedMem = 0, cudaStream_t stream = null)
+{
+	enforceCuda(cudart.cudaLaunchKernel(func, gridDim, blockDim, args));
+}
+
 /**
  * Utility wrapper to enforce error check for cuda functions.
  */
