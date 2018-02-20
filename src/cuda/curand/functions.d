@@ -34,7 +34,7 @@ void curandSetPseudoRandomGeneratorSeed(curandGenerator_t generator, ulong seed)
 	enforceCurand(curand.curandSetPseudoRandomGeneratorSeed(generator, seed));
 }
 
-void curandGenerate(curandGenerator_t generator, ref float* outputPtr, size_t num) nothrow @nogc
+void curandGenerate(curandGenerator_t generator, float* outputPtr, size_t num) nothrow @nogc
 {
 	enforceCurand(curand.curandGenerate(generator, outputPtr, num));
 }
