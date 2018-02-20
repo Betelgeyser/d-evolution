@@ -73,38 +73,30 @@ struct Layer
 {
 	static immutable ushort biasLength = 1; /// Number of bias weights per neuron.
 	
-	private
-	{
-		Matrix _weights; /// Connections' weights of every neuron.
+	Matrix weights; /// Connections' weights of every neuron.
 	
-		/// Number of connections per neuron (including bias).
-		@property void connections(in ushort val) pure nothrow @safe @nogc
-		{
-			_weights.rows = val;
-		}
-		
-		/// Number of neurons in the layer.
-		@property void neurons(in ushort val) pure nothrow @safe @nogc
-		{
-			_weights.cols = val;
-		}
+	/// Number of connections per neuron (including bias).
+	@property void connections(in ushort val) pure nothrow @safe @nogc
+	{
+		weights.rows = val;
 	}
 	
-	@property float* weights() pure nothrow @safe @nogc
+	/// Number of neurons in the layer.
+	@property void neurons(in ushort val) pure nothrow @safe @nogc
 	{
-		return _weights.values;
+		weights.cols = val;
 	}
 	
 	/// Number of connections per neuron (including bias).
 	@property ushort connections() const pure nothrow @safe @nogc
 	{
-		return _weights.rows;
+		return weights.rows;
 	}
 	
 	/// Number of neurons in the layer.
 	@property ushort neurons() const pure nothrow @safe @nogc
 	{
-		return _weights.cols;
+		return weights.cols;
 	}
 	
 	/**
@@ -115,7 +107,7 @@ struct Layer
 	 *     neurons = Number of neurons in the layer.
 	 *     generator = Pseudorandom number generator.
 	 */
-	this(in ushort inputs, in ushort neurons, ref curandGenerator_t generator) nothrow @nogc
+	this(in ushort inputs, in ushort neurons, curandGenerator_t generator) nothrow @nogc
 	in
 	{
 		assert (inputs  >= 1);
@@ -128,7 +120,7 @@ struct Layer
 		this.connections = cast(ushort)(inputs + biasLength); // WTF? Error: cannot implicitly convert expression (cast(int)inputs + 1) of type int to ushort
 		this.neurons     = neurons;
 		
-		cudaMallocManaged(this.weights, length);
+		cudaMallocManaged(weights, length);
 		
 		curandGenerate(generator, weights, length);
 	}
@@ -145,7 +137,7 @@ struct Layer
 		scope(exit) curandDestroyGenerator(generator);
 		
 		Layer l = Layer(3, 2, generator); scope(exit) l.freeMem();
-		
+		cudaDeviceSynchronize();
 		
 		assert (l.connections == 3 + biasLength);
 		assert (l.neurons     == 2);
@@ -161,35 +153,74 @@ struct Layer
 	 */
 	void freeMem() nothrow @nogc
 	{
-		if (weights !is null)
-			cudaFree(weights);
+		cudaFree(weights);
 	}
 	
-	void opCall(in float* data, ref float* result) const nothrow @nogc
+	void opCall(in Matrix inputs, Matrix outputs) const nothrow @nogc
 	{
 		cublasHandle_t handle;
 		cublasCreate(handle);
 		scope(exit) cublasDestroy(handle);
 		
-		opCall(data, result, handle);
+		opCall(inputs, outputs, handle);
 	}
 	
-	void opCall(in ref Layer inputs, ref cublasHandle_t cublasHandle) const nothrow @nogc
+	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const nothrow @nogc
 	{
-//		assert (? == connections);
+		assert (inputs.cols == connections);
+		assert (inputs.rows == outputs.rows);
+		assert (neurons == outputs.cols);
 		
-		immutable int alpha = 1;
-		immutable int beta  = 1;
+		immutable float alpha = 1;
+		immutable float beta  = 0;
 		
 		cublasSgemm(
 			cublasHandle,
 			cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
-			m, neurons, connections,
+			inputs.rows, neurons, connections,
 			&alpha,
-			inputs.values, inputs,
+			inputs, inputs.rows,
 			weights, connections,
 			&beta,
-			C, m);
+			outputs, inputs.rows
+		);
+	}
+	
+	unittest
+	{
+		mixin(writetest!opCall);
+		
+		// Initialize cuRAND generator.
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
+		
+		scope(exit) curandDestroyGenerator(generator);
+		
+		Layer l = Layer(2, 2, generator); scope(exit) l.freeMem();
+		cudaDeviceSynchronize();
+		
+		for (int i = 0; i < l.length; i++)
+			l.weights.values[i] = i;
+		
+		Matrix inputs;
+		inputs.rows = 4;
+		inputs.cols = 3;
+		cudaMallocManaged(inputs, inputs.rows * inputs.cols);
+		for (int i = 0; i < inputs.rows * inputs.cols; i++)
+			inputs[i] = i;
+		
+		Matrix outputs;
+		outputs.rows = 4;
+		outputs.cols = 2;
+		cudaMallocManaged(outputs, outputs.rows * outputs.cols);
+		
+		l(inputs, outputs);
+		cudaDeviceSynchronize();
+		
+		immutable float[] result = [20, 23, 26, 29, 56, 68, 80, 92];
+		for (int i = 0; i < outputs.rows * outputs.cols; i++)
+			assert (outputs[i] == result[i]);
 	}
 	
 	/**
@@ -225,7 +256,7 @@ struct Network
 	
 	uint depth; /// Number of hidden layers (input and output does not count).
 	
-	this(in NetworkParams params, ref curandGenerator_t generator)// nothrow @nogc
+	this(in NetworkParams params, curandGenerator_t generator) nothrow @nogc
 	in
 	{
 		assert (&params);
@@ -261,6 +292,7 @@ struct Network
 		scope(exit) curandDestroyGenerator(generator);
 		
 		Network n = Network(params, generator); scope(exit) n.freeMem();
+		cudaDeviceSynchronize();
 		
 		assert (n.depth == params.layers);
 		
