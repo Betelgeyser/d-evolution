@@ -25,5 +25,4 @@ extern(C) package nothrow @nogc:
 	cudaError_t cudaFree(void* devPtr);
 	cudaError_t cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind);
 	cudaError_t cudaDeviceSynchronize();
-	cudaError_t cudaLaunchKernel(const(void)* func, dim3 gridDim, dim3 blockDim, void** args, size_t sharedMem = 0, cudaStream_t stream = null);
 
