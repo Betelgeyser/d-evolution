@@ -37,9 +37,7 @@ import cuda.cublas;
 import common;
 import math;
 
-
-//extern(C++) void kernel_tanh(float* x);//, int n);// nothrow @nogc;
-
+extern(C++) void cuda_tanh(float* x, int n) nothrow @nogc;
 
 /**
  * Random network generation parameters.
@@ -156,10 +154,10 @@ struct Layer
 	 */
 	void freeMem() nothrow @nogc
 	{
-//		cudaFree(weights);
+		cudaFree(weights);
 	}
 	
-	void opCall(in Matrix inputs, Matrix outputs)// const nothrow @nogc
+	void opCall(in Matrix inputs, Matrix outputs) const nothrow @nogc
 	{
 		cublasHandle_t handle;
 		cublasCreate(handle);
@@ -168,7 +166,7 @@ struct Layer
 		opCall(inputs, outputs, handle);
 	}
 	
-	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle)// const nothrow @nogc
+	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const nothrow @nogc
 	{
 		assert (inputs.cols == connections);
 		assert (inputs.rows == outputs.rows);
@@ -187,29 +185,13 @@ struct Layer
 			&beta,
 			outputs, inputs.rows
 		);
-		cudaDeviceSynchronize();
 		
-//		int* size;
-//		cudaMallocManaged(size, 1);
-//		size[0] = outputs.rows * outputs.cols;
-//		void** args;
-//		cudaMallocManaged!(void*)(args, 1);
-//		args[0] = outputs.values;
-////		args[1] = size;
-//		cudaLaunchKernel(
-//			&kernel_tanh,
-//			dim3(1, 1, 1),
-//			dim3(1, 1, 1),
-//			args
-//		);
-//		cudaDeviceSynchronize();
-//		for (int i = 0; i < 8; i++)//size[0]; i++)
-//			writeln(outputs[i]);
-//		cudaDeviceSynchronize();
+		cuda_tanh(outputs, outputs.rows * outputs.cols);
 	}
 	
 	unittest
 	{
+		import std.math : approxEqual;
 		mixin(writetest!opCall);
 		
 		// Initialize cuRAND generator.
@@ -222,13 +204,21 @@ struct Layer
 		Layer l = Layer(2, 2, generator); scope(exit) l.freeMem();
 		cudaDeviceSynchronize();
 		
+		/* 0.00 0.08 0.16 *
+		 * 0.02 0.10 0.18 *
+		 * 0.04 0.12 0.20 *
+		 * 0.06 0.14 0.22 */
 		for (int i = 0; i < l.length; i++)
-			l.weights.values[i] = i;
+			l.weights.values[i] = i / 50f;
 		
 		Matrix inputs;
 		inputs.rows = 4;
 		inputs.cols = 3;
 		cudaMallocManaged(inputs, inputs.rows * inputs.cols);
+		
+		/* 0 3 *
+		 * 1 4 *
+		 * 2 5 */
 		for (int i = 0; i < inputs.rows * inputs.cols; i++)
 			inputs[i] = i;
 		
@@ -238,13 +228,16 @@ struct Layer
 		cudaMallocManaged(outputs, outputs.rows * outputs.cols);
 		
 		l(inputs, outputs);
-//		cudaDeviceSynchronize();
+		cudaDeviceSynchronize();
 		
-//		immutable float[] result = [20, 23, 26, 29, 56, 68, 80, 92];
-//		for (int i = 0; i < outputs.rows * outputs.cols; i++)
-////			assert (outputs[i] == result[i]);
-//			writeln(outputs[i]);
-//			writeln(__LINE__);
+		immutable float[] result = [0.379949, 0.430084, 0.477700, 0.522665, 0.807569, 0.876393, 0.921669, 0.950795];
+		for (int i = 0; i < outputs.rows * outputs.cols; i++)
+			assert (
+				approxEqual(
+					outputs[i], result[i],
+					0.0001
+				)
+			);
 	}
 	
 	/**
@@ -300,32 +293,32 @@ struct Network
 		
 	unittest
 	{
-//		mixin(writetest!__ctor);
-//		
-//		NetworkParams params;
-//		params.inputs  = 2;
-//		params.layers  = 2;
-//		params.neurons = 3;
-//		params.outputs = 1;
-//		
-//		// Initialize cuRAND generator.
-//		curandGenerator_t generator;
-//		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-//		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
-//		
-//		scope(exit) curandDestroyGenerator(generator);
-//		
-//		Network n = Network(params, generator); scope(exit) n.freeMem();
-//		cudaDeviceSynchronize();
-//		
-//		assert (n.depth == params.layers);
-//		
-//		assert (n.inputLayer.length  == (params.inputs  + 1) * params.neurons);
-//		assert (n.outputLayer.length == (params.neurons + 1) * params.outputs);
-//		
-//		// Check memory
-//		assert (n.hiddenLayers[0].length == (params.neurons + 1) * params.neurons);
-//		assert (n.hiddenLayers[params.layers - 1].length == (params.neurons + 1) * params.neurons);
+		mixin(writetest!__ctor);
+		
+		NetworkParams params;
+		params.inputs  = 2;
+		params.layers  = 2;
+		params.neurons = 3;
+		params.outputs = 1;
+		
+		// Initialize cuRAND generator.
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
+		
+		scope(exit) curandDestroyGenerator(generator);
+		
+		Network n = Network(params, generator); scope(exit) n.freeMem();
+		cudaDeviceSynchronize();
+		
+		assert (n.depth == params.layers);
+		
+		assert (n.inputLayer.length  == (params.inputs  + 1) * params.neurons);
+		assert (n.outputLayer.length == (params.neurons + 1) * params.outputs);
+		
+		// Check memory
+		assert (n.hiddenLayers[0].length == (params.neurons + 1) * params.neurons);
+		assert (n.hiddenLayers[params.layers - 1].length == (params.neurons + 1) * params.neurons);
 	}
 	
 	/**
