@@ -20,7 +20,6 @@ import core.stdc.stdlib;
 
 // D modules
 import std.format;
-import std.conv : to;
 
 version (unittest)
 {
@@ -130,9 +129,9 @@ struct Layer
 		this.connections = cast(ushort)(inputs + biasLength); // WTF? Error: cannot implicitly convert expression (cast(int)inputs + 1) of type int to ushort
 		this.neurons     = neurons;
 		
-		cudaMallocManaged(weights.values, length);
+		cudaMallocManaged(weights, weights.length);
 		
-		curandGenerate(generator, weights.values, length);
+		curandGenerate(generator, weights, weights.length);
 	}
 	
 	///
@@ -150,13 +149,11 @@ struct Layer
 		Layer l = Layer(3, 2, generator); scope(exit) l.freeMem();
 		cudaDeviceSynchronize();
 		
-		assert (l.connections == 3 + biasLength);
-		assert (l.neurons     == 2);
-		assert (l.length      == 8);
-		assert (l.size        == 32);
+		assert (l.connections    == 3 + biasLength);
+		assert (l.neurons        == 2);
 		
-		assert (l.weights[0           ] == l.weights[0           ]);
-		assert (l.weights[l.length - 1] == l.weights[l.length - 1]);
+		assert (l.weights[0] == l.weights[0]);
+		assert (l.weights[l.weights.length - 1] == l.weights[l.weights.length - 1]);
 	}
 	
 	/**
@@ -236,8 +233,8 @@ struct Layer
 		 * 0.02 0.10 0.18 *
 		 * 0.04 0.12 0.20 *
 		 * 0.06 0.14 0.22 */
-		for (int i = 0; i < l.length; i++)
-			l.weights.values[i] = i / 50f;
+		for (int i = 0; i < l.weights.length; i++)
+			l.weights[i] = i / 50f;
 		
 		Matrix inputs;
 		inputs.rows = 4;
@@ -266,22 +263,6 @@ struct Layer
 					0.0001
 				)
 			);
-	}
-	
-	/**
-	 * Number of elements in the weights array.
-	 */
-	@property ushort length() pure const nothrow @nogc
-	{
-		return cast(ushort) (connections * neurons);
-	}
-	
-	/**
-	 * Size of the weights array in bytes.
-	 */
-	@property ulong size() pure const nothrow @nogc
-	{
-		return length * float.sizeof;
 	}
 }
 
@@ -341,12 +322,17 @@ struct Network
 		
 		assert (n.depth == params.layers);
 		
-		assert (n.inputLayer.length  == (params.inputs  + 1) * params.neurons);
-		assert (n.outputLayer.length == (params.neurons + 1) * params.outputs);
+		assert (n.inputLayer.connections  == params.inputs + 1);
+		assert (n.inputLayer.neurons      == params.neurons);
 		
-		// Check memory
-		assert (n.hiddenLayers[0].length == (params.neurons + 1) * params.neurons);
-		assert (n.hiddenLayers[params.layers - 1].length == (params.neurons + 1) * params.neurons);
+		assert (n.outputLayer.connections == params.neurons + 1);
+		assert (n.outputLayer.neurons     == params.outputs);
+		
+		for (int i = 0; i < n.depth; i++)
+		{
+			assert (n.hiddenLayers[i].connections == params.neurons + 1);
+			assert (n.hiddenLayers[i].neurons     == params.neurons);
+		}
 	}
 	
 	/**

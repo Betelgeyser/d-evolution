@@ -15,13 +15,24 @@
  */
 module math;
 
+/**
+ * Convenient struct to handle cuBLAS matricies.
+ */
 struct Matrix
 {
 	alias values this;
 	
-	float* values;
-	ushort rows;
-	ushort cols;
+	float* values; /// Self explaining.
+	ushort rows;   /// ditto
+	ushort cols;   /// ditto
+	
+	/**
+	 * Number of elements.
+	 */
+	@property uint length() const pure nothrow @safe @nogc
+	{
+		return rows * cols;
+	}
 }
 
 //import std.algorithm : sum, map;
