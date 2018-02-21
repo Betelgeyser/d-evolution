@@ -70,38 +70,47 @@ struct NetworkParams
 	}
 }
 
+/**
+ * Feedforward layer.
+ *
+ * Each neuron of this layer is connected to each neuron of the previous layer.
+ */
 struct Layer
 {
 	static immutable ushort biasLength = 1; /// Number of bias weights per neuron.
 	
-	Matrix weights; /// Connections' weights of every neuron.
+	Matrix weights; /// Connection weights.
 	
-	/// Number of connections per neuron (including bias).
+	/**
+	 * Number of connections per neuron (including bias).
+	 */
 	@property void connections(in ushort val) pure nothrow @safe @nogc
 	{
 		weights.rows = val;
 	}
 	
-	/// Number of neurons in the layer.
-	@property void neurons(in ushort val) pure nothrow @safe @nogc
-	{
-		weights.cols = val;
-	}
-	
-	/// Number of connections per neuron (including bias).
+	/// ditto
 	@property ushort connections() const pure nothrow @safe @nogc
 	{
 		return weights.rows;
 	}
 	
-	/// Number of neurons in the layer.
+	/**
+	 * Number of neurons in the layer.
+	 */
+	@property void neurons(in ushort val) pure nothrow @safe @nogc
+	{
+		weights.cols = val;
+	}
+	
+	/// ditto
 	@property ushort neurons() const pure nothrow @safe @nogc
 	{
 		return weights.cols;
 	}
 	
 	/**
-	 * Random layer.
+	 * Constructor for random layer.
 	 *
 	 * Params:
 	 *     inputs = Number of weights per neuron.
@@ -126,6 +135,7 @@ struct Layer
 		curandGenerate(generator, weights.values, length);
 	}
 	
+	///
 	unittest
 	{
 		mixin(writetest!__ctor);
@@ -151,12 +161,28 @@ struct Layer
 	
 	/**
 	 * Free memory.
+	 *
+	 * For the reason how D works with structs memory freeing moved from destructor to
+	 * the the distinct function. Either allocating structs on stack or in heap or both
+	 * causes spontaneous destructors calls. Apparently structs are not intended
+	 * to be used with dynamic memory, probably it should be implemented as a class.  
 	 */
 	void freeMem() nothrow @nogc
 	{
 		cudaFree(weights);
 	}
 	
+	/**
+	 * Evaluate the layer.
+	 *
+	 * Evaluates a result of feeding inpit matrix to the layer.
+	 * Currently uses tanh() as activation function.
+	 *
+	 * Params:
+	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
+	 *     outputs = Output matrix of size m x n, where n is the number of neurons.
+	 *     cublasHandle = Cublas handle.
+	 */
 	void opCall(in Matrix inputs, Matrix outputs) const nothrow @nogc
 	{
 		cublasHandle_t handle;
@@ -166,6 +192,7 @@ struct Layer
 		opCall(inputs, outputs, handle);
 	}
 	
+	/// ditto
 	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const nothrow @nogc
 	{
 		assert (inputs.cols == connections);
@@ -189,6 +216,7 @@ struct Layer
 		cuda_tanh(outputs, outputs.rows * outputs.cols);
 	}
 	
+	///
 	unittest
 	{
 		import std.math : approxEqual;
@@ -268,8 +296,8 @@ struct Network
 	static cublasHandle_t cublasHandle;
 	
 	Layer  inputLayer;   /// Self explaining.
-	Layer* hiddenLayers; /// Ditto.
-	Layer  outputLayer;  /// Ditto.
+	Layer* hiddenLayers; /// ditto
+	Layer  outputLayer;  /// ditto
 	
 	uint depth; /// Number of hidden layers (input and output does not count).
 	
@@ -337,44 +365,13 @@ struct Network
 		}
 	}
 	
-	void evaluate() const nothrow @nogc
+	void opCall(in Matrix inputs, Matrix outputs)
 	{
-//		//		int lda=m,ldb=k,ldc=m;
-//		assert (trainingData.vectorLength == inputLayer.weightsPerNeuron);
-//		
-//		const float alpha = 1;
-//		const float beta  = 0;
-//		
-//		float* layerResult;
-//		layerResult = 
-//		
-//		cublasSgemm(
-//			cublasHandle,
-//			cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
-//			trainingData.dataLength, trainingData.vectorLength, inputLayer.neuronsNum,
-//			&alpha,
-//			trainingData, trainingData.dataLength,
-//			inputLayer, inputLayer.weightsPerNeuron,
-//			&beta,
-//			C, ldc);
-	//	
-//	// Destroy the handle
-//	cublasDestroy(handle);
-//		cublasSgemm(handle,
-//		cublasOperation_t transa,
-//		cublasOperation_t transb,
-//		int m,
-//		int n,
-//		int k,
-//		const float *alpha,
-//		const float *A,
-//		int lda,
-//		const float *B,
-//		int ldb,
-//		const float *beta,
-//		float *C,
-//		int ldc
-//	);
+		cublasHandle_t handle;
+		cublasCreate(handle);
+		scope(exit) cublasDestroy(handle);
+		
+		opCall(inputs, outputs, handle);
 	}
 	
 	/**
@@ -383,43 +380,13 @@ struct Network
 	 * Params:
 	 *     input = Input values to work on.
 	 */
-	void opCall(immutable float* input)
+	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle)
 	{
-//		int lda=m,ldb=k,ldc=m;
-//	const float alf = 1;
-//	const float bet = 0;
-//	const float *alpha = &alf;
-//	const float *beta = &bet;
-//	
-//	// Create a handle for CUBLAS
-//	cublasHandle_t handle;
-//	cublasCreate(&handle);
-//	
-//	// Do the actual multiplication
-//	cublasSgemm(handle, cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_T, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
-//	
-//	// Destroy the handle
-//	cublasDestroy(handle);
-//		cublasSgemm(handle,
-//		cublasOperation_t transa,
-//		cublasOperation_t transb,
-//		int m,
-//		int n,
-//		int k,
-//		const float *alpha,
-//		const float *A,
-//		int lda,
-//		const float *B,
-//		int ldb,
-//		const float *beta,
-//		float *C,
-//		int ldc
-//	);
-	}
-//		inputLayer(input);
+//		Matrix tmpMatrix;
+//		inputLayer(input, outputLayer, cublasHandle);
 //		
-//		foreach (i, ref h; hiddenLayers)
-//			if (i == 0)
+//		for (int i = 0; i < depth; i++)
+//			hiddenLayers[i](//			if (i == 0)
 //				h(inputLayer);
 //			else
 //				h(hiddenLayers[i - 1]);
@@ -467,6 +434,6 @@ struct Network
 //		foreach(i, h; hiddenLayers)
 //			result ~= h.toString("\t", i);
 //		return result;
-//	}
+	}
 }
 
