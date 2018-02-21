@@ -47,7 +47,7 @@ void cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind) 
 	enforceCuda(cudart.cudaMemcpy(dst, src, count, kind));
 }
 
-void cudaDeviceSynchronize()
+void cudaDeviceSynchronize() nothrow @nogc
 {
 	enforceCuda(cudart.cudaDeviceSynchronize());
 }
