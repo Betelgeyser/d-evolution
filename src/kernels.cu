@@ -16,9 +16,15 @@
 
 // CUDA Kernel function to add the elements of two arrays on the GPU
 __global__
-void kernel_tanh(float *x)//, int n)
+void kernel_tanh(float *x, int n)
 {
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < n; i++)
 		x[i] = tanhf(x[i]);
+}
+
+__host__
+void cuda_tanh(float *x, int n)
+{
+	kernel_tanh<<<1, 1>>>(x, n);
 }
 

@@ -38,7 +38,7 @@ import common;
 import math;
 
 
-extern(C++) void kernel_tanh(float* x);//, int n);// nothrow @nogc;
+//extern(C++) void kernel_tanh(float* x);//, int n);// nothrow @nogc;
 
 
 /**
@@ -192,19 +192,19 @@ struct Layer
 //		int* size;
 //		cudaMallocManaged(size, 1);
 //		size[0] = outputs.rows * outputs.cols;
-		void** args;
-		cudaMallocManaged!(void*)(args, 1);
-		args[0] = outputs.values;
-//		args[1] = size;
-		cudaLaunchKernel(
-			&kernel_tanh,
-			dim3(1, 1, 1),
-			dim3(1, 1, 1),
-			args
-		);
-		cudaDeviceSynchronize();
-		for (int i = 0; i < 8; i++)//size[0]; i++)
-			writeln(outputs[i]);
+//		void** args;
+//		cudaMallocManaged!(void*)(args, 1);
+//		args[0] = outputs.values;
+////		args[1] = size;
+//		cudaLaunchKernel(
+//			&kernel_tanh,
+//			dim3(1, 1, 1),
+//			dim3(1, 1, 1),
+//			args
+//		);
+//		cudaDeviceSynchronize();
+//		for (int i = 0; i < 8; i++)//size[0]; i++)
+//			writeln(outputs[i]);
 //		cudaDeviceSynchronize();
 	}
 	
