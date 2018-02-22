@@ -36,7 +36,6 @@ import cuda.cublas;
 import common;
 import math;
 
-extern(C++) void cuda_tanh(float* x, int n) nothrow @nogc;
 
 /**
  * Random network generation parameters.
@@ -126,12 +125,7 @@ struct Layer
 	{
 		scope(failure) freeMem();
 		
-		this.connections = cast(ushort)(inputs + biasLength); // WTF? Error: cannot implicitly convert expression (cast(int)inputs + 1) of type int to ushort
-		this.neurons     = neurons;
-		
-		cudaMallocManaged(weights, weights.length);
-		
-		curandGenerate(generator, weights, weights.length);
+		weights = Matrix(cast(ushort)(inputs + biasLength), neurons, generator); // inputs + biasLength is of type int
 	}
 	
 	///
@@ -166,7 +160,7 @@ struct Layer
 	 */
 	void freeMem() nothrow @nogc
 	{
-		cudaFree(weights);
+		weights.freeMem();
 	}
 	
 	/**
@@ -267,9 +261,7 @@ struct Layer
 }
 
 /**
- * Simple feedforward network.
- *
- * Currently supports only two layers, excluding output layer.
+ * Simple feedforward neural network.
  */
 struct Network
 {
@@ -280,8 +272,16 @@ struct Network
 	Layer* hiddenLayers; /// ditto
 	Layer  outputLayer;  /// ditto
 	
-	uint depth; /// Number of hidden layers (input and output does not count).
+	ushort depth;   /// Number of hidden layers (input and output does not count).
+	ushort neurons; /// Number of neurons per layer (except the outputLayer).
 	
+	/**
+	 * Constructor for random neural network.
+	 *
+	 * Params:
+	 *     params = Network parameters.
+	 *     generator = Pseudorandom number generator.
+	 */
 	this(in NetworkParams params, curandGenerator_t generator) nothrow @nogc
 	in
 	{
@@ -299,7 +299,8 @@ struct Network
 		for (uint i = 0; i < depth; i++)
 			hiddenLayers[i] = Layer(params.neurons, params.neurons, generator);
 	}
-		
+	
+	///
 	unittest
 	{
 		mixin(writetest!__ctor);
@@ -337,6 +338,11 @@ struct Network
 	
 	/**
 	 * Free memory.
+	 *
+	 * For the reason how D works with structs memory freeing moved from destructor to
+	 * the the distinct function. Either allocating structs on stack or in heap or both
+	 * causes spontaneous destructors calls. Apparently structs are not intended
+	 * to be used with dynamic memory, probably it should be implemented as a class.
 	 */
 	void freeMem() nothrow @nogc
 	{
@@ -351,37 +357,48 @@ struct Network
 		}
 	}
 	
-	void opCall(in Matrix inputs, Matrix outputs)
-	{
-		cublasHandle_t handle;
-		cublasCreate(handle);
-		scope(exit) cublasDestroy(handle);
-		
-		opCall(inputs, outputs, handle);
-	}
-	
-	/**
-	 *
-	 *
-	 * Params:
-	 *     input = Input values to work on.
-	 */
-	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle)
-	{
-//		Matrix tmpMatrix;
-//		inputLayer(input, outputLayer, cublasHandle);
+//	/**
+//	 * Evaluate the layer.
+//	 *
+//	 * Evaluates a result of feeding inpit matrix to the network.
+//	 *
+//	 * Params:
+//	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
+//	 *     outputs = Output matrix of size m x n, where n is the number of output neurons.
+//	 *     cublasHandle = Cublas handle.
+//	 */
+//	void opCall(in Matrix inputs, Matrix outputs)
+//	{
+//		cublasHandle_t handle;
+//		cublasCreate(handle);
+//		scope(exit) cublasDestroy(handle);
+//		
+//		opCall(inputs, outputs, handle);
+//	}
+//	
+//	/// ditto
+//	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle)
+//	{
+//		Matrix prev = Matrix(inputs.cols, neurons);
+//		Matrix next = Matrix(inputs.cols, neurons);
+//		
+//		inputLayer(inputs, prev, cublasHandle);
 //		
 //		for (int i = 0; i < depth; i++)
-//			hiddenLayers[i](//			if (i == 0)
-//				h(inputLayer);
-//			else
-//				h(hiddenLayers[i - 1]);
+//		{
+//			hiddenLayers[i](prev, next, cublasHandle);
+//			prev.freeMem();
+//			prev = next;
+//			next = Matrix(inputs.cols, neurons);
+//		}
 //		
-//		return hiddenLayers[$ - 1]();
+//		outputLayer(prev, outputs, cublasHandle);
 //	}
 	
-//	unittest
-//	{
+	///
+	unittest
+	{
+//		mixin(writetest!opCall);
 //		import std.stdio : writeln;
 //		writeln("Network");
 //		Genome g;
@@ -400,26 +417,6 @@ struct Network
 //		assert (n.outputLayer.length == 1);
 //		
 //		n([0, 0]);
-//	}
-//	
-//	/**
-//	 * Return hidden layers number.
-//	 */
-//	@property size_t length() const pure nothrow @safe @nogc
-//	{
-//		return hiddenLayers.length;
-//	}
-//	
-//	/**
-//	 * Human-readable string representation.
-//	 */
-//	@property string toString() const @safe
-//	{
-//		string result = "Network:\n";
-//		result ~= inputLayer.toString("\t");
-//		foreach(i, h; hiddenLayers)
-//			result ~= h.toString("\t", i);
-//		return result;
 	}
 }
 

@@ -15,8 +15,17 @@
  */
 module math;
 
+// CUDA modules
+import cuda.cudaruntimeapi;
+import cuda.curand;
+
+// DNN modules
+import common;
+
 /**
  * Convenient struct to handle cuBLAS matricies.
+ *
+ * Row-major order.
  */
 struct Matrix
 {
@@ -33,20 +42,84 @@ struct Matrix
 	{
 		return rows * cols;
 	}
+	
+	invariant
+	{
+		assert (rows >= 1);
+		assert (cols >= 1);
+	}
+	
+	/**
+	 * Creates matrix and allocates memory in GPU device.
+	 *
+	 * Default values are not initialized. If a cuRAND generator is passed,
+	 * values are randomly generated on GPU.
+	 *
+	 * Params:
+	 *     rows = Number of rows.
+	 *     cols = Number of columns.
+	 *     generator = Pseudorandom number generator.
+	 */
+	this(in ushort rows, in ushort cols) nothrow @nogc
+	{
+		scope(failure) freeMem();
+		
+		this.rows = rows;
+		this.cols = cols;
+		
+		cudaMallocManaged(values, length);
+	}
+	
+	/// ditto
+	this(in ushort rows, in ushort cols, curandGenerator_t generator) nothrow @nogc
+	{
+		scope(failure) freeMem();
+		
+		this(rows, cols);
+		curandGenerate(generator, values, length);
+	}
+	
+	///
+	unittest
+	{
+		mixin(writetest!__ctor);
+		
+		// Initialize cuRAND generator.
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
+		
+		scope(exit) curandDestroyGenerator(generator);
+		
+		auto m = Matrix(3, 2, generator); scope(exit) m.freeMem();
+		cudaDeviceSynchronize();
+		
+		assert (m.rows == 3);
+		assert (m.cols == 2);
+		
+		// Check memory accessebility
+		assert (m.values[0] == m.values[0]);
+		assert (m.values[m.length - 1] == m.values[m.length - 1]);
+	}
+	
+	/**
+	 * Free memory.
+	 *
+	 * For the reason how D works with structs memory freeing moved from destructor to
+	 * the the distinct function. Either allocating structs on stack or in heap or both
+	 * causes spontaneous destructors calls. Apparently structs are not intended
+	 * to be used with dynamic memory, probably it should be implemented as a class.  
+	 */
+	void freeMem() nothrow @nogc
+	{
+		cudaFree(values);
+	}
 }
 
-//import std.algorithm : sum, map;
-//import std.math      : pow, abs, sqrt, exp;
-//
-///**
-// * Sigmoid function.
-// */
-//double sigmoid(double x) pure nothrow @safe @nogc
-//{
-//	return 1 / (1 + exp(-x));
-//}
-//
-///**
+extern (C++) nothrow @nogc:
+	void cuda_tanh(float* x, int n) nothrow @nogc;
+
+//**
 // * Vector magnitude in the Euclidean vector space.
 // *
 // * Params:
@@ -132,7 +205,7 @@ struct Matrix
 //		));
 //}
 //
-///**
+//**
 // * Relative error.
 // *
 // * Params:
@@ -173,7 +246,7 @@ struct Matrix
 //		));
 //}
 //
-///**
+//**
 // * Mean absolute relative error.
 // *
 // * Params:
@@ -225,30 +298,30 @@ struct Matrix
 //		));
 //}
 //
-/////**
-//// * Standard error of a given sample.
-//// *
-//// * Params:
-//// *     sample = Data sample.
-//// */
-////double standardError(double[] sample)
-////{
-////	return pow(sample.map!(x => pow(x - mean(sample), 2)).sum / sample.length, 0.5);
-////}
-////	
-////unittest
-////{
-////	import std.math : approxEqual;
-////	
-////	assert (approxEqual(
-////			standardError([1_000_000_000, 1_000_000_001, 999_999_999]),
-////			0.8165
-////		));
-////	
-////	assert (approxEqual(
-////			standardError([0.000_000_000_1, 0.000_000_000_11, 0.000_000_000_09]),
-////			0.000_000_000_008_165,
-////			0.000_000_000_000_001
-////		));
-////}
+//**
+// * Standard error of a given sample.
+// *
+// * Params:
+// *     sample = Data sample.
+// */
+//double standardError(double[] sample)
+//{
+//	return pow(sample.map!(x => pow(x - mean(sample), 2)).sum / sample.length, 0.5);
+//}
+//	
+//unittest
+//{
+//	import std.math : approxEqual;
+//	
+//	assert (approxEqual(
+//			standardError([1_000_000_000, 1_000_000_001, 999_999_999]),
+//			0.8165
+//		));
+//	
+//	assert (approxEqual(
+//			standardError([0.000_000_000_1, 0.000_000_000_11, 0.000_000_000_09]),
+//			0.000_000_000_008_165,
+//			0.000_000_000_000_001
+//		));
+//}
 //
