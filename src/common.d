@@ -17,9 +17,11 @@ module common;
 
 version (unittest)
 {
+	public import std.stdio  : write, writeln;
+	
 	template writetest(alias T)
 	{
-		import std.traits;
+		import std.traits : fullyQualifiedName;
 		enum writetest = "write(\"\x1b[1m" ~ fullyQualifiedName!T ~ "...\x1b[0m\");
 			scope(failure) writeln(\"\x1b[1;31m failure!\x1b[0m\");
 			scope(success) writeln(\"\x1b[1;32m success =)\x1b[0m\");";
