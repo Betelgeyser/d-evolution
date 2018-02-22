@@ -50,7 +50,7 @@ struct Matrix
 	}
 	
 	/**
-	 * Creates matrix and allocates memory in GPU device.
+	 * Creates matrix and allocates memory on GPU device.
 	 *
 	 * Default values are not initialized. If a cuRAND generator is passed,
 	 * values are randomly generated on GPU.
