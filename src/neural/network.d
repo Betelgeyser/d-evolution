@@ -107,6 +107,12 @@ struct Layer
 		return weights.cols;
 	}
 	
+	invariant
+	{
+		assert (&weights);
+		assert (weights.rows >= 1 + biasLength); // connections()
+	}
+	
 	/**
 	 * Constructor for random layer.
 	 *
@@ -116,16 +122,14 @@ struct Layer
 	 *     generator = Pseudorandom number generator.
 	 */
 	this(in ushort inputs, in ushort neurons, curandGenerator_t generator) nothrow @nogc
-	in
-	{
-		assert (inputs  >= 1);
-		assert (neurons >= 1);
-	}
-	body
 	{
 		scope(failure) freeMem();
 		
-		weights = Matrix(cast(ushort)(inputs + biasLength), neurons, generator); // inputs + biasLength is of type int
+		weights = Matrix(
+			cast(ushort)(inputs + biasLength), // inputs + biasLength is of type int
+			neurons,
+			generator
+		);
 	}
 	
 	///
@@ -140,14 +144,11 @@ struct Layer
 		
 		scope(exit) curandDestroyGenerator(generator);
 		
-		Layer l = Layer(3, 2, generator); scope(exit) l.freeMem();
+		auto l = Layer(3, 2, generator); scope(exit) l.freeMem();
 		cudaDeviceSynchronize();
 		
-		assert (l.connections    == 3 + biasLength);
-		assert (l.neurons        == 2);
-		
-		assert (l.weights[0] == l.weights[0]);
-		assert (l.weights[l.weights.length - 1] == l.weights[l.weights.length - 1]);
+		assert (l.connections == 3 + biasLength);
+		assert (l.neurons     == 2);
 	}
 	
 	/**
