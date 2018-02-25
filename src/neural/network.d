@@ -21,12 +21,6 @@ import core.stdc.stdlib;
 // D modules
 import std.format;
 
-version (unittest)
-{
-	import std.stdio;
-	import std.random : unpredictableSeed;
-}
-
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.curand;
@@ -140,7 +134,7 @@ struct Layer
 		// Initialize cuRAND generator.
 		curandGenerator_t generator;
 		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
 		
 		scope(exit) curandDestroyGenerator(generator);
 		
@@ -217,7 +211,7 @@ struct Layer
 		// Initialize cuRAND generator.
 		curandGenerator_t generator;
 		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
 		
 		scope(exit) curandDestroyGenerator(generator);
 		
@@ -315,7 +309,7 @@ struct Network
 		// Initialize cuRAND generator.
 		curandGenerator_t generator;
 		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
 		
 		scope(exit) curandDestroyGenerator(generator);
 		
