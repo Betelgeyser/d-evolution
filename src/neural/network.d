@@ -162,7 +162,12 @@ struct Layer
 	 * Evaluate the layer.
 	 *
 	 * Evaluates a result of feeding inpit matrix to the layer.
+	 *
 	 * Currently uses tanh() as activation function.
+	 *
+	 * Although sizes of matricies are checked before multiplication, output matrix is allowed to have more columns than
+	 * there is neurons in the layer. This restriction is omited to make possible to pass output matricies with additional
+	 * column to multiply bias on.
 	 *
 	 * Params:
 	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
@@ -183,7 +188,7 @@ struct Layer
 	{
 		assert (inputs.cols == connections);
 		assert (inputs.rows == outputs.rows);
-		assert (neurons == outputs.cols);
+		assert (neurons     <= outputs.cols);
 		
 		immutable float alpha = 1;
 		immutable float beta  = 0;
@@ -244,6 +249,10 @@ struct Layer
 		l(inputs, outputs);
 		cudaDeviceSynchronize();
 		
+		/* 0.379949 0.807569 *
+		 * 0.430084 0.876393 *
+		 * 0.477700 0.921669 *
+		 * 0.522665 0.950795 */
 		immutable float[] result = [0.379949, 0.430084, 0.477700, 0.522665, 0.807569, 0.876393, 0.921669, 0.950795];
 		for (int i = 0; i < outputs.rows * outputs.cols; i++)
 			assert (
