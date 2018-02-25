@@ -45,8 +45,8 @@ struct Matrix
 	
 	invariant
 	{
-		assert (rows >= 1);
-		assert (cols >= 1);
+		assert (rows >= 1, "Matrix must containg at least 1 row.");
+		assert (cols >= 1, "Matrix must containg at least 1 column.");
 	}
 	
 	/**
