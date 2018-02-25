@@ -298,7 +298,8 @@ struct Network
 		inputLayer  = Layer(params.inputs,  params.neurons, generator);
 		outputLayer = Layer(params.neurons, params.outputs, generator);
 		
-		depth = params.layers;
+		depth   = params.layers;
+		neurons = params.neurons;
 		hiddenLayers = cast(Layer*)malloc(depth * Layer.sizeof);
 		for (uint i = 0; i < depth; i++)
 			hiddenLayers[i] = Layer(params.neurons, params.neurons, generator);
@@ -325,7 +326,8 @@ struct Network
 		Network n = Network(params, generator); scope(exit) n.freeMem();
 		cudaDeviceSynchronize();
 		
-		assert (n.depth == params.layers);
+		assert (n.depth   == params.layers);
+		assert (n.neurons == params.neurons);
 		
 		assert (n.inputLayer.connections  == params.inputs + 1);
 		assert (n.inputLayer.neurons      == params.neurons);
