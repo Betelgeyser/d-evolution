@@ -8,5 +8,6 @@ data/*
 trace.log
 trace.def
 profilegc.log
+*.so
 log
 dnn
