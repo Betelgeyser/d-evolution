@@ -117,7 +117,8 @@ struct Matrix
 }
 
 extern (C++) nothrow @nogc:
-	void cuda_tanh(float* x, int n) nothrow @nogc;
+	void cuda_tanh(float* x, size_t n) nothrow @nogc;
+	void cuda_fill(float* x, float val, size_t n) nothrow @nogc;
 
 //**
 // * Vector magnitude in the Euclidean vector space.

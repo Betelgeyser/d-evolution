@@ -14,17 +14,31 @@
  * limitations under the License.
  */
 
-// CUDA Kernel function to add the elements of two arrays on the GPU
+// CUDA Kernel function to compute tanh of each element of an array.
 __global__
-void kernel_tanh(float *x, int n)
+void kernel_tanh(float *x, size_t n)
 {
 	for (int i = 0; i < n; i++)
 		x[i] = tanhf(x[i]);
 }
 
 __host__
-void cuda_tanh(float *x, int n)
+void cuda_tanh(float *x, size_t n)
 {
 	kernel_tanh<<<1, 1>>>(x, n);
+}
+
+// CUDA Kernel function to fill array with values.
+__global__
+void kernel_fill(float *x, float val, size_t count)
+{
+	for (int i = 0; i < count; i++)
+		x[i] = val;
+}
+
+__host__
+void cuda_fill(float *x, float val, size_t count)
+{
+	kernel_fill<<<1, 1>>>(x, val, count);
 }
 
