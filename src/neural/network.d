@@ -167,24 +167,25 @@ struct Layer
 	 *
 	 * Although sizes of matricies are checked before multiplication, output matrix is allowed to have more columns than
 	 * there is neurons in the layer. This restriction is omited to make possible to pass output matricies with additional
-	 * column to multiply bias on.
+	 * column to multiply bias of the netx layer on.
 	 *
 	 * Params:
 	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
 	 *     outputs = Output matrix of size m x n, where n is the number of neurons.
 	 *     cublasHandle = Cublas handle.
+	 *     activate = If set to true activation function will be applied to the result.
 	 */
-	void opCall(in Matrix inputs, Matrix outputs) const nothrow @nogc
+	void opCall(in Matrix inputs, Matrix outputs, in bool activate = true) const nothrow @nogc
 	{
 		cublasHandle_t handle;
 		cublasCreate(handle);
 		scope(exit) cublasDestroy(handle);
 		
-		opCall(inputs, outputs, handle);
+		opCall(inputs, outputs, handle, activate);
 	}
 	
 	/// ditto
-	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const nothrow @nogc
+	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle, in bool activate = true) const nothrow @nogc
 	{
 		assert (inputs.cols == connections);
 		assert (inputs.rows == outputs.rows);
@@ -204,7 +205,8 @@ struct Layer
 			outputs, inputs.rows
 		);
 		
-		cuda_tanh(outputs, outputs.rows * outputs.cols);
+		if (activate)
+			cuda_tanh(outputs, outputs.rows * outputs.cols);
 	}
 	
 	///
@@ -223,10 +225,11 @@ struct Layer
 		Layer l = Layer(2, 2, generator); scope(exit) l.freeMem();
 		cudaDeviceSynchronize();
 		
-		/* 0.00 0.08 0.16 *
-		 * 0.02 0.10 0.18 *
-		 * 0.04 0.12 0.20 *
-		 * 0.06 0.14 0.22 */
+		/*   Neurons
+		 *   V    V
+		 * 0.00 0.06 * <- weights
+		 * 0.02 0.08 * <- weights
+		 * 0.04 0.10 * <- biases */
 		for (int i = 0; i < l.weights.length; i++)
 			l.weights[i] = i / 50f;
 		
@@ -235,10 +238,11 @@ struct Layer
 		inputs.cols = 3;
 		cudaMallocManaged(inputs, inputs.rows * inputs.cols);
 		
-		/* 0 3 *
-		 * 1 4 *
-		 * 2 5 */
-		for (int i = 0; i < inputs.rows * inputs.cols; i++)
+		/* 0 4  8 *
+		 * 1 5  9 *
+		 * 2 6 10 *
+		 * 3 7 11 */
+		for (int i = 0; i < inputs.length; i++)
 			inputs[i] = i;
 		
 		Matrix outputs;
@@ -246,6 +250,24 @@ struct Layer
 		outputs.cols = 2;
 		cudaMallocManaged(outputs, outputs.rows * outputs.cols);
 		
+		// No activation
+		l(inputs, outputs, false);
+		cudaDeviceSynchronize();
+		
+		/* 0.40 1.12 *
+		 * 0.46 1.36 *
+		 * 0.52 1.60 *
+		 * 0.58 1.84 */
+		immutable float[] resultNoact = [0.40, 0.46, 0.52, 0.58, 1.12, 1.36, 1.60, 1.84];
+		for (int i = 0; i < outputs.length; i++)
+			assert (
+				approxEqual(
+					outputs[i], resultNoact[i],
+					0.000001
+				)
+			);
+		
+		// With activation
 		l(inputs, outputs);
 		cudaDeviceSynchronize();
 		
@@ -253,12 +275,12 @@ struct Layer
 		 * 0.430084 0.876393 *
 		 * 0.477700 0.921669 *
 		 * 0.522665 0.950795 */
-		immutable float[] result = [0.379949, 0.430084, 0.477700, 0.522665, 0.807569, 0.876393, 0.921669, 0.950795];
+		immutable float[] resultAct = [0.379949, 0.430084, 0.477700, 0.522665, 0.807569, 0.876393, 0.921669, 0.950795];
 		for (int i = 0; i < outputs.rows * outputs.cols; i++)
 			assert (
 				approxEqual(
-					outputs[i], result[i],
-					0.0001
+					outputs[i], resultAct[i],
+					0.000001
 				)
 			);
 	}
