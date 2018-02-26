@@ -26,36 +26,36 @@ static import cudart = cuda.cudaruntimeapi.exp;
 void cudaMalloc(T)(ref T* devPtr, ulong nitems) nothrow @nogc
 {
 	void* tmp;
-	enforceCuda(cudart.cudaMalloc(&tmp, nitems * T.sizeof));
+	enforceCudart(cudart.cudaMalloc(&tmp, nitems * T.sizeof));
 	devPtr = cast(T*)tmp;
 }
 
 void cudaMallocManaged(T)(ref T* devPtr, ulong nitems, uint flags = cudaMemAttachGlobal) nothrow @nogc
 {
 	void* tmp;
-	enforceCuda(cudart.cudaMallocManaged(&tmp, nitems * T.sizeof, flags));
+	enforceCudart(cudart.cudaMallocManaged(&tmp, nitems * T.sizeof, flags));
 	devPtr = cast(T*)tmp;
 }
 
 void cudaFree(void* devPtr) nothrow @nogc
 {
-	enforceCuda(cudart.cudaFree(devPtr));
+	enforceCudart(cudart.cudaFree(devPtr));
 }
 
 void cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind) nothrow @nogc
 {
-	enforceCuda(cudart.cudaMemcpy(dst, src, count, kind));
+	enforceCudart(cudart.cudaMemcpy(dst, src, count, kind));
 }
 
 void cudaDeviceSynchronize() nothrow @nogc
 {
-	enforceCuda(cudart.cudaDeviceSynchronize());
+	enforceCudart(cudart.cudaDeviceSynchronize());
 }
 
 /**
  * Utility wrapper to enforce error check for cuda functions.
  */
-package void enforceCuda(cudaError_t error) pure nothrow @safe @nogc
+package void enforceCudart(cudaError_t error) pure nothrow @safe @nogc
 {
 	assert (error == cudaError_t.cudaSuccess, error.toString);
 }
