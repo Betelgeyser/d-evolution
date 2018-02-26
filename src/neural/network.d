@@ -316,7 +316,7 @@ struct Network
 	body
 	{
 		scope(failure) freeMem();
-				
+		
 		inputLayer  = Layer(params.inputs,  params.neurons, generator);
 		outputLayer = Layer(params.neurons, params.outputs, generator);
 		
@@ -385,66 +385,102 @@ struct Network
 		}
 	}
 	
-//	/**
-//	 * Evaluate the layer.
-//	 *
-//	 * Evaluates a result of feeding inpit matrix to the network.
-//	 *
-//	 * Params:
-//	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
-//	 *     outputs = Output matrix of size m x n, where n is the number of output neurons.
-//	 *     cublasHandle = Cublas handle.
-//	 */
-//	void opCall(in Matrix inputs, Matrix outputs)
-//	{
-//		cublasHandle_t handle;
-//		cublasCreate(handle);
-//		scope(exit) cublasDestroy(handle);
-//		
-//		opCall(inputs, outputs, handle);
-//	}
-//	
-//	/// ditto
-//	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle)
-//	{
-//		Matrix prev = Matrix(inputs.cols, neurons);
-//		Matrix next = Matrix(inputs.cols, neurons);
-//		
-//		inputLayer(inputs, prev, cublasHandle);
-//		
-//		for (int i = 0; i < depth; i++)
-//		{
-//			hiddenLayers[i](prev, next, cublasHandle);
-//			prev.freeMem();
-//			prev = next;
-//			next = Matrix(inputs.cols, neurons);
-//		}
-//		
-//		outputLayer(prev, outputs, cublasHandle);
-//	}
+	/**
+	 * Evaluate the layer.
+	 *
+	 * Evaluates a result of feeding inpit matrix to the network.
+	 *
+	 * Params:
+	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
+	 *     outputs = Output matrix of size m x n, where n is the number of output neurons.
+	 *     cublasHandle = Cublas handle.
+	 */
+	void opCall(in Matrix inputs, Matrix outputs)
+	{
+		cublasHandle_t handle;
+		cublasCreate(handle);
+		scope(exit) cublasDestroy(handle);
+		
+		opCall(inputs, outputs, handle);
+	}
+	
+	/// ditto
+	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle)
+	{
+		auto prev = Matrix(inputs.cols, neurons + 1);
+		auto next = Matrix(inputs.cols, neurons + 1);
+		
+		cuda_fill(prev + inputs.cols * neurons, 1, neurons + 1); // Extend matrix with 1's for biases
+		inputLayer(inputs, prev, cublasHandle);
+		
+		for (int i = 0; i < depth; i++)
+		{
+			cuda_fill(prev + inputs.cols * neurons, 1, neurons + 1); // Reset last column to 1's
+			hiddenLayers[i](prev, next, cublasHandle);
+			
+			auto tmp = prev;
+			prev = next;
+			next = prev;
+		}
+		
+		cuda_fill(prev + inputs.cols * neurons, 1, neurons + 1); // Reset last column to 1's
+		outputLayer(prev, outputs, cublasHandle, false);
+	}
 	
 	///
 	unittest
 	{
-//		mixin(writetest!opCall);
-//		import std.stdio : writeln;
-//		writeln("Network");
-//		Genome g;
-//		
-//		g.input = 2;
-//		
-//		g.hidden = [
-//			[ [1, 2, 3   ], [3, 2, 1   ], [1, 0, 1] ],
-//			[ [1, 1, 1, 1], [2, 2, 2, 2]            ],
-//			[ [2, 1, 2   ]                          ]
-//		];
-//		
-//		Network n = Network(g);
-//		assert (n.length             == 3);
-//		assert (n.inputLayer.length  == 2);
-//		assert (n.outputLayer.length == 1);
-//		
-//		n([0, 0]);
+		import std.math : approxEqual;
+		mixin(writetest!opCall);
+		
+		// Initialize cuRAND generator.
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
+		
+		scope(exit) curandDestroyGenerator(generator);
+		
+		NetworkParams params;
+		params.inputs  = 1;
+		params.outputs = 1;
+		params.neurons = 1;
+		params.layers  = 1;
+		
+		/* 0 1 *
+		 * 1 1 */
+		auto inputs = Matrix(2, 2);
+		cudaDeviceSynchronize();
+		inputs.values[0] = 0;
+		inputs.values[1] = 1;
+		inputs.values[2] = 1;
+		inputs.values[3] = 1;
+		
+		auto outputs = Matrix(2, 1);
+		
+		/* This is how test network works for 1st input value: *
+		 *                                                     *
+		 * 0 - 0.00 - (in) - 2.00 - (hn) - -0.50 - (on) ---- o *
+		 *           /             /              /         /  *
+		 *   1 - 1.00     1 - -2.00       1 - 0.75  0.971843   */
+		auto network = Network(params, generator);
+		cudaDeviceSynchronize();
+		network.inputLayer.weights[0]   =  0.00;
+		network.inputLayer.weights[1]   =  1.00; // bias
+		network.hiddenLayers.weights[0] =  2.00;
+		network.hiddenLayers.weights[1] = -2.00; // bias
+		network.outputLayer.weights[0]  = -0.50;
+		network.outputLayer.weights[1]  =  0.75; // bias
+		
+		network(inputs, outputs);
+		
+		float[] result = [0.971843, 0.971843];
+		for(int i = 0; i < outputs.length; i++)
+			assert (
+				approxEqual(
+					outputs[i], result[i],
+					0.000001
+				)
+			);
 	}
 }
 
