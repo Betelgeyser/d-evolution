@@ -6,6 +6,7 @@
 	"license" : "Apache-2.0",
 	"lflags": ["--library-path=."],
 	"libs": ["cudart", "cublas", "curand", "kernels"],
+	"excludedSourceFiles": ["src/cuda/cudadriverapi/*"],
 	"dflags": ["-vgc", "-color", "-mcpu=native"],
 	"preBuildCommands": ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -Xcompiler -fPIC -shared -o libkernels.so"]
 }

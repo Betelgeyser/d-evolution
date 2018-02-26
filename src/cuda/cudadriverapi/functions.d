@@ -24,7 +24,7 @@ import cuda.common;
 import cuda.cudadriverapi.types;
 static import cudadriver = cuda.cudadriverapi.exp;
 
-void cuMemsetD32(T)(T* dstDevice, uint ui, size_t N) nothrow @nogc
+void cuMemsetD32(CUdeviceptr dstDevice, uint ui, size_t N) nothrow @nogc
 {
 	enforceCuda(cudadriver.cuMemsetD32(dstDevice, ui, N));
 }
