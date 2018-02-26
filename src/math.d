@@ -32,8 +32,8 @@ struct Matrix
 	alias values this;
 	
 	float* values; /// Self explaining.
-	ushort rows;   /// ditto
-	ushort cols;   /// ditto
+	uint   rows;   /// ditto
+	uint   cols;   /// ditto
 	
 	/**
 	 * Number of elements.
@@ -60,7 +60,7 @@ struct Matrix
 	 *     cols = Number of columns.
 	 *     generator = Pseudorandom number generator.
 	 */
-	this(in ushort rows, in ushort cols) nothrow @nogc
+	this(in uint rows, in uint cols) nothrow @nogc
 	{
 		scope(failure) freeMem();
 		
@@ -71,7 +71,7 @@ struct Matrix
 	}
 	
 	/// ditto
-	this(in ushort rows, in ushort cols, curandGenerator_t generator) nothrow @nogc
+	this(in uint rows, in uint cols, curandGenerator_t generator) nothrow @nogc
 	{
 		scope(failure) freeMem();
 		

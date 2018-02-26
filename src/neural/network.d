@@ -36,10 +36,10 @@ import math;
  */
 struct NetworkParams
 {
-	ushort inputs;  /// Number of network's inputs.
-	ushort outputs; /// Number of network's outputs.
-	ushort layers;  /// Number of hidden layers (excluding input and output layers).
-	ushort neurons; /// Number of neurons in every hidden layer.
+	uint inputs;  /// Number of network's inputs.
+	uint outputs; /// Number of network's outputs.
+	uint layers;  /// Number of hidden layers (excluding input and output layers).
+	uint neurons; /// Number of neurons in every hidden layer.
 	
 	invariant
 	{
@@ -69,20 +69,20 @@ struct NetworkParams
  */
 struct Layer
 {
-	static immutable ushort biasLength = 1; /// Number of bias weights per neuron.
+	static immutable uint biasLength = 1; /// Number of bias weights per neuron.
 	
 	Matrix weights; /// Connection weights.
 	
 	/**
 	 * Number of connections per neuron (including bias).
 	 */
-	@property void connections(in ushort val) pure nothrow @safe @nogc
+	@property void connections(in uint val) pure nothrow @safe @nogc
 	{
 		weights.rows = val;
 	}
 	
 	/// ditto
-	@property ushort connections() const pure nothrow @safe @nogc
+	@property uint connections() const pure nothrow @safe @nogc
 	{
 		return weights.rows;
 	}
@@ -90,13 +90,13 @@ struct Layer
 	/**
 	 * Number of neurons in the layer.
 	 */
-	@property void neurons(in ushort val) pure nothrow @safe @nogc
+	@property void neurons(in uint val) pure nothrow @safe @nogc
 	{
 		weights.cols = val;
 	}
 	
 	/// ditto
-	@property ushort neurons() const pure nothrow @safe @nogc
+	@property uint neurons() const pure nothrow @safe @nogc
 	{
 		return weights.cols;
 	}
@@ -115,12 +115,12 @@ struct Layer
 	 *     neurons = Number of neurons in the layer.
 	 *     generator = Pseudorandom number generator.
 	 */
-	this(in ushort inputs, in ushort neurons, curandGenerator_t generator) nothrow @nogc
+	this(in uint inputs, in uint neurons, curandGenerator_t generator) nothrow @nogc
 	{
 		scope(failure) freeMem();
 		
 		weights = Matrix(
-			cast(ushort)(inputs + biasLength), // inputs + biasLength is of type int
+			inputs + biasLength,
 			neurons,
 			generator
 		);
@@ -276,8 +276,8 @@ struct Network
 	Layer* hiddenLayers; /// ditto
 	Layer  outputLayer;  /// ditto
 	
-	ushort depth;   /// Number of hidden layers (input and output does not count).
-	ushort neurons; /// Number of neurons per layer (except the outputLayer).
+	uint depth;   /// Number of hidden layers (input and output does not count).
+	uint neurons; /// Number of neurons per layer (except the outputLayer).
 	
 	/**
 	 * Constructor for random neural network.
