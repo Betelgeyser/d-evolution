@@ -377,7 +377,7 @@ struct Network
 		inputLayer.freeMem();
 		outputLayer.freeMem();
 		
-		if (hiddenLayers !is null)
+		if (depth > 0)
 		{
 			for (uint i = 0; i < depth; i++)
 				hiddenLayers[i].freeMem();
@@ -395,7 +395,7 @@ struct Network
 	 *     outputs = Output matrix of size m x n, where n is the number of output neurons.
 	 *     cublasHandle = Cublas handle.
 	 */
-	void opCall(in Matrix inputs, Matrix outputs)
+	void opCall(in Matrix inputs, Matrix outputs) const nothrow @nogc
 	{
 		cublasHandle_t handle;
 		cublasCreate(handle);
@@ -405,7 +405,7 @@ struct Network
 	}
 	
 	/// ditto
-	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle)
+	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const nothrow @nogc
 	{
 		auto prev = Matrix(inputs.cols, neurons + 1);
 		auto next = Matrix(inputs.cols, neurons + 1);
