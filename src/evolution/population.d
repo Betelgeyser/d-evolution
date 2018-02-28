@@ -26,6 +26,7 @@ version (unittest)
 }
 
 // CUDA modules
+import cuda.cudaruntimeapi;
 import cuda.curand;
 
 // DNN modules
@@ -39,7 +40,7 @@ struct Population
 	
 	Network* population;
 	
-	this(in NetworkParams params, in ulong size, ref curandGenerator_t generator)// nothrow @nogc
+	this(in NetworkParams params, in ulong size, curandGenerator_t generator) nothrow @nogc
 	{
 		scope(failure) freeMem();
 		
@@ -72,14 +73,17 @@ struct Population
 		assert (p.size == 10);
 		
 		// Check memory
-		assert (p.population[0].depth == params.layers);
-		assert (p.population[9].depth == params.layers);
-		assert (p.population[9].hiddenLayers[params.layers - 1].length == (params.neurons + 1) * params.neurons);
+		assert (p.population[0].depth          == params.layers);
+		assert (p.population[p.size - 1].depth == params.layers);
+		assert (
+			p.population[p.size - 1].hiddenLayers[params.layers - 1].weights.length
+			== (params.neurons + 1) * params.neurons
+		);
 	}
 	
 	void freeMem() nothrow @nogc
 	{
-		if (population !is null)
+		if (size > 0)
 		{
 			for (ulong i = 0; i < size; i++)
 				population[i].freeMem();
