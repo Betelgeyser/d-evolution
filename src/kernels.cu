@@ -42,3 +42,31 @@ void cuda_fill(float *x, float val, size_t count)
 	kernel_fill<<<1, 1>>>(x, val, count);
 }
 
+// CUDA Kernel subtraction.
+__global__
+void kernel_sub(float *x, const float *y, size_t n)
+{
+	for (int i = 0; i < n; i++)
+		x[i] = x[i] - y[i];
+}
+
+__host__
+void cuda_sub(float *x, const float *y, size_t n)
+{
+	kernel_sub<<<1, 1>>>(x, y, n);
+}
+
+// CUDA Kernel L2 norm.
+__global__
+void kernel_L2(const float *x, float *y, int dim, size_t count)
+{
+	for (int i = 0; i < count; i++)
+		y[i] = normf(dim, x + dim * i);
+}
+
+__host__
+void cuda_L2(const float *x, float *y, int dim, size_t count)
+{
+	kernel_L2<<<1, 1>>>(x, y, dim, count);
+}
+

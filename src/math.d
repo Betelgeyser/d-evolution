@@ -116,9 +116,102 @@ struct Matrix
 	}
 }
 
-extern (C++) nothrow @nogc:
+// TODO: extended matrix. Has additional column filled with 1's which is not affected by activation function.
+//struct ExtendedMatrix
+//{
+//	Matrix mt;
+//	alias mt this;
+//	
+//	this()
+//}
+
+extern (C++):
 	void cuda_tanh(float* x, size_t n) nothrow @nogc;
+	unittest
+	{
+		import std.math : approxEqual;
+		mixin(writetest!cuda_tanh);
+		
+		float* data;
+		cudaMallocManaged(data, 5);
+		data[0] = -1_000;
+		data[1] =     -1;
+		data[2] =      0;
+		data[3] =      1;
+		data[4] =  1_000;
+		
+		cuda_tanh(data, 5);
+		cudaDeviceSynchronize();
+		
+		immutable float[] result = [-1.000000, -0.761594, 0.0,  0.761594, 1.000000];
+		for (int i = 0; i < 5; i++)
+			assert ( approxEqual(data[i], result[i], 0.000001) );
+	}
+	
 	void cuda_fill(float* x, float val, size_t n) nothrow @nogc;
+	unittest
+	{
+		import std.math : approxEqual;
+		mixin(writetest!cuda_fill);
+		
+		float* data;
+		cudaMallocManaged(data, 5);
+		
+		cuda_fill(data,     1, 5);
+		cuda_fill(data + 1, 2, 3);
+		cudaDeviceSynchronize();
+		
+		immutable float[] result = [1, 2, 2, 2, 1];
+		for (int i = 0; i < 5; i++)
+			assert ( approxEqual(data[i], result[i], 0.000001) );
+	}
+	
+	void cuda_sub(float* x, const(float)* y, size_t n) nothrow @nogc;
+	unittest
+	{
+		import std.math : approxEqual;
+		mixin(writetest!cuda_sub);
+		
+		float* data;
+		float* sub;
+		cudaMallocManaged(data, 2);
+		cudaMallocManaged(sub,  2);
+		
+		data[0] =  10;
+		data[1] = -10;
+		
+		sub[0] = -5;
+		sub[1] =  5;
+		
+		cuda_sub(data, sub, 2);
+		cudaDeviceSynchronize();
+		
+		immutable float[] result = [15, -15];
+		for (int i = 0; i < 2; i++)
+			assert ( approxEqual(data[i], result[i], 0.000001) );
+	}
+	
+	void cuda_L2(const(float)* x, float* y, int dim, size_t count) nothrow @nogc;
+	unittest
+	{
+		import std.math : approxEqual;
+		mixin(writetest!cuda_L2);
+		
+		float* data;
+		float* norm;
+		cudaMallocManaged(data, 8);
+		cudaMallocManaged(norm, 2);
+		
+		for (int i = 0; i < 8; i++)
+			data[i] = i;
+		
+		cuda_L2(data, norm, 4, 2);
+		cudaDeviceSynchronize();
+		
+		immutable float[] result = [3.741657, 11.224972];
+		for (int i = 0; i < 2; i++)
+			assert ( approxEqual(norm[i], result[i], 0.000001) );
+	}
 
 //**
 // * Vector magnitude in the Euclidean vector space.
