@@ -250,24 +250,6 @@ struct Layer
 		outputs.cols = 2;
 		cudaMallocManaged(outputs, outputs.rows * outputs.cols);
 		
-		// No activation
-		l(inputs, outputs, false);
-		cudaDeviceSynchronize();
-		
-		/* 0.40 1.12 *
-		 * 0.46 1.36 *
-		 * 0.52 1.60 *
-		 * 0.58 1.84 */
-		immutable float[] resultNoact = [0.40, 0.46, 0.52, 0.58, 1.12, 1.36, 1.60, 1.84];
-		for (int i = 0; i < outputs.length; i++)
-			assert (
-				approxEqual(
-					outputs[i], resultNoact[i],
-					0.000001
-				)
-			);
-		
-		// With activation
 		l(inputs, outputs);
 		cudaDeviceSynchronize();
 		
@@ -275,11 +257,11 @@ struct Layer
 		 * 0.430084 0.876393 *
 		 * 0.477700 0.921669 *
 		 * 0.522665 0.950795 */
-		immutable float[] resultAct = [0.379949, 0.430084, 0.477700, 0.522665, 0.807569, 0.876393, 0.921669, 0.950795];
+		immutable float[] result = [0.379949, 0.430084, 0.477700, 0.522665, 0.807569, 0.876393, 0.921669, 0.950795];
 		for (int i = 0; i < outputs.rows * outputs.cols; i++)
 			assert (
 				approxEqual(
-					outputs[i], resultAct[i],
+					outputs[i], result[i],
 					0.000001
 				)
 			);
