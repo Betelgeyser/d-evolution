@@ -20,7 +20,7 @@ private struct curandGenerator;
 
 enum curandStatus_t
 {
-	CURAND_STATUS_SUCCESS                   = 0,
+	CURAND_STATUS_SUCCESS                   =   0,
 	CURAND_STATUS_VERSION_MISMATCH          = 100,
 	CURAND_STATUS_NOT_INITIALIZED           = 101,
 	CURAND_STATUS_ALLOCATION_FAILED         = 102,
@@ -37,7 +37,7 @@ enum curandStatus_t
 
 enum curandRngType_t
 {
-	CURAND_RNG_TEST                    = 0,
+	CURAND_RNG_TEST                    =   0,
 	CURAND_RNG_PSEUDO_DEFAULT          = 100,
 	CURAND_RNG_PSEUDO_XORWOW           = 101,
 	CURAND_RNG_PSEUDO_MRG32K3A         = 121,

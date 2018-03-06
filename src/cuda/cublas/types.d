@@ -16,6 +16,14 @@
 module cuda.cublas.types;
 
 /**
+ * The cublasHandle_t type is a pointer type to an opaque structure holding the cuBLAS library context
+ *
+ * Read more at: http://docs.nvidia.com/cuda/cublas/index.html#ixzz53yDMI41e
+ */
+alias cublasHandle_t = cublasContext*;
+private struct cublasContext;
+
+/**
  * cuBLAS statucs.
  */
 enum cublasStatus_t
@@ -43,12 +51,4 @@ enum cublasOperation_t
 	CUBLAS_OP_T = 1, /// The transpose operation
 	CUBLAS_OP_C = 2  /// The conjugate transpose operation
 }
-
-/**
- * The cublasHandle_t type is a pointer type to an opaque structure holding the cuBLAS library context
- *
- * Read more at: http://docs.nvidia.com/cuda/cublas/index.html#ixzz53yDMI41e
- */
-alias cublasHandle_t = cublasContext*;
-private struct cublasContext;
 

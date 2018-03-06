@@ -17,6 +17,26 @@
  */
 module cuda.cudaruntimeapi.types;
 
+immutable uint cudaMemAttachGlobal = 0x01;
+immutable uint cudaMemAttachHost   = 0x02;
+
+alias cudaStream_t = CUstream_st*;
+private struct CUstream_st;
+
+struct dim3
+{
+    uint x = 1;
+    uint y = 1;
+    uint z = 1;
+    
+    this(uint x, uint y, uint z)
+    {
+    	this.x = x;
+    	this.y = y;
+    	this.z = z;
+    }
+}
+
 enum cudaError_t
 {
 	cudaSuccess                          =     0,
@@ -112,23 +132,4 @@ enum cudaMemcpyKind
     cudaMemcpyDefault        = 4
 }
 
-alias cudaStream_t = CUstream_st*;
-private struct CUstream_st;
-
-immutable uint cudaMemAttachGlobal = 0x01;
-immutable uint cudaMemAttachHost   = 0x02;
-
-struct dim3
-{
-    uint x = 1;
-    uint y = 1;
-    uint z = 1;
-    
-    this(uint x, uint y, uint z)
-    {
-    	this.x = x;
-    	this.y = y;
-    	this.z = z;
-    }
-}
 
