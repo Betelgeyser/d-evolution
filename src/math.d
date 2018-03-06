@@ -116,6 +116,123 @@ struct Matrix
 	}
 }
 
+//float MASE(in Matrix measured, in Matrix approximated)
+//{
+//	assert (measured.cols == approximated.cols);
+//	assert (measured.rows == approximated.rows);
+//	assert (measured.rows >  1);
+//	
+////	auto naive = Matrix(measured.rows - 1, measured.cols);
+////	cudaMemcpy(naive.values, measured.values + 1, measured.rows - 1, cudaMemcpyKind.cudaMemcpyHostToHost);
+////	cuda_sub(naive.values, measured.values + 1, measured.rows - 1);
+////	
+////	auto naive_L2 = Matrix(naive.rows, 1);
+////	cuda_L2(naive.values, naive_L2.values, naive.cols, naive.rows);
+////	
+////	auto error = Matrix(measured.rows, measured.cols);
+////	cudaMemcpy(error.values, measured.values, measured.rows, cudaMemcpyKind.cudaMemcpyHostToHost);
+////	cuda_sub(naive.values, naive_L2.values, naive.rows);
+////	
+////	auto error_L2 = cuda_L2(naive.values, naive_L2.values, naive.cols, naive.rows);
+////	cuda_L2(naive.values, naive_L2.values, naive.cols, naive.rows);
+////	
+////	
+//	return 1;
+//}
+//
+//float AE(in Matrix measured, in Matrix approximated, Matrix error)
+//{
+//	for (int i = 0; i < error.length; i++)
+//		result[i] = measured[i];
+//	
+//	cuda_sub(error.values, measured.values, error.length);
+//	
+//	auto error_L2 = Matrix(error.rows, 1);
+//	cuda_L2(error.values, error_L2.values, error.cols, error.rows);
+//	
+//	cudaDeviceSynchronize();
+//	for (uint i = 0; i < naive_L2.length; i++)
+//		result += naive[i] / naive_L2.length;
+//	
+//	return result;
+//}
+//
+//float MAE(in Matrix measured, in Matrix approximated)
+//in
+//{
+//	assert (measured.rows == approximated.rows);
+//	assert (measured.cols == approximated.cols);
+//}
+//body
+//{
+//	float result = 0;
+//	
+//	auto error = Matrix(measured.rows, measured.cols);
+//	for (int i = 0; i < error.length; i++)
+//		error[i] = measured[i];
+//	
+//	cuda_sub(error.values, measured.values, error.length);
+//	
+//	auto error_L2 = Matrix(error.rows, 1);
+//	cuda_L2(error.values, error_L2.values, error.cols, error.rows);
+//	
+//	cudaDeviceSynchronize();
+//	for (uint i = 0; i < naive_L2.length; i++)
+//		result += naive[i] / naive_L2.length;
+//	
+//	return result;
+//}
+//
+///**
+// * Evaluate MAE of naive forecast.
+// *
+// * Useful for MASE evaluation.
+// */
+//private float NaiveMAE(in Matrix data)
+//{
+//	import std.stdio;
+//	float result = 0;
+//	
+//	auto naive = Matrix(data.rows - 1, data.cols);
+//	
+//	// copy data to naive but one row up
+//	for (int i = 0; i < naive.length; i++)
+//		naive[i] = data[i + data.cols];
+//	
+//	cuda_sub(naive.values, data.values, naive.rows);
+//	
+//	cudaDeviceSynchronize();
+//	for (int i = 0; i < naive.length; i++)
+//		writeln(naive[i]);
+//	
+//	auto naive_L2 = Matrix(naive.rows, 1);
+//	cuda_L2(naive.values, naive_L2.values, naive.cols, naive.rows);
+//	
+//	cudaDeviceSynchronize();
+//	for (uint i = 0; i < naive_L2.length; i++)
+//		result += naive[i] / naive_L2.length;
+//	
+//	return result;
+//}
+
+///
+unittest
+{
+//	import std.math : approxEqual;
+//	mixin(writetest!NaiveMAE);
+//	
+//	/* 0 1 2 *
+//	 * 3 4 5 *
+//	 * 6 7 8 */
+//	auto data = Matrix(3, 3);
+//	for (uint i = 0; i < 9; i++)
+//		data[i] = i;
+//	cudaDeviceSynchronize();
+//	
+//	writeln(NaiveMAE(data));
+//	assert ( approxEqual(NaiveMAE(data), 4.530593, 0.00001) );
+}
+
 // TODO: extended matrix. Has additional column filled with 1's which is not affected by activation function.
 //struct ExtendedMatrix
 //{
@@ -127,6 +244,7 @@ struct Matrix
 
 extern (C++):
 	void cuda_tanh(float* x, size_t n) nothrow @nogc;
+	void kernel_tanh(float* x, size_t n) nothrow @nogc;
 	unittest
 	{
 		import std.math : approxEqual;
