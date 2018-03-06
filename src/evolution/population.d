@@ -28,9 +28,11 @@ version (unittest)
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.curand;
+import cuda.cublas;
 
 // DNN modules
 import common;
+import math;
 import neural.network;
 
 
@@ -39,6 +41,9 @@ struct Population
 	ulong size;
 	
 	Network* population;
+	
+	Matrix inputs;
+	Matrix outputs;
 	
 	this(in NetworkParams params, in ulong size, curandGenerator_t generator) nothrow @nogc
 	{
@@ -89,6 +94,49 @@ struct Population
 				population[i].freeMem();
 			free(population);
 		}
+	}
+	
+	/**
+	 * Evaluate the population.
+	 *
+	 * Evaluates a result of feeding inpit matrix to the network.
+	 *
+	 * Params:
+	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
+	 *     outputs = Output matrix of size m x n, where n is the number of output neurons.
+	 *     cublasHandle = Cublas handle.
+	 */
+	void evaluate(in Matrix inputs, in Matrix outputs) nothrow @nogc
+	{
+		cublasHandle_t handle;
+		cublasCreate(handle);
+		scope(exit) cublasDestroy(handle);
+		
+		evaluate(inputs, outputs, handle);
+	}
+	
+	/// ditto
+	void evaluate(in Matrix inputs, in Matrix outputs, cublasHandle_t cublasHandle) nothrow @nogc
+	{
+		auto result = Matrix(outputs.rows, outputs.cols);
+		auto norms  = Matrix(outputs.rows, 1);
+		
+		for (uint i = 0; i < size; i++)
+		{
+			population[i](inputs, result);
+			
+			cuda_sub(result.values, outputs.values, outputs.length);
+			cuda_L2(result.values, norms.values, result.cols, norms.rows);
+		}
+	}
+	
+	///
+	unittest
+	{
+		mixin(writetest!evaluate);
+		
+		/* 1  2 *
+		 * 3 -1 */ 
 	}
 }
 
