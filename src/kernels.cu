@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-// CUDA Kernel function to compute tanh of each element of an array.
+/**
+ * Calculate hyperbolic tangent for each element in array on GPU.
+ *
+ * Params:
+ *     x = Array to calculate.
+ *     n = Size of array. If n is less than atual x size, only the ferst n elements will be calculated.
+ */
 __global__
 void kernel_tanh(float *x, size_t n)
 {
@@ -22,13 +28,22 @@ void kernel_tanh(float *x, size_t n)
 		x[i] = tanhf(x[i]);
 }
 
+/// ditto
 __host__
 void cuda_tanh(float *x, size_t n)
 {
 	kernel_tanh<<<1, 1>>>(x, n);
 }
 
-// CUDA Kernel function to fill array with values.
+/**
+ * Fill array on GPU.
+ *
+ * Params:
+ *     x = A pointer to an array. Could point to not the first element.
+ *     val = A value to fill with.
+ *     n = Size of the array. If n is less than the actual x size, only the first n elements starting from the pointer p
+ *         will be filled.
+ */
 __global__
 void kernel_fill(float *x, float val, size_t count)
 {
@@ -36,13 +51,24 @@ void kernel_fill(float *x, float val, size_t count)
 		x[i] = val;
 }
 
+/// ditto
 __host__
 void cuda_fill(float *x, float val, size_t count)
 {
 	kernel_fill<<<1, 1>>>(x, val, count);
 }
 
-// CUDA Kernel subtraction.
+/**
+ * Per-element substraction of two arrays on GPU.
+ *
+ * Params:
+ *     x = A pointer to an array to substract from. Could point to not the first element.
+ *     y = A pointer to an array to substract. Could point to not the first element.
+ *     n = Number of elements to substrat starting from both x and y pointers.
+ *
+ * Notes:
+ *     Substractions is calculated in place.
+ */
 __global__
 void kernel_sub(float *x, const float *y, size_t n)
 {
@@ -50,13 +76,22 @@ void kernel_sub(float *x, const float *y, size_t n)
 		x[i] = x[i] - y[i];
 }
 
+/// ditto
 __host__
 void cuda_sub(float *x, const float *y, size_t n)
 {
 	kernel_sub<<<1, 1>>>(x, y, n);
 }
 
-// CUDA Kernel L2 norm.
+/**
+ * Per-vector calculation of the Euclidean distance (L2 norm) of a vector array on GPU.
+ *
+ * Params:
+ *     x = A pointer to an array of vectors. Must have size of `dim * count` or less but be multiple to `dim`.
+ *     y = A pointer to the resulting array of L2 norm values. Must contain `count` elements.
+ *     dim = Vectors dimention.
+ *     count = Number of vectors in the `x` array and resulting values in the `y` array.
+ */
 __global__
 void kernel_L2(const float *x, float *y, int dim, size_t count)
 {
@@ -64,6 +99,7 @@ void kernel_L2(const float *x, float *y, int dim, size_t count)
 		y[i] = normf(dim, x + dim * i);
 }
 
+/// ditto
 __host__
 void cuda_L2(const float *x, float *y, int dim, size_t count)
 {

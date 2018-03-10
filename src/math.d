@@ -243,8 +243,17 @@ unittest
 //}
 
 extern (C++):
+	/**
+	 * Calculate hyperbolic tangent for each element of an array `x` on GPU.
+	 *
+	 * Params:
+	 *     x = A pointer to an array. Could point to not the first element.
+	 *     n = Size of the array. If n is less than the actual x size, only the first n elements starting from the pointer p
+	 *         will be calculated.
+	 */
 	void cuda_tanh(float* x, size_t n) nothrow @nogc;
-	void kernel_tanh(float* x, size_t n) nothrow @nogc;
+	
+	///
 	unittest
 	{
 		import std.math : approxEqual;
@@ -266,7 +275,18 @@ extern (C++):
 			assert ( approxEqual(data[i], result[i], 0.000001) );
 	}
 	
+	/**
+	 * Fill an array on GPU.
+	 *
+	 * Params:
+	 *     x = A pointer to an array. Could point to not the first element.
+	 *     val = A value to fill with.
+	 *     n = Size of the array. If n is less than the actual x size, only the first n elements starting from the pointer p
+	 *         will be filled.
+	 */
 	void cuda_fill(float* x, float val, size_t n) nothrow @nogc;
+	
+	///
 	unittest
 	{
 		import std.math : approxEqual;
@@ -284,7 +304,20 @@ extern (C++):
 			assert ( approxEqual(data[i], result[i], 0.000001) );
 	}
 	
+	/**
+	 * Per-element substraction of two arrays on GPU.
+	 *
+	 * Params:
+	 *     x = A pointer to an array to substract from. Could point to not the first element.
+	 *     y = A pointer to an array to substract. Could point to not the first element.
+	 *     n = Number of elements to substrat starting from both x and y pointers.
+	 *
+	 * Notes:
+	 *     Substractions is calculated in place.
+	 */
 	void cuda_sub(float* x, const(float)* y, size_t n) nothrow @nogc;
+	
+	///
 	unittest
 	{
 		import std.math : approxEqual;
@@ -309,7 +342,18 @@ extern (C++):
 			assert ( approxEqual(data[i], result[i], 0.000001) );
 	}
 	
+	/**
+	 * Per-vector calculation of the Euclidean distance (L2 norm) of a vector array on GPU.
+	 *
+	 * Params:
+	 *     x = A pointer to an array of vectors. Must have size of `dim * count` or less but be multiple to `dim`.
+	 *     y = A pointer to the resulting array of L2 norm values. Must contain `count` elements.
+	 *     dim = Vectors dimention.
+	 *     count = Number of vectors in the `x` array and resulting values in the `y` array.
+	 */
 	void cuda_L2(const(float)* x, float* y, int dim, size_t count) nothrow @nogc;
+	
+	///
 	unittest
 	{
 		import std.math : approxEqual;
