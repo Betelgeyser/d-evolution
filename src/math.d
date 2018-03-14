@@ -305,44 +305,6 @@ extern (C++):
 	}
 	
 	/**
-	 * Per-element substraction of two arrays on GPU.
-	 *
-	 * Params:
-	 *     x = A pointer to an array to substract from. Could point to not the first element.
-	 *     y = A pointer to an array to substract. Could point to not the first element.
-	 *     n = Number of elements to substrat starting from both x and y pointers.
-	 *
-	 * Notes:
-	 *     Substractions is calculated in place.
-	 */
-	void cuda_sub(float* x, const(float)* y, size_t n) nothrow @nogc;
-	
-	///
-	unittest
-	{
-		import std.math : approxEqual;
-		mixin(writetest!cuda_sub);
-		
-		float* data;
-		float* sub;
-		cudaMallocManaged(data, 2);
-		cudaMallocManaged(sub,  2);
-		
-		data[0] =  10;
-		data[1] = -10;
-		
-		sub[0] = -5;
-		sub[1] =  5;
-		
-		cuda_sub(data, sub, 2);
-		cudaDeviceSynchronize();
-		
-		immutable float[] result = [15, -15];
-		for (int i = 0; i < 2; i++)
-			assert ( approxEqual(data[i], result[i], 0.000001) );
-	}
-	
-	/**
 	 * Per-vector calculation of the Euclidean distance (L2 norm) of a vector array on GPU.
 	 *
 	 * Params:

@@ -58,6 +58,31 @@ void cublasSgemm(
 	);
 }
 
+void cublasSgeam(
+	cublasHandle_t handle,
+	cublasOperation_t transa, cublasOperation_t transb,
+	int m, int n,
+	const(float)* alpha,
+	const(float)* A, int lda,
+	const(float)* beta,
+	const(float)* B, int ldb,
+	float* C, int ldc
+) nothrow @nogc
+{
+	enforceCublas(
+		cublas.cublasSgeam(
+			handle,
+			transa, transb,
+			m, n,
+			alpha,
+			A, lda,
+			beta,
+			B, ldb,
+			C, ldc
+		)
+	);
+}
+
 package void enforceCublas(cublasStatus_t error) pure nothrow @safe @nogc
 {
 	assert (error == cublasStatus_t.CUBLAS_STATUS_SUCCESS, error.toString);

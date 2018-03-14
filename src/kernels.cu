@@ -59,31 +59,6 @@ void cuda_fill(float *x, float val, size_t count)
 }
 
 /**
- * Per-element substraction of two arrays on GPU.
- *
- * Params:
- *     x = A pointer to an array to substract from. Could point to not the first element.
- *     y = A pointer to an array to substract. Could point to not the first element.
- *     n = Number of elements to substrat starting from both x and y pointers.
- *
- * Notes:
- *     Substractions is calculated in place.
- */
-__global__
-void kernel_sub(float *x, const float *y, size_t n)
-{
-	for (int i = 0; i < n; i++)
-		x[i] = x[i] - y[i];
-}
-
-/// ditto
-__host__
-void cuda_sub(float *x, const float *y, size_t n)
-{
-	kernel_sub<<<1, 1>>>(x, y, n);
-}
-
-/**
  * Per-vector calculation of the Euclidean distance (L2 norm) of a vector array on GPU.
  *
  * Params:

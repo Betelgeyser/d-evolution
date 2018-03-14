@@ -125,8 +125,8 @@ struct Population
 		{
 			population[i](inputs, result);
 			
-			cuda_sub(result.values, outputs.values, outputs.length);
-			cuda_L2(result.values, norms.values, result.cols, norms.rows);
+//			cuda_sub(result.values, outputs.values, outputs.length);
+//			cuda_L2(result.values, norms.values, result.cols, norms.rows);
 		}
 	}
 	

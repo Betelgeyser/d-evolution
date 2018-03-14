@@ -24,7 +24,7 @@ alias cublasHandle_t = cublasContext*;
 private struct cublasContext;
 
 /**
- * cuBLAS statucs.
+ * cuBLAS status.
  */
 enum cublasStatus_t
 {
@@ -41,14 +41,17 @@ enum cublasStatus_t
 }
 
 /**
- * cuBLAS matrix operation type.
+ * The cublasOperation_t type indicates which operation needs to be performed with the dense matrix. Its values correspond
+ * to Fortran characters ‘N’ or ‘n’ (non-transpose), ‘T’ or ‘t’ (transpose) and ‘C’ or ‘c’ (conjugate transpose) that are
+ * often used as parameters to legacy BLAS implementations.
  *
- * Read more at: http://docs.nvidia.com/cuda/cublas/index.html#ixzz53yBlVPU6
+ * See_also:
+ *     $(LINK http://docs.nvidia.com/cuda/cublas/index.html#cublasoperation_t)
  */
 enum cublasOperation_t
 {
-	CUBLAS_OP_N = 0, /// The non-transpose operation
-	CUBLAS_OP_T = 1, /// The transpose operation
-	CUBLAS_OP_C = 2  /// The conjugate transpose operation
+	CUBLAS_OP_N = 0, /// The non-transpose operation.
+	CUBLAS_OP_T = 1, /// The transpose operation.
+	CUBLAS_OP_C = 2  /// The conjugate transpose operation.
 }
 
