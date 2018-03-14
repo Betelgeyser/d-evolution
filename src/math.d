@@ -122,7 +122,7 @@ struct Matrix
 /**
  * Calculate an Absolute Error between $(D_PARAM A) and $(D_PARAM B) array of vectors on GPU.
  *
- * Resulting array $(D_PARAM error) calculated by formula:
+ * Resulting array $(D_PARAM error) is calculated by formula:
  *
  * <math>
  *   <mrow>
@@ -212,6 +212,62 @@ unittest
 	float[] result = [1.118034, 3.535534, 6.103278, 8.689074];
 	for (int i = 0; i < E.length; i++)
 		assert ( approxEqual(E[i], result[i], 0.000001) );
+}
+
+/**
+ * Calculate a Mean Absolute Error between $(D_PARAM A) and $(D_PARAM B) array of vectors on GPU.
+ *
+ * Though $(D_PARAM A) and $(D_PARAM B) are of the type `Matrix` this is a technical convinience. They are interpreted
+ * as arrays of vectors where a single col is a single vector.
+ *
+ * Params:
+ *     A = The first array of vectors.
+ *     B = The second array of vectors.
+ *     cublasHandle = cuBLAS handle.
+ *
+ * See_also:
+ *     $(LINK https://en.wikipedia.org/wiki/Mean_absolute_error)
+ */
+float MAE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle)
+in
+{
+	assert (A.length == B.length);
+}
+body
+{
+	float result = 0;
+	
+	auto error = Matrix(1, A.cols);
+	
+	AE(A, B, error, cublasHandle);
+	cudaDeviceSynchronize();
+	
+	for (uint i = 0; i < error.length; i++)
+		result += error[i] / error.length;
+	
+	return result;
+}
+
+///
+unittest
+{
+	import std.math;
+	mixin(writetest!MAE);
+	
+	cublasHandle_t handle;
+	cublasCreate(handle);
+	scope(exit) cublasDestroy(handle);
+	
+	auto A = Matrix(3, 4);
+	auto B = Matrix(3, 4);
+	
+	for (int i = 0; i < A.length; i++)
+	{
+		A[i] = i;
+		B[i] = i * 1.5;
+	}
+	
+	assert ( approxEqual(MAE(A, B, handle), 4.861480, 0.000001) );
 }
 
 float MASE(in Matrix measured, in Matrix approximated)
