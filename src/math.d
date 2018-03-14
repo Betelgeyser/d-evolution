@@ -12,11 +12,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This module contains basic structs, subroutines and cuda kernel interfaces for mathematics.
  */
 module math;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
+import cuda.cublas;
 import cuda.curand;
 
 // DNN modules
@@ -116,8 +119,103 @@ struct Matrix
 	}
 }
 
-//float MASE(in Matrix measured, in Matrix approximated)
-//{
+/**
+ * Calculate an Absolute Error between $(D_PARAM A) and $(D_PARAM B) array of vectors on GPU.
+ *
+ * Resulting array $(D_PARAM error) calculated by formula:
+ *
+ * <math>
+ *   <mrow>
+ *     <msub>
+ *       <mi>error</mi>
+ *       <mi>i</mi>
+ *     </msub>
+ *     <mo>=</mo>
+ *     <msqrt>
+ *       <msup>
+ *         <mfenced open="(" close=")" separators="">
+ *           <msub>
+ *             <mi>A</mi>
+ *             <mi>i</mi>
+ *           </msub>
+ *           <mo>-</mo>
+ *           <msub>
+ *             <mi>B</mi>
+ *             <mi>i</mi>
+ *           </msub>
+ *         </mfenced>
+ *         <mn>2</mn>
+ *       </msup>
+ *     </msqrt>
+ *   </mrow>
+ * </math>
+ *
+ * Though $(D_PARAM A) and $(D_PARAM B) are of the type `Matrix` this is a technical convinience. They are interpreted
+ * as arrays of vectors where a single col is a single vector.
+ *
+ * Params:
+ *     A = The first array of vectors.
+ *     B = The second array of vectors.
+ *     error = The resulting array of errors. 
+ *     cublasHandle = cuBLAS handle.
+ */
+void AE(in Matrix A, in Matrix B, ref Matrix error, cublasHandle_t cublasHandle)
+in
+{
+	assert (A.length == B.length);
+	assert (A.cols   <= error.cols);
+}
+body
+{
+	float alpha =  1;
+	float beta  = -1;
+	
+	auto C = Matrix(A.rows, A.cols);
+	
+	cublasSgeam(
+		cublasHandle,
+		cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
+		A.rows, A.cols,
+		&alpha,
+		A.values, A.rows,
+		&beta,
+		B.values, B.rows,
+		C, C.rows
+	);
+	
+	cuda_L2(C, error, C.rows, error.cols);
+}
+
+///
+unittest
+{
+	import std.math;
+	mixin(writetest!AE);
+	
+	cublasHandle_t handle;
+	cublasCreate(handle);
+	scope(exit) cublasDestroy(handle);
+	
+	auto A = Matrix(3, 4);
+	auto B = Matrix(3, 4);
+	auto E = Matrix(1, 4);
+	
+	for (int i = 0; i < A.length; i++)
+	{
+		A[i] = i;
+		B[i] = i * 1.5;
+	}
+	
+	AE(A, B, E, handle);
+	cudaDeviceSynchronize();
+	
+	float[] result = [1.118034, 3.535534, 6.103278, 8.689074];
+	for (int i = 0; i < E.length; i++)
+		assert ( approxEqual(E[i], result[i], 0.000001) );
+}
+
+float MASE(in Matrix measured, in Matrix approximated)
+{
 //	assert (measured.cols == approximated.cols);
 //	assert (measured.rows == approximated.rows);
 //	assert (measured.rows >  1);
@@ -137,35 +235,18 @@ struct Matrix
 ////	cuda_L2(naive.values, naive_L2.values, naive.cols, naive.rows);
 ////	
 ////	
-//	return 1;
-//}
-//
-//float AE(in Matrix measured, in Matrix approximated, Matrix error)
-//{
-//	for (int i = 0; i < error.length; i++)
-//		result[i] = measured[i];
-//	
-//	cuda_sub(error.values, measured.values, error.length);
-//	
-//	auto error_L2 = Matrix(error.rows, 1);
-//	cuda_L2(error.values, error_L2.values, error.cols, error.rows);
-//	
-//	cudaDeviceSynchronize();
-//	for (uint i = 0; i < naive_L2.length; i++)
-//		result += naive[i] / naive_L2.length;
-//	
-//	return result;
-//}
-//
-//float MAE(in Matrix measured, in Matrix approximated)
-//in
-//{
-//	assert (measured.rows == approximated.rows);
-//	assert (measured.cols == approximated.cols);
-//}
-//body
-//{
-//	float result = 0;
+	return 1;
+}
+
+void MAE(in Matrix measured, in Matrix approximated, ref Matrix error)
+in
+{
+	assert (measured.rows == approximated.rows);
+	assert (measured.cols == approximated.cols);
+}
+body
+{
+	float result = 0;
 //	
 //	auto error = Matrix(measured.rows, measured.cols);
 //	for (int i = 0; i < error.length; i++)
