@@ -297,9 +297,9 @@ unittest
 	
 	auto data = Matrix(2, 3);
 	for (uint i = 0; i < data.length; i++)
-		data[i] = i;
+		data[i] = i * i;
 	
-	assert ( approxEqual(MAEnaive(data, handle), 2.828427, 0.000001) );
+	assert ( approxEqual(MAEnaive(data, handle), 14.472136, 0.000001) );
 }
 
 /**
