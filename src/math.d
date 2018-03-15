@@ -262,6 +262,46 @@ unittest
 	assert ( approxEqual(MAE(A, B, handle), 4.861480, 0.000001) );
 }
 
+/**
+ * Calculate a Mean Absolute Error of naive forecast on GPU.
+ *
+ * Useful for MASE calculation.
+ *
+ * Though $(D_PARAM data) is of the type `Matrix` this is a technical convinience. It is interpreted as an array of vectors
+ * where a single column is a single vector.
+ *
+ * Params:
+ *     data = An array of input vectors.
+ *     cublasHandle = cuBLAS handle.
+ */
+float MAEnaive(in Matrix data, cublasHandle_t cublasHandle) nothrow @nogc
+{
+	auto measured = Matrix(data.rows, data.cols - 1);
+	measured.values = cast(float*)data.values; // Just pointers, no copying here
+	
+	auto naive = Matrix(data.rows, data.cols - 1);
+	naive.values = cast(float*)data.values + data.rows; // Shift one column to the begining
+	
+	return MAE(measured, naive, cublasHandle);
+}
+
+///
+unittest
+{
+	import std.math : approxEqual;
+	mixin(writetest!MAEnaive);
+	
+	cublasHandle_t handle;
+	cublasCreate(handle);
+	scope(exit) cublasDestroy(handle);
+	
+	auto data = Matrix(2, 3);
+	for (uint i = 0; i < data.length; i++)
+		data[i] = i;
+	
+	assert ( approxEqual(MAEnaive(data, handle), 2.828427, 0.000001) );
+}
+
 float MASE(in Matrix measured, in Matrix approximated)
 {
 //	assert (measured.cols == approximated.cols);
@@ -284,82 +324,6 @@ float MASE(in Matrix measured, in Matrix approximated)
 ////	
 ////	
 	return 1;
-}
-
-void MAE(in Matrix measured, in Matrix approximated, ref Matrix error)
-in
-{
-	assert (measured.rows == approximated.rows);
-	assert (measured.cols == approximated.cols);
-}
-body
-{
-	float result = 0;
-//	
-//	auto error = Matrix(measured.rows, measured.cols);
-//	for (int i = 0; i < error.length; i++)
-//		error[i] = measured[i];
-//	
-//	cuda_sub(error.values, measured.values, error.length);
-//	
-//	auto error_L2 = Matrix(error.rows, 1);
-//	cuda_L2(error.values, error_L2.values, error.cols, error.rows);
-//	
-//	cudaDeviceSynchronize();
-//	for (uint i = 0; i < naive_L2.length; i++)
-//		result += naive[i] / naive_L2.length;
-//	
-//	return result;
-//}
-//
-///**
-// * Evaluate MAE of naive forecast.
-// *
-// * Useful for MASE evaluation.
-// */
-//private float NaiveMAE(in Matrix data)
-//{
-//	import std.stdio;
-//	float result = 0;
-//	
-//	auto naive = Matrix(data.rows - 1, data.cols);
-//	
-//	// copy data to naive but one row up
-//	for (int i = 0; i < naive.length; i++)
-//		naive[i] = data[i + data.cols];
-//	
-//	cuda_sub(naive.values, data.values, naive.rows);
-//	
-//	cudaDeviceSynchronize();
-//	for (int i = 0; i < naive.length; i++)
-//		writeln(naive[i]);
-//	
-//	auto naive_L2 = Matrix(naive.rows, 1);
-//	cuda_L2(naive.values, naive_L2.values, naive.cols, naive.rows);
-//	
-//	cudaDeviceSynchronize();
-//	for (uint i = 0; i < naive_L2.length; i++)
-//		result += naive[i] / naive_L2.length;
-//	
-//	return result;
-//}
-
-///
-unittest
-{
-//	import std.math : approxEqual;
-//	mixin(writetest!NaiveMAE);
-//	
-//	/* 0 1 2 *
-//	 * 3 4 5 *
-//	 * 6 7 8 */
-//	auto data = Matrix(3, 3);
-//	for (uint i = 0; i < 9; i++)
-//		data[i] = i;
-//	cudaDeviceSynchronize();
-//	
-//	writeln(NaiveMAE(data));
-//	assert ( approxEqual(NaiveMAE(data), 4.530593, 0.00001) );
 }
 
 // TODO: extended matrix. Has additional column filled with 1's which is not affected by activation function.
