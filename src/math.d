@@ -126,32 +126,21 @@ struct Matrix
  *
  * <math>
  *   <mrow>
- *     <msub>
- *       <mi>error</mi>
- *       <mi>i</mi>
- *     </msub>
+ *     <msub> <mi>error</mi> <mi>i</mi> </msub>
  *     <mo>=</mo>
- *     <msqrt>
- *       <msup>
+ *     <msqrt> <msup>
  *         <mfenced open="(" close=")" separators="">
- *           <msub>
- *             <mi>A</mi>
- *             <mi>i</mi>
- *           </msub>
+ *           <msub> <mi>A</mi> <mi>i</mi> </msub>
  *           <mo>-</mo>
- *           <msub>
- *             <mi>B</mi>
- *             <mi>i</mi>
- *           </msub>
+ *           <msub> <mi>B</mi> <mi>i</mi> </msub>
  *         </mfenced>
  *         <mn>2</mn>
- *       </msup>
- *     </msqrt>
+ *     </msup> </msqrt>
  *   </mrow>
  * </math>
  *
  * Though $(D_PARAM A) and $(D_PARAM B) are of the type `Matrix` this is a technical convinience. They are interpreted
- * as arrays of vectors where a single col is a single vector.
+ * as arrays of vectors where a single column is a single vector.
  *
  * Params:
  *     A = The first array of vectors.
@@ -218,7 +207,7 @@ unittest
  * Calculate a Mean Absolute Error between $(D_PARAM A) and $(D_PARAM B) array of vectors on GPU.
  *
  * Though $(D_PARAM A) and $(D_PARAM B) are of the type `Matrix` this is a technical convinience. They are interpreted
- * as arrays of vectors where a single col is a single vector.
+ * as arrays of vectors where a single column is a single vector.
  *
  * Params:
  *     A = The first array of vectors.
