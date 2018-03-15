@@ -120,7 +120,7 @@ struct Matrix
 }
 
 /**
- * Calculate an Absolute Error between $(D_PARAM A) and $(D_PARAM B) array of vectors on GPU.
+ * Calculate an Absolute Error between $(D_PARAM A) and $(D_PARAM B) arrays of vectors on GPU.
  *
  * Resulting array $(D_PARAM error) is calculated by formula:
  *
@@ -302,38 +302,48 @@ unittest
 	assert ( approxEqual(MAEnaive(data, handle), 2.828427, 0.000001) );
 }
 
-float MASE(in Matrix measured, in Matrix approximated)
+/**
+ * Calculate a Mean Absolute Scalde Error between $(D_PARAM measured) and $(D_PARAM approximated) arrays of vectors on GPU.
+ *
+ * Though $(D_PARAM data) is of the type `Matrix` this is a technical convinience. It is interpreted as an array of vectors
+ * where a single column is a single vector.
+ *
+ * Params:
+ *     measured = An array of vectors of measured/actual/real data.
+ *     approximated = An array of vectors of approximated/estimated data.
+ *     cublasHandle = cuBLAS handle.
+ */
+float MASE(in Matrix measured, in Matrix approximated, cublasHandle_t cublasHandle)
+in
 {
-//	assert (measured.cols == approximated.cols);
-//	assert (measured.rows == approximated.rows);
-//	assert (measured.rows >  1);
-//	
-////	auto naive = Matrix(measured.rows - 1, measured.cols);
-////	cudaMemcpy(naive.values, measured.values + 1, measured.rows - 1, cudaMemcpyKind.cudaMemcpyHostToHost);
-////	cuda_sub(naive.values, measured.values + 1, measured.rows - 1);
-////	
-////	auto naive_L2 = Matrix(naive.rows, 1);
-////	cuda_L2(naive.values, naive_L2.values, naive.cols, naive.rows);
-////	
-////	auto error = Matrix(measured.rows, measured.cols);
-////	cudaMemcpy(error.values, measured.values, measured.rows, cudaMemcpyKind.cudaMemcpyHostToHost);
-////	cuda_sub(naive.values, naive_L2.values, naive.rows);
-////	
-////	auto error_L2 = cuda_L2(naive.values, naive_L2.values, naive.cols, naive.rows);
-////	cuda_L2(naive.values, naive_L2.values, naive.cols, naive.rows);
-////	
-////	
-	return 1;
+	assert (measured.rows == approximated.rows);
+	assert (measured.cols == approximated.cols);
+}
+body
+{
+	return MAE(measured, approximated, cublasHandle) / MAEnaive(measured, cublasHandle);
 }
 
-// TODO: extended matrix. Has additional column filled with 1's which is not affected by activation function.
-//struct ExtendedMatrix
-//{
-//	Matrix mt;
-//	alias mt this;
-//	
-//	this()
-//}
+///
+unittest
+{
+	import std.math : approxEqual;
+	mixin(writetest!MASE);
+	
+	cublasHandle_t handle;
+	cublasCreate(handle);
+	scope(exit) cublasDestroy(handle);
+	
+	auto measured = Matrix(3, 4);
+	for (uint i = 0; i < measured.length; i++)
+		measured[i] = i;
+	
+	auto approximated = Matrix(3, 4);
+	for (uint i = 0; i < approximated.length; i++)
+		approximated[i] = i + 1;
+	
+	assert ( approxEqual(MASE(measured, approximated, handle), 0.333333, 0.000001) );
+}
 
 extern (C++):
 	/**
