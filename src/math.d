@@ -148,11 +148,13 @@ struct Matrix
  *     error = The resulting array of errors. 
  *     cublasHandle = cuBLAS handle.
  */
-void AE(in Matrix A, in Matrix B, ref Matrix error, cublasHandle_t cublasHandle)
+void AE(in Matrix A, in Matrix B, ref Matrix error, cublasHandle_t cublasHandle) nothrow @nogc
 in
 {
-	assert (A.length == B.length);
-	assert (A.cols   <= error.cols);
+	assert (A.cols == B.cols);
+	assert (A.rows == B.rows);
+	assert (A.cols == error.cols);
+	assert (error.rows == 1);
 }
 body
 {
@@ -217,10 +219,11 @@ unittest
  * See_also:
  *     $(LINK https://en.wikipedia.org/wiki/Mean_absolute_error)
  */
-float MAE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle)
+float MAE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle) nothrow @nogc
 in
 {
-	assert (A.length == B.length);
+	assert (A.cols == B.cols);
+	assert (A.rows == B.rows);
 }
 body
 {
