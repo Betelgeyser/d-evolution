@@ -36,11 +36,19 @@ import math;
 import neural.network;
 
 
+struct Individual
+{
+	alias individual this;
+	
+	Network individual;
+	float fitness;
+}
+
 struct Population
 {
 	ulong size;
 	
-	Network* population;
+	Individual* individual;
 	
 	Matrix inputs;
 	Matrix outputs;
@@ -51,11 +59,12 @@ struct Population
 		
 		this.size = size;
 		
-		population = cast(Network*)malloc(size * Network.sizeof);
+		individual = cast(Individual*)malloc(size * Individual.sizeof);
 		for (ulong i = 0; i < size; i++)
-			population[i] = Network(params, generator);
+			individual[i] = Network(params, generator);
 	}
 	
+	///
 	unittest
 	{
 		mixin(writetest!__ctor);
@@ -78,10 +87,10 @@ struct Population
 		assert (p.size == 10);
 		
 		// Check memory
-		assert (p.population[0].depth          == params.layers);
-		assert (p.population[p.size - 1].depth == params.layers);
+		assert (p.individual[0].depth          == params.layers);
+		assert (p.individual[p.size - 1].depth == params.layers);
 		assert (
-			p.population[p.size - 1].hiddenLayers[params.layers - 1].weights.length
+			p.individual[p.size - 1].hiddenLayers[params.layers - 1].weights.length
 			== (params.neurons + 1) * params.neurons
 		);
 	}
@@ -91,8 +100,8 @@ struct Population
 		if (size > 0)
 		{
 			for (ulong i = 0; i < size; i++)
-				population[i].freeMem();
-			free(population);
+				individual[i].freeMem();
+			free(individual);
 		}
 	}
 	
@@ -122,8 +131,8 @@ struct Population
 		
 		for (uint i = 0; i < size; i++)
 		{
-			population[i](inputs, approximation, cublasHandle);
-			population[i].fitness = MASE(
+			individual[i](inputs, approximation, cublasHandle);
+			individual[i].fitness = MASE(
 				outputs,
 				approximation,
 				cublasHandle

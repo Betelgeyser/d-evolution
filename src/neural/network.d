@@ -276,8 +276,6 @@ struct Network
 	uint depth;   /// Number of hidden layers (input and output does not count).
 	uint neurons; /// Number of neurons per layer (except the outputLayer).
 	
-	float fitness; /// Value of fitness function of the network.
-	
 	/**
 	 * Constructor for random neural network.
 	 *
