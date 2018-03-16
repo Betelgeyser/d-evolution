@@ -118,15 +118,16 @@ struct Population
 	/// ditto
 	void evaluate(in Matrix inputs, in Matrix outputs, cublasHandle_t cublasHandle) nothrow @nogc
 	{
-		auto result = Matrix(outputs.rows, outputs.cols);
-		auto norms  = Matrix(outputs.rows, 1);
+		auto approximation = Matrix(outputs.rows, outputs.cols);
 		
 		for (uint i = 0; i < size; i++)
 		{
-			population[i](inputs, result, cublasHandle);
-			
-//			cuda_sub(result.values, outputs.values, outputs.length);
-//			cuda_L2(result.values, norms.values, result.cols, norms.rows);
+			population[i](inputs, approximation, cublasHandle);
+			population[i].fitness = MASE(
+				outputs,
+				approximation,
+				cublasHandle
+			);
 		}
 	}
 	
@@ -136,7 +137,7 @@ struct Population
 		mixin(writetest!evaluate);
 		
 		/* 1  2 *
-		 * 3 -1 */ 
+		 * 3 -1 */
 	}
 }
 
