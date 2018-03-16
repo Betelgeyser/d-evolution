@@ -25,6 +25,11 @@ import cuda.curand;
 // DNN modules
 import common;
 
+version (unittest)
+{
+	import std.math : approxEqual;
+}
+
 /**
  * Convenient struct to handle cuBLAS matricies.
  *
@@ -288,7 +293,6 @@ float MAEnaive(in Matrix data, cublasHandle_t cublasHandle) nothrow @nogc
 ///
 unittest
 {
-	import std.math : approxEqual;
 	mixin(writetest!MAEnaive);
 	
 	cublasHandle_t handle;
@@ -327,7 +331,6 @@ body
 ///
 unittest
 {
-	import std.math : approxEqual;
 	mixin(writetest!MASE);
 	
 	cublasHandle_t handle;
@@ -359,7 +362,6 @@ extern (C++):
 	///
 	unittest
 	{
-		import std.math : approxEqual;
 		mixin(writetest!cuda_tanh);
 		
 		float* data;
@@ -392,7 +394,6 @@ extern (C++):
 	///
 	unittest
 	{
-		import std.math : approxEqual;
 		mixin(writetest!cuda_fill);
 		
 		float* data;
@@ -421,7 +422,6 @@ extern (C++):
 	///
 	unittest
 	{
-		import std.math : approxEqual;
 		mixin(writetest!cuda_L2);
 		
 		float* data;
