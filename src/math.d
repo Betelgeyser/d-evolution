@@ -313,7 +313,7 @@ unittest
  *     approximated = An array of vectors of approximated/estimated data.
  *     cublasHandle = cuBLAS handle.
  */
-float MASE(in Matrix measured, in Matrix approximated, cublasHandle_t cublasHandle)
+float MASE(in Matrix measured, in Matrix approximated, cublasHandle_t cublasHandle) nothrow @nogc
 in
 {
 	assert (measured.rows == approximated.rows);
