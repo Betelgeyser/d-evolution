@@ -27,3 +27,4 @@ string toString(T)(T enumMember) pure nothrow @safe @nogc
 				return m;
 	}
 }
+

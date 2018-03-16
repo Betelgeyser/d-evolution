@@ -12,6 +12,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Neural network and related things.
  */
 module neural.network;
 
@@ -175,16 +177,6 @@ struct Layer
 	 *     cublasHandle = Cublas handle.
 	 *     activate = If set to true activation function will be applied to the result.
 	 */
-	void opCall(in Matrix inputs, Matrix outputs, in bool activate = true) const nothrow @nogc
-	{
-		cublasHandle_t handle;
-		cublasCreate(handle);
-		scope(exit) cublasDestroy(handle);
-		
-		opCall(inputs, outputs, handle, activate);
-	}
-	
-	/// ditto
 	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle, in bool activate = true) const nothrow @nogc
 	{
 		assert (inputs.cols == connections);
@@ -219,8 +211,12 @@ struct Layer
 		curandGenerator_t generator;
 		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
 		curandSetPseudoRandomGeneratorSeed(generator, 0);
-		
 		scope(exit) curandDestroyGenerator(generator);
+		
+		// Initialize cuBLAS
+		cublasHandle_t handle;
+		cublasCreate(handle);
+		scope(exit) cublasDestroy(handle);
 		
 		Layer l = Layer(2, 2, generator); scope(exit) l.freeMem();
 		cudaDeviceSynchronize();
@@ -250,7 +246,7 @@ struct Layer
 		outputs.cols = 2;
 		cudaMallocManaged(outputs, outputs.rows * outputs.cols);
 		
-		l(inputs, outputs);
+		l(inputs, outputs, handle);
 		cudaDeviceSynchronize();
 		
 		/* 0.379949 0.807569 *
@@ -273,9 +269,6 @@ struct Layer
  */
 struct Network
 {
-//	static const(Data)* trainingData;
-	static cublasHandle_t cublasHandle;
-	
 	Layer  inputLayer;   /// Self explaining.
 	Layer* hiddenLayers; /// ditto
 	Layer  outputLayer;  /// ditto
@@ -379,16 +372,6 @@ struct Network
 	 *     outputs = Output matrix of size m x n, where n is the number of output neurons.
 	 *     cublasHandle = Cublas handle.
 	 */
-	void opCall(in Matrix inputs, Matrix outputs) const nothrow @nogc
-	{
-		cublasHandle_t handle;
-		cublasCreate(handle);
-		scope(exit) cublasDestroy(handle);
-		
-		opCall(inputs, outputs, handle);
-	}
-	
-	/// ditto
 	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const nothrow @nogc
 	{
 		auto prev = Matrix(inputs.cols, neurons + 1);
@@ -421,8 +404,12 @@ struct Network
 		curandGenerator_t generator;
 		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
 		curandSetPseudoRandomGeneratorSeed(generator, 0);
-		
 		scope(exit) curandDestroyGenerator(generator);
+		
+		// Initialize cuBLAS
+		cublasHandle_t handle;
+		cublasCreate(handle);
+		scope(exit) cublasDestroy(handle);
 		
 		NetworkParams params;
 		params.inputs  = 1;
@@ -455,7 +442,8 @@ struct Network
 		network.outputLayer.weights[0]  = -0.50;
 		network.outputLayer.weights[1]  =  0.75; // bias
 		
-		network(inputs, outputs);
+		network(inputs, outputs, handle);
+		cudaDeviceSynchronize();
 		
 		float[] result = [0.971843, 0.971843];
 		for(int i = 0; i < outputs.length; i++)

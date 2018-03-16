@@ -123,7 +123,7 @@ struct Population
 		
 		for (uint i = 0; i < size; i++)
 		{
-			population[i](inputs, result);
+			population[i](inputs, result, cublasHandle);
 			
 //			cuda_sub(result.values, outputs.values, outputs.length);
 //			cuda_L2(result.values, norms.values, result.cols, norms.rows);
