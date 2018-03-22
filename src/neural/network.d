@@ -45,10 +45,9 @@ struct NetworkParams
 	
 	invariant
 	{
-		assert (inputs  >= 1);
-		assert (outputs >= 1);
-		assert (neurons >= 1);
-		assert (layers  >= 0);
+		assert (inputs  >= 1, "Neural network must have at least 1 input neuron.");
+		assert (outputs >= 1, "Neural network must have at least 1 output neuron.");
+		assert (neurons >= 1, "Neural network must have at least 1 neuron in every hidden layer.");
 	}
 	
 	/**
@@ -105,8 +104,8 @@ struct Layer
 	
 	invariant
 	{
-		assert (&weights);
-		assert (weights.rows >= 1 + biasLength); // connections()
+		assert (&weights, "The weights matrix is incorrect.");
+		assert (weights.rows >= 1 + biasLength, "A layer must have at least 2 connections."); // connections()
 	}
 	
 	/**
@@ -118,6 +117,12 @@ struct Layer
 	 *     generator = Pseudorandom number generator.
 	 */
 	this(in uint inputs, in uint neurons, curandGenerator_t generator) nothrow @nogc
+	in
+	{
+		assert (inputs  >= 1, "A layer must have at least 1 input connection.");
+		assert (neurons >= 1, "A layer must have at least 1 neuron.");
+	}
+	body
 	{
 		scope(failure) freeMem();
 		
@@ -178,11 +183,14 @@ struct Layer
 	 *     activate = If set to true activation function will be applied to the result.
 	 */
 	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle, in bool activate = true) const nothrow @nogc
+	in
 	{
-		assert (inputs.cols == connections);
-		assert (inputs.rows == outputs.rows);
-		assert (neurons     <= outputs.cols);
-		
+		assert (inputs.cols == connections, "The number of matrix columns must be equal to the layer's connections number.");
+		assert (inputs.rows == outputs.rows, "The input and the output matrix must have the same number of rows.");
+		assert (neurons     <= outputs.cols, "The output matrix must not have less columns than the layer's neurons number.");
+	}
+	body
+	{
 		immutable float alpha = 1;
 		immutable float beta  = 0;
 		
@@ -276,6 +284,16 @@ struct Network
 	uint depth;   /// Number of hidden layers (input and output does not count).
 	uint neurons; /// Number of neurons per layer (except the outputLayer).
 	
+	invariant
+	{
+		for (ulong i = 0; i < depth; ++i)
+			assert (
+				hiddenLayers[i].neurons == inputLayer.neurons,
+				"Every hidden layer must have the same number of neurons as the input layer."
+			);
+	}
+	
+	
 	/**
 	 * Constructor for random neural network.
 	 *
@@ -286,7 +304,7 @@ struct Network
 	this(in NetworkParams params, curandGenerator_t generator) nothrow @nogc
 	in
 	{
-		assert (&params);
+		assert (&params, "Neural network parameters are incorrect.");
 	}
 	body
 	{

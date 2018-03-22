@@ -75,6 +75,12 @@ struct Matrix
 	 *     generator = Pseudorandom number generator.
 	 */
 	this(in uint rows, in uint cols) nothrow @nogc
+	in
+	{
+		assert (rows >= 1, "Matrix must containg at least 1 row.");
+		assert (cols >= 1, "Matrix must containg at least 1 column.");
+	}
+	body
 	{
 		scope(failure) freeMem();
 		
