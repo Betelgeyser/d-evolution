@@ -197,9 +197,10 @@ struct Layer
 			inputs, inputs.rows,
 			weights, connections,
 			&beta,
-			outputs, inputs.rows
+			outputs, outputs.rows
 		);
 		
+		// TODO: need extended matrix here. Extended part should not be activated.
 		if (activate)
 			cuda_tanh(outputs, outputs.rows * outputs.cols);
 	}
@@ -390,23 +391,23 @@ struct Network
 	 */
 	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const nothrow @nogc
 	{
-		auto prev = Matrix(inputs.cols, neurons + 1);
-		auto next = Matrix(inputs.cols, neurons + 1);
+		immutable extensionOffset = inputs.cols * neuronsPerLayer;
 		
-		cuda_fill(prev + inputs.cols * neurons, 1, neurons + 1); // Extend matrix with 1's for biases
+		auto prev = Matrix(inputs.cols, neuronsPerLayer + biasLength);
+		auto next = Matrix(inputs.cols, neuronsPerLayer + biasLength);
+		
 		inputLayer(inputs, prev, cublasHandle);
+		cuda_fill(prev + extensionOffset, biasWeight, neuronsPerLayer + biasLength);
 		
-		for (int i = 0; i < depth; i++)
+		for (ulong i = 0; i < depth; ++i)
 		{
-			cuda_fill(prev + inputs.cols * neurons, 1, neurons + 1); // Reset last column to 1's
 			hiddenLayers[i](prev, next, cublasHandle);
-			
-			auto tmp = prev;
 			prev = next;
-			next = prev;
+			
+			// TODO: need extemded matrix instead. Extended part should not be activated.
+			cuda_fill(prev + extensionOffset, biasWeight, neuronsPerLayer + biasLength);
 		}
 		
-		cuda_fill(prev + inputs.cols * neurons, 1, neurons + 1); // Reset last column to 1's
 		outputLayer(prev, outputs, cublasHandle, false);
 	}
 	
@@ -432,10 +433,7 @@ struct Network
 		params.neurons = 1;
 		params.layers  = 1;
 		
-		/* 0 1 *
-		 * 1 1 */
 		auto inputs = Matrix(2, 2);
-		cudaDeviceSynchronize();
 		inputs.values[0] = 0;
 		inputs.values[1] = 1;
 		inputs.values[2] = 1;
