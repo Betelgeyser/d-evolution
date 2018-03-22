@@ -33,18 +33,24 @@ version (unittest)
 /**
  * Convenient struct to handle cuBLAS matricies.
  *
- * Row-major order.
+ * It wraps pointer to allocated memory of values with some additional properties of a matrix, such as rows and columns
+ * numbers. All linear algebra method are implemented on GPU.
+ *
+ * As it implements cuBLAS matrix, it is column-major ordered.
  */
 struct Matrix
 {
 	alias values this;
 	
-	float* values; /// Self explaining.
-	uint   rows;   /// ditto
-	uint   cols;   /// ditto
+	float* values; /// A pointer to an allocated memory.
+	uint   rows;   /// Rows number.
+	uint   cols;   /// Columns number.
 	
 	/**
-	 * Number of elements.
+	 * The length of the matrix.
+	 *
+	 * Returns:
+	 *     Number of elements.
 	 */
 	@property uint length() const pure nothrow @safe @nogc
 	{
@@ -58,7 +64,7 @@ struct Matrix
 	}
 	
 	/**
-	 * Creates matrix and allocates memory on GPU device.
+	 * Create a matrix and allocate memory for it.
 	 *
 	 * Default values are not initialized. If a cuRAND generator is passed,
 	 * values are randomly generated on GPU.
