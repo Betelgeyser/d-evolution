@@ -240,7 +240,7 @@ struct Layer
 		 * 0.00 0.06 * <- weights
 		 * 0.02 0.08 * <- weights
 		 * 0.04 0.10 * <- biases */
-		for (int i = 0; i < l.weights.length; i++)
+		for (ulong i = 0; i < l.weights.length; ++i)
 			l.weights[i] = i / 50f;
 		
 		Matrix inputs;
@@ -252,7 +252,7 @@ struct Layer
 		 * 1 5  9 *
 		 * 2 6 10 *
 		 * 3 7 11 */
-		for (int i = 0; i < inputs.length; i++)
+		for (ulong i = 0; i < inputs.length; ++i)
 			inputs[i] = i;
 		
 		Matrix outputs;
@@ -268,7 +268,7 @@ struct Layer
 		 * 0.477700 0.921669 *
 		 * 0.522665 0.950795 */
 		immutable float[] result = [0.379949, 0.430084, 0.477700, 0.522665, 0.807569, 0.876393, 0.921669, 0.950795];
-		for (int i = 0; i < outputs.rows * outputs.cols; i++)
+		for (ulong i = 0; i < outputs.length; ++i)
 			assert (
 				approxEqual(
 					outputs[i], result[i],
@@ -322,7 +322,7 @@ struct Network
 		depth   = params.layers;
 		neurons = params.neurons;
 		hiddenLayers = cast(Layer*)malloc(depth * Layer.sizeof);
-		for (uint i = 0; i < depth; i++)
+		for (ulong i = 0; i < depth; ++i)
 			hiddenLayers[i] = Layer(params.neurons, params.neurons, generator);
 	}
 	
@@ -356,7 +356,7 @@ struct Network
 		assert (n.outputLayer.connections == params.neurons + biasLength);
 		assert (n.outputLayer.neurons     == params.outputs);
 		
-		for (int i = 0; i < n.depth; i++)
+		for (ulong i = 0; i < n.depth; ++i)
 		{
 			assert (n.hiddenLayers[i].connections == params.neurons + biasLength);
 			assert (n.hiddenLayers[i].neurons     == params.neurons);
@@ -378,7 +378,7 @@ struct Network
 		
 		if (depth > 0)
 		{
-			for (uint i = 0; i < depth; i++)
+			for (ulong i = 0; i < depth; ++i)
 				hiddenLayers[i].freeMem();
 			free(hiddenLayers);
 		}
@@ -467,7 +467,7 @@ struct Network
 		cudaDeviceSynchronize();
 		
 		float[] result = [0.971843, 0.971843];
-		for(int i = 0; i < outputs.length; i++)
+		for(ulong i = 0; i < outputs.length; ++i)
 			assert (
 				approxEqual(
 					outputs[i], result[i],

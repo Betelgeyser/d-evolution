@@ -218,7 +218,7 @@ unittest
 	auto B = Matrix(3, 4);
 	auto E = Matrix(1, 4);
 	
-	for (int i = 0; i < A.length; i++)
+	for (ulong i = 0; i < A.length; ++i)
 	{
 		A[i] = i;
 		B[i] = i * 1.5;
@@ -228,8 +228,8 @@ unittest
 	cudaDeviceSynchronize();
 	
 	float[] result = [1.118034, 3.535534, 6.103278, 8.689074];
-	for (int i = 0; i < E.length; i++)
-		assert ( approxEqual(E[i], result[i], 0.000001) );
+	for (ulong i = 0; i < E.length; ++i)
+		assert ( approxEqual(E[i], result[i], accuracy) );
 }
 
 /**
@@ -261,7 +261,7 @@ body
 	AE(A, B, error, cublasHandle);
 	cudaDeviceSynchronize();
 	
-	for (uint i = 0; i < error.length; i++)
+	for (ulong i = 0; i < error.length; ++i)
 		result += error[i] / error.length;
 	
 	return result;
@@ -279,7 +279,7 @@ unittest
 	auto A = Matrix(3, 4);
 	auto B = Matrix(3, 4);
 	
-	for (int i = 0; i < A.length; i++)
+	for (ulong i = 0; i < A.length; ++i)
 	{
 		A[i] = i;
 		B[i] = i * 1.5;
@@ -321,7 +321,7 @@ unittest
 	scope(exit) cublasDestroy(handle);
 	
 	auto data = Matrix(2, 3);
-	for (uint i = 0; i < data.length; i++)
+	for (ulong i = 0; i < data.length; ++i)
 		data[i] = i * i;
 	
 	assert ( approxEqual(MAEnaive(data, handle), 14.472136, 0.000001) );
@@ -359,11 +359,11 @@ unittest
 	scope(exit) cublasDestroy(handle);
 	
 	auto measured = Matrix(3, 4);
-	for (uint i = 0; i < measured.length; i++)
+	for (ulong i = 0; i < measured.length; ++i)
 		measured[i] = i;
 	
 	auto approximated = Matrix(3, 4);
-	for (uint i = 0; i < approximated.length; i++)
+	for (ulong i = 0; i < approximated.length; ++i)
 		approximated[i] = i + 1;
 	
 	assert (
