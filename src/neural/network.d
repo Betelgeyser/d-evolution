@@ -84,12 +84,6 @@ struct Layer
 	/**
 	 * Number of connections per neuron (including bias).
 	 */
-	@property void connections(in uint val) pure nothrow @safe @nogc
-	{
-		weights.rows = val;
-	}
-	
-	/// ditto
 	@property uint connections() const pure nothrow @safe @nogc
 	{
 		return weights.rows;
@@ -98,12 +92,6 @@ struct Layer
 	/**
 	 * Number of neurons in the layer.
 	 */
-	@property void neurons(in uint val) pure nothrow @safe @nogc
-	{
-		weights.cols = val;
-	}
-	
-	/// ditto
 	@property uint neurons() const pure nothrow @safe @nogc
 	{
 		return weights.cols;
@@ -287,8 +275,7 @@ struct Network
 	Layer* hiddenLayers; /// ditto
 	Layer  outputLayer;  /// ditto
 	
-	uint depth;   /// Number of hidden layers (input and output does not count).
-	uint neurons; /// Number of neurons per layer (except the outputLayer).
+	uint depth; /// Number of hidden layers (input and output does not count).
 	
 	invariant
 	{
@@ -299,6 +286,13 @@ struct Network
 			);
 	}
 	
+	/**
+	 * Get number of neurons per hidden layer.
+	 */
+	@property uint neuronsPerLayer() const pure nothrow @safe @nogc
+	{
+		return inputLayer.neurons;
+	}
 	
 	/**
 	 * Constructor for random neural network.
@@ -319,8 +313,8 @@ struct Network
 		inputLayer  = Layer(params.inputs,  params.neurons, generator);
 		outputLayer = Layer(params.neurons, params.outputs, generator);
 		
-		depth   = params.layers;
-		neurons = params.neurons;
+		depth = params.layers;
+		
 		hiddenLayers = cast(Layer*)malloc(depth * Layer.sizeof);
 		for (ulong i = 0; i < depth; ++i)
 			hiddenLayers[i] = Layer(params.neurons, params.neurons, generator);
@@ -347,8 +341,8 @@ struct Network
 		Network n = Network(params, generator); scope(exit) n.freeMem();
 		cudaDeviceSynchronize();
 		
-		assert (n.depth   == params.layers);
-		assert (n.neurons == params.neurons);
+		assert (n.depth           == params.layers);
+		assert (n.neuronsPerLayer == params.neurons);
 		
 		assert (n.inputLayer.connections == params.inputs + biasLength);
 		assert (n.inputLayer.neurons     == params.neurons);
