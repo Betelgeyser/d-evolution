@@ -28,7 +28,9 @@ import common;
 version (unittest)
 {
 	import std.math : approxEqual;
+	immutable accuracy = 0.000001;
 }
+
 
 /**
  * Convenient struct to handle cuBLAS matricies.
@@ -206,7 +208,6 @@ body
 ///
 unittest
 {
-	import std.math;
 	mixin(writetest!AE);
 	
 	cublasHandle_t handle;
@@ -269,7 +270,6 @@ body
 ///
 unittest
 {
-	import std.math;
 	mixin(writetest!MAE);
 	
 	cublasHandle_t handle;
@@ -285,7 +285,7 @@ unittest
 		B[i] = i * 1.5;
 	}
 	
-	assert ( approxEqual(MAE(A, B, handle), 4.861480, 0.000001) );
+	assert ( approxEqual(MAE(A, B, handle), 4.861480, accuracy) );
 }
 
 /**
@@ -366,7 +366,13 @@ unittest
 	for (uint i = 0; i < approximated.length; i++)
 		approximated[i] = i + 1;
 	
-	assert ( approxEqual(MASE(measured, approximated, handle), 0.333333, 0.000001) );
+	assert (
+		approxEqual(
+			MASE(measured, approximated, handle),
+			0.333333,
+			accuracy
+		)
+	);
 }
 
 extern (C++):
@@ -385,20 +391,22 @@ extern (C++):
 	{
 		mixin(writetest!cuda_tanh);
 		
+		immutable length = 5;
+		
 		float* data;
-		cudaMallocManaged(data, 5);
+		cudaMallocManaged(data, length);
 		data[0] = -1_000;
 		data[1] =     -1;
 		data[2] =      0;
 		data[3] =      1;
 		data[4] =  1_000;
 		
-		cuda_tanh(data, 5);
+		cuda_tanh(data, length);
 		cudaDeviceSynchronize();
 		
-		immutable float[] result = [-1.000000, -0.761594, 0.0,  0.761594, 1.000000];
-		for (int i = 0; i < 5; i++)
-			assert ( approxEqual(data[i], result[i], 0.000001) );
+		immutable float[] result = [-1.000000, -0.761594, 0.000000,  0.761594, 1.000000];
+		for (ulong i = 0; i < length; ++i)
+			assert ( approxEqual(data[i], result[i], accuracy) );
 	}
 	
 	/**
@@ -417,16 +425,18 @@ extern (C++):
 	{
 		mixin(writetest!cuda_fill);
 		
-		float* data;
-		cudaMallocManaged(data, 5);
+		immutable length = 5;
 		
-		cuda_fill(data,     1, 5);
-		cuda_fill(data + 1, 2, 3);
+		float* data;
+		cudaMallocManaged(data, length);
+		
+		cuda_fill(data,     1, length);
+		cuda_fill(data + 1, 2, length - 2);
 		cudaDeviceSynchronize();
 		
 		immutable float[] result = [1, 2, 2, 2, 1];
-		for (int i = 0; i < 5; i++)
-			assert ( approxEqual(data[i], result[i], 0.000001) );
+		for (ulong i = 0; i < length; ++i)
+			assert ( approxEqual(data[i], result[i], accuracy) );
 	}
 	
 	/**
@@ -445,19 +455,22 @@ extern (C++):
 	{
 		mixin(writetest!cuda_L2);
 		
+		immutable dim    = 4;
+		immutable length = 2;
+		
 		float* data;
 		float* norm;
-		cudaMallocManaged(data, 8);
-		cudaMallocManaged(norm, 2);
+		cudaMallocManaged(data, dim * length);
+		cudaMallocManaged(norm, length);
 		
-		for (int i = 0; i < 8; i++)
+		for (ulong i = 0; i < dim * length; ++i)
 			data[i] = i;
 		
-		cuda_L2(data, norm, 4, 2);
+		cuda_L2(data, norm, dim, length);
 		cudaDeviceSynchronize();
 		
 		immutable float[] result = [3.741657, 11.224972];
-		for (int i = 0; i < 2; i++)
-			assert ( approxEqual(norm[i], result[i], 0.000001) );
+		for (ulong i = 0; i < length; ++i)
+			assert ( approxEqual(norm[i], result[i], accuracy) );
 	}
 

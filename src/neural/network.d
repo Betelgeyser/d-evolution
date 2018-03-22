@@ -32,6 +32,15 @@ import cuda.cublas;
 import common;
 import math;
 
+version (unittest)
+{
+	import std.math : approxEqual;
+	immutable accuracy = 0.000001;
+}
+
+
+immutable biasLength = 1; /// Number of bias weights per neuron.
+immutable biasWeight = 1; /// Weight of every bias connection.
 
 /**
  * Random network generation parameters.
@@ -70,8 +79,6 @@ struct NetworkParams
  */
 struct Layer
 {
-	static immutable uint biasLength = 1; /// Number of bias weights per neuron.
-	
 	Matrix weights; /// Connection weights.
 	
 	/**
@@ -212,7 +219,6 @@ struct Layer
 	///
 	unittest
 	{
-		import std.math : approxEqual;
 		mixin(writetest!opCall);
 		
 		// Initialize cuRAND generator.
@@ -266,7 +272,7 @@ struct Layer
 			assert (
 				approxEqual(
 					outputs[i], result[i],
-					0.000001
+					accuracy
 				)
 			);
 	}
@@ -344,15 +350,15 @@ struct Network
 		assert (n.depth   == params.layers);
 		assert (n.neurons == params.neurons);
 		
-		assert (n.inputLayer.connections  == params.inputs + 1);
-		assert (n.inputLayer.neurons      == params.neurons);
+		assert (n.inputLayer.connections == params.inputs + biasLength);
+		assert (n.inputLayer.neurons     == params.neurons);
 		
-		assert (n.outputLayer.connections == params.neurons + 1);
+		assert (n.outputLayer.connections == params.neurons + biasLength);
 		assert (n.outputLayer.neurons     == params.outputs);
 		
 		for (int i = 0; i < n.depth; i++)
 		{
-			assert (n.hiddenLayers[i].connections == params.neurons + 1);
+			assert (n.hiddenLayers[i].connections == params.neurons + biasLength);
 			assert (n.hiddenLayers[i].neurons     == params.neurons);
 		}
 	}
@@ -413,7 +419,6 @@ struct Network
 	///
 	unittest
 	{
-		import std.math : approxEqual;
 		mixin(writetest!opCall);
 		
 		// Initialize cuRAND generator.
@@ -466,7 +471,7 @@ struct Network
 			assert (
 				approxEqual(
 					outputs[i], result[i],
-					0.000001
+					accuracy
 				)
 			);
 	}
