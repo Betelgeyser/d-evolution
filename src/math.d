@@ -300,7 +300,7 @@ unittest
  *     data = An array of input vectors.
  *     cublasHandle = cuBLAS handle.
  */
-float MAEnaive(in Matrix data, cublasHandle_t cublasHandle) nothrow @nogc
+float MAENaive(in Matrix data, cublasHandle_t cublasHandle) nothrow @nogc
 {
 	auto measured = Matrix(data.rows, data.cols - 1);
 	measured.values = cast(float*)data.values; // Just pointers, no copying here
@@ -314,7 +314,7 @@ float MAEnaive(in Matrix data, cublasHandle_t cublasHandle) nothrow @nogc
 ///
 unittest
 {
-	mixin(writetest!MAEnaive);
+	mixin(writetest!MAENaive);
 	
 	cublasHandle_t handle;
 	cublasCreate(handle);
@@ -324,7 +324,7 @@ unittest
 	for (ulong i = 0; i < data.length; ++i)
 		data[i] = i * i;
 	
-	assert ( approxEqual(MAEnaive(data, handle), 14.472136, 0.000001) );
+	assert ( approxEqual(MAENaive(data, handle), 14.472136, accuracy) );
 }
 
 /**
@@ -346,7 +346,7 @@ in
 }
 body
 {
-	return MAE(measured, approximated, cublasHandle) / MAEnaive(measured, cublasHandle);
+	return MAE(measured, approximated, cublasHandle) / MAENaive(measured, cublasHandle);
 }
 
 ///
