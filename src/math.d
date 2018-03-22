@@ -86,11 +86,20 @@ struct Matrix
 	
 	/// ditto
 	this(in uint rows, in uint cols, curandGenerator_t generator) nothrow @nogc
+	in
 	{
-		scope(failure) freeMem();
-		
+		assert (rows >= 1, "Matrix must containg at least 1 row.");
+		assert (cols >= 1, "Matrix must containg at least 1 column.");
+	}
+	body
+	{
 		this(rows, cols);
-		curandGenerate(generator, values, length);
+		
+		{
+			// To prevent a double free error, additional freeMem() is moved from this(...) scope.
+			scope(failure) freeMem();
+			curandGenerate(generator, values, length);
+		}
 	}
 	
 	///
