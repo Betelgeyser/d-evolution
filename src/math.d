@@ -28,7 +28,27 @@ import common;
 version (unittest)
 {
 	import std.math : approxEqual;
-	immutable accuracy = 0.000001;
+	
+	private immutable accuracy = 0.000001;
+	
+	private curandGenerator_t generator;
+	private cublasHandle_t handle;
+	
+	static this()
+	{
+		// Initialize cuRAND generator.
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
+		
+		// Initialize cuBLAS
+		cublasCreate(handle);
+	}
+	
+	static ~this()
+	{
+		curandDestroyGenerator(generator);
+		cublasDestroy(handle);
+	}
 }
 
 
@@ -114,13 +134,6 @@ struct Matrix
 	unittest
 	{
 		mixin(writetest!__ctor);
-		
-		// Initialize cuRAND generator.
-		curandGenerator_t generator;
-		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, 0);
-		
-		scope(exit) curandDestroyGenerator(generator);
 		
 		auto m = Matrix(3, 2, generator); scope(exit) m.freeMem();
 		cudaDeviceSynchronize();
@@ -210,10 +223,6 @@ unittest
 {
 	mixin(writetest!AE);
 	
-	cublasHandle_t handle;
-	cublasCreate(handle);
-	scope(exit) cublasDestroy(handle);
-	
 	auto A = Matrix(3, 4);
 	auto B = Matrix(3, 4);
 	auto E = Matrix(1, 4);
@@ -272,10 +281,6 @@ unittest
 {
 	mixin(writetest!MAE);
 	
-	cublasHandle_t handle;
-	cublasCreate(handle);
-	scope(exit) cublasDestroy(handle);
-	
 	auto A = Matrix(3, 4);
 	auto B = Matrix(3, 4);
 	
@@ -316,10 +321,6 @@ unittest
 {
 	mixin(writetest!MAENaive);
 	
-	cublasHandle_t handle;
-	cublasCreate(handle);
-	scope(exit) cublasDestroy(handle);
-	
 	auto data = Matrix(2, 3);
 	for (ulong i = 0; i < data.length; ++i)
 		data[i] = i * i;
@@ -353,10 +354,6 @@ body
 unittest
 {
 	mixin(writetest!MASE);
-	
-	cublasHandle_t handle;
-	cublasCreate(handle);
-	scope(exit) cublasDestroy(handle);
 	
 	auto measured = Matrix(3, 4);
 	for (ulong i = 0; i < measured.length; ++i)
