@@ -12,10 +12,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * This module contains basic structs, subroutines and cuda kernel interfaces for mathematics.
  */
-module math;
+module math.statistics;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
@@ -24,12 +22,13 @@ import cuda.curand;
 
 // DNN modules
 import common;
+import math.matrix;
 
 version (unittest)
 {
 	import std.math : approxEqual;
 	
-	private immutable accuracy = 0.000001;
+	private immutable accuracy = 0.000_001;
 	
 	private curandGenerator_t generator;
 	private cublasHandle_t handle;
@@ -51,114 +50,6 @@ version (unittest)
 	}
 }
 
-
-/**
- * Convenient struct to handle cuBLAS matricies.
- *
- * It wraps pointer to allocated memory of values with some additional properties of a matrix, such as rows and columns
- * numbers. All linear algebra method are implemented on GPU.
- *
- * As it implements cuBLAS matrix, it is column-major ordered.
- */
-struct Matrix
-{
-	alias values this;
-	
-	float* values; /// A pointer to an allocated memory.
-	uint   rows;   /// Rows number.
-	uint   cols;   /// Columns number.
-	
-	/**
-	 * The length of the matrix.
-	 *
-	 * Returns:
-	 *     Number of elements.
-	 */
-	@property uint length() const pure nothrow @safe @nogc
-	{
-		return rows * cols;
-	}
-	
-	invariant
-	{
-		assert (rows >= 1, "Matrix must containg at least 1 row.");
-		assert (cols >= 1, "Matrix must containg at least 1 column.");
-	}
-	
-	/**
-	 * Create a matrix and allocate memory for it.
-	 *
-	 * Default values are not initialized. If a cuRAND generator is passed,
-	 * values are randomly generated on GPU.
-	 *
-	 * Params:
-	 *     rows = Number of rows.
-	 *     cols = Number of columns.
-	 *     generator = Pseudorandom number generator.
-	 */
-	this(in uint rows, in uint cols) nothrow @nogc
-	in
-	{
-		assert (rows >= 1, "Matrix must containg at least 1 row.");
-		assert (cols >= 1, "Matrix must containg at least 1 column.");
-	}
-	body
-	{
-		scope(failure) freeMem();
-		
-		this.rows = rows;
-		this.cols = cols;
-		
-		cudaMallocManaged(values, length);
-	}
-	
-	/// ditto
-	this(in uint rows, in uint cols, curandGenerator_t generator) nothrow @nogc
-	in
-	{
-		assert (rows >= 1, "Matrix must containg at least 1 row.");
-		assert (cols >= 1, "Matrix must containg at least 1 column.");
-	}
-	body
-	{
-		this(rows, cols);
-		
-		{
-			// To prevent a double free error, additional freeMem() is moved from this(...) scope.
-			scope(failure) freeMem();
-			curandGenerate(generator, values, length);
-		}
-	}
-	
-	///
-	unittest
-	{
-		mixin(writetest!__ctor);
-		
-		auto m = Matrix(3, 2, generator); scope(exit) m.freeMem();
-		cudaDeviceSynchronize();
-		
-		assert (m.rows == 3);
-		assert (m.cols == 2);
-		
-		// Check memory accessebility
-		assert (m.values[0] == m.values[0]);
-		assert (m.values[m.length - 1] == m.values[m.length - 1]);
-	}
-	
-	/**
-	 * Free memory.
-	 *
-	 * For the reason how D works with structs memory freeing moved from destructor to
-	 * the the distinct function. Either allocating structs on stack or in heap or both
-	 * causes spontaneous destructors calls. Apparently structs are not intended
-	 * to be used with dynamic memory, probably it should be implemented as a class.  
-	 */
-	void freeMem() nothrow @nogc
-	{
-		cudaFree(values);
-	}
-}
 
 /**
  * Calculate an Absolute Error between $(D_PARAM A) and $(D_PARAM B) arrays of vectors on GPU.
@@ -189,7 +80,7 @@ struct Matrix
  *     error = The resulting array of errors. 
  *     cublasHandle = cuBLAS handle.
  */
-void AE(in Matrix A, in Matrix B, ref Matrix error, cublasHandle_t cublasHandle) nothrow @nogc
+void AE(in Matrix A, in Matrix B, Matrix error, cublasHandle_t cublasHandle) nothrow @nogc
 in
 {
 	assert (A.cols == B.cols);
@@ -204,17 +95,7 @@ body
 	
 	auto C = Matrix(A.rows, A.cols);
 	
-	cublasSgeam(
-		cublasHandle,
-		cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
-		A.rows, A.cols,
-		&alpha,
-		A.values, A.rows,
-		&beta,
-		B.values, B.rows,
-		C, C.rows
-	);
-	
+	geam(1, A, -1, B, C, cublasHandle);
 	cuda_L2(C, error, C.rows, error.cols);
 }
 

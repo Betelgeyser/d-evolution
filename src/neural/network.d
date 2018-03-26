@@ -199,19 +199,7 @@ struct Layer
 	}
 	body
 	{
-		immutable float alpha = 1;
-		immutable float beta  = 0;
-		
-		cublasSgemm(
-			cublasHandle,
-			cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
-			inputs.rows, neurons, connections,
-			&alpha,
-			inputs, inputs.rows,
-			weights, connections,
-			&beta,
-			outputs, outputs.rows
-		);
+		gemm(inputs, weights, outputs, cublasHandle);
 		
 		// TODO: need extended matrix here. Extended part should not be activated.
 		if (activate)
