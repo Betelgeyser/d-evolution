@@ -18,13 +18,6 @@ module evolution.population;
 // C modules
 import core.stdc.stdlib;
 
-// D modules
-version (unittest)
-{
-	import std.stdio;
-	import std.random : unpredictableSeed;
-}
-
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.curand;
@@ -34,6 +27,33 @@ import cuda.cublas;
 import common;
 import math;
 import neural.network;
+
+version (unittest)
+{
+	import std.random : unpredictableSeed;
+	import std.math : approxEqual;
+	
+	private immutable accuracy = 0.000001;
+	
+	private curandGenerator_t generator;
+	private cublasHandle_t handle;
+	
+	static this()
+	{
+		// Initialize cuRAND generator.
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
+		
+		// Initialize cuBLAS
+		cublasCreate(handle);
+	}
+	
+	static ~this()
+	{
+		curandDestroyGenerator(generator);
+		cublasDestroy(handle);
+	}
+}
 
 
 struct Individual
@@ -111,42 +131,32 @@ struct Population
 	 * Evaluates a result of feeding inpit matrix to the network.
 	 *
 	 * Params:
-	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
-	 *     outputs = Output matrix of size m x n, where n is the number of output neurons.
+	 *     inputs = Input matrix of a size m x n, where n is the number of input variables + 1 for bias and m is the number
+	 *         of measurements.
+	 *     outputs = Output matrix of a size m x k, where k is the number of output variables and m is the number of results.
 	 *     cublasHandle = Cublas handle.
 	 */
-	void evaluate(in Matrix inputs, in Matrix outputs) nothrow @nogc
-	{
-		cublasHandle_t handle;
-		cublasCreate(handle);
-		scope(exit) cublasDestroy(handle);
-		
-		evaluate(inputs, outputs, handle);
-	}
-	
-	/// ditto
 	void evaluate(in Matrix inputs, in Matrix outputs, cublasHandle_t cublasHandle) nothrow @nogc
 	{
-		auto approximation = Matrix(outputs.rows, outputs.cols);
+		auto outputs_t = Matrix(outputs.cols, outputs.rows);
+		auto approx    = Matrix(outputs.rows, outputs.cols);
+		auto approx_t  = Matrix(outputs.cols, outputs.rows);
+		
+		transpose(outputs, outputs_t, cublasHandle);
 		
 		for (uint i = 0; i < size; i++)
 		{
-			individual[i](inputs, approximation, cublasHandle);
-			individual[i].fitness = MASE(
-				outputs,
-				approximation,
-				cublasHandle
-			);
+			individual[i](inputs, approx, cublasHandle);
+			
+			transpose(approx, approx_t, cublasHandle);
+			
+			individual[i].fitness = MASE(outputs_t, approx_t, cublasHandle);
 		}
 	}
 	
-	///
 	unittest
 	{
-		mixin(writetest!evaluate);
-		
-		/* 1  2 *
-		 * 3 -1 */
+		mixin(notTested!evaluate);
 	}
 }
 
