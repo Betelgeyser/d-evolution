@@ -28,34 +28,9 @@ import common;
 import math;
 import neural.network;
 
-version (unittest)
-{
-	import std.random : unpredictableSeed;
-	import std.math : approxEqual;
-	
-	private immutable accuracy = 0.000001;
-	
-	private curandGenerator_t generator;
-	private cublasHandle_t handle;
-	
-	static this()
-	{
-		// Initialize cuRAND generator.
-		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, 0);
-		
-		// Initialize cuBLAS
-		cublasCreate(handle);
-	}
-	
-	static ~this()
-	{
-		curandDestroyGenerator(generator);
-		cublasDestroy(handle);
-	}
-}
-
-
+/**
+ * A single individual ot a population stored with its fitness value.
+ */
 struct Individual
 {
 	alias individual this;
@@ -146,22 +121,25 @@ struct Population
 	{
 		mixin(writetest!__ctor);
 		
-		NetworkParams params;
-		params.inputs  = 2;
-		params.layers  = 2;
-		params.neurons = 3;
-		params.outputs = 1;
-		
-		// Initialize cuRAND generator.
+		// Initialize cuRAND generator
 		curandGenerator_t generator;
 		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, unpredictableSeed());
-		
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
 		scope(exit) curandDestroyGenerator(generator);
 		
-		Population p = Population(params, 10, generator); scope(exit) p.freeMem();
+		// Initialize network params
+		NetworkParams params;
+		params.inputs  = 2;
+		params.outputs = 1;
+		params.neurons = 3;
+		params.layers  = 2;
 		
-		assert (p.size == 10);
+		immutable size = 10;
+		
+		auto p = Population(params, size, generator);
+		scope(exit) p.freeMem();
+		
+		assert (p.size == size);
 		
 		// Check memory
 		assert (p.individual[0].depth          == params.layers);
@@ -172,6 +150,14 @@ struct Population
 		);
 	}
 	
+	/**
+	 * Free memory.
+	 *
+	 * For the reason how D works with structs memory freeing moved from destructor to
+	 * the the distinct function. Either allocating structs on stack or in heap or both
+	 * causes spontaneous destructors calls. Apparently structs are not intended
+	 * to be used with dynamic memory, probably it should be implemented as a class.  
+	 */
 	void freeMem() nothrow @nogc
 	{
 		if (size > 0)
