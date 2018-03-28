@@ -32,32 +32,6 @@ import cuda.cublas;
 import common;
 import math;
 
-version (unittest)
-{
-	import std.math : approxEqual;
-	
-	private immutable accuracy = 0.000001;
-	
-	private curandGenerator_t generator;
-	private cublasHandle_t handle;
-	
-	static this()
-	{
-		// Initialize cuRAND generator.
-		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, 0);
-		
-		// Initialize cuBLAS
-		cublasCreate(handle);
-	}
-	
-	static ~this()
-	{
-		curandDestroyGenerator(generator);
-		cublasDestroy(handle);
-	}
-}
-
 
 immutable biasLength = 1; /// Number of bias weights per neuron.
 immutable biasWeight = 1; /// Weight of every bias connection.
@@ -153,6 +127,12 @@ struct Layer
 	{
 		mixin(writetest!__ctor);
 		
+		// Initialize cuRAND generator.
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
+		scope(exit) curandDestroyGenerator(generator);
+		
 		auto l = Layer(3, 2, generator); scope(exit) l.freeMem();
 		cudaDeviceSynchronize();
 		
@@ -210,6 +190,20 @@ struct Layer
 	unittest
 	{
 		mixin(writetest!opCall);
+		
+		import std.math : approxEqual;
+		immutable accuracy = 0.000_001;
+		
+		// Initialize cuRAND generator.
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
+		scope(exit) curandDestroyGenerator(generator);
+		
+		// Initialize cuBLAS
+		cublasHandle_t handle;
+		cublasCreate(handle);
+		scope(exit) cublasDestroy(handle);
 		
 		Layer l = Layer(2, 2, generator); scope(exit) l.freeMem();
 		cudaDeviceSynchronize();
@@ -322,6 +316,13 @@ struct Network
 		params.neurons = 3;
 		params.outputs = 1;
 		
+		// Initialize cuRAND generator.
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
+		
+		scope(exit) curandDestroyGenerator(generator);
+		
 		Network n = Network(params, generator); scope(exit) n.freeMem();
 		cudaDeviceSynchronize();
 		
@@ -398,6 +399,20 @@ struct Network
 	unittest
 	{
 		mixin(writetest!opCall);
+		
+		import std.math : approxEqual;
+		immutable accuracy = 0.000_001;
+		
+		// Initialize cuRAND generator.
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
+		scope(exit) curandDestroyGenerator(generator);
+		
+		// Initialize cuBLAS
+		cublasHandle_t handle;
+		cublasCreate(handle);
+		scope(exit) cublasDestroy(handle);
 		
 		NetworkParams params;
 		params.inputs  = 1;

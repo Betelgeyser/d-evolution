@@ -23,32 +23,6 @@ import cuda.curand;
 // DNN modules
 import common;
 
-version (unittest)
-{
-	import std.math : approxEqual;
-	
-	private immutable accuracy = 0.000_001;
-	
-	private curandGenerator_t generator;
-	private cublasHandle_t handle;
-	
-	static this()
-	{
-		// Initialize cuRAND generator.
-		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, 0);
-		
-		// Initialize cuBLAS
-		cublasCreate(handle);
-	}
-	
-	static ~this()
-	{
-		curandDestroyGenerator(generator);
-		cublasDestroy(handle);
-	}
-}
-
 
 /**
  * Convenient struct to handle cuBLAS matricies.
@@ -133,7 +107,15 @@ struct Matrix
 	{
 		mixin(writetest!__ctor);
 		
-		auto m = Matrix(3, 2, generator); scope(exit) m.freeMem();
+		// Initialize cuRAND generator
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
+		scope(exit) curandDestroyGenerator(generator);
+		
+		auto m = Matrix(3, 2, generator);
+		scope(exit) m.freeMem();
+		
 		cudaDeviceSynchronize();
 		
 		assert (m.rows == 3);
@@ -198,6 +180,14 @@ unittest
 {
 	mixin(writetest!gemm);
 	
+	import std.math : approxEqual;
+	immutable accuracy = 0.000_001;
+	
+	// Initialize cuBLAS
+	cublasHandle_t handle;
+	cublasCreate(handle);
+	scope(exit) cublasDestroy(handle);
+	
 	immutable n = 7;
 	immutable k = 3;
 	immutable m = 5;
@@ -251,9 +241,6 @@ in
 }
 body
 {
-//	immutable float alpha = 1;
-//	immutable float beta  = 1;
-//	
 	cublasSgeam(
 		cublasHandle,
 		cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
@@ -270,6 +257,14 @@ body
 unittest
 {
 	mixin(writetest!geam);
+	
+	import std.math : approxEqual;
+	immutable accuracy = 0.000_001;
+	
+	// Initialize cuBLAS
+	cublasHandle_t handle;
+	cublasCreate(handle);
+	scope(exit) cublasDestroy(handle);
 	
 	immutable size = 10;
 	
@@ -332,6 +327,14 @@ body
 unittest
 {
 	mixin(writetest!transpose);
+	
+	import std.math : approxEqual;
+	immutable accuracy = 0.000_001;
+	
+	// Initialize cuBLAS
+	cublasHandle_t handle;
+	cublasCreate(handle);
+	scope(exit) cublasDestroy(handle);
 	
 	immutable m = 5;
 	immutable n = 3;
