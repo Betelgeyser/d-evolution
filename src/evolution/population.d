@@ -60,8 +60,65 @@ struct Individual
 {
 	alias individual this;
 	
-	Network individual;
-	float fitness;
+	Network individual; /// Individual.
+	float fitness;      /// Value of individual's fitness. 
+	
+	/**
+	 * Tests if two individuals have same fitness value. 
+	 */
+	bool opEquals()(auto ref scope const Individual i) const pure nothrow @safe @nogc
+	{
+		return this.fitness == i.fitness;
+	}
+	
+	unittest
+	{
+		mixin(writetest!opEquals);
+		
+		Individual i1;
+		Individual i2;
+		Individual i3;
+		
+		i1.fitness =  0;
+		i2.fitness =  0;
+		i3.fitness = -0.000_000_1;
+		
+		assert (i1 == i2);
+		assert (i1 != i3);
+	}
+	
+	/**
+	 * Compares fitness values of two individuals.
+	 */
+	int opCmp(in ref Individual i) const pure nothrow @safe @nogc
+	{
+		if (this.opEquals(i))
+			return 0;
+		else if (this.fitness > i.fitness)
+			return 1;
+		else if (this.fitness < i.fitness)
+			return -1;
+		else
+			assert (0, "float comparasion error.");
+	}
+	
+	unittest
+	{
+		mixin(writetest!opCmp);
+		
+		Individual i1;
+		Individual i2;
+		Individual i3;
+		
+		i1.fitness =  0;
+		i2.fitness =  0;
+		i3.fitness = -0.000_000_1;
+		
+		assert (i1 > i3);
+		assert (i3 < i1);
+		assert (i1 >= i2);
+		assert (i2 >= i3);
+	}
 }
 
 struct Population
