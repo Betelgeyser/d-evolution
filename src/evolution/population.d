@@ -18,6 +18,9 @@ module evolution.population;
 // C modules
 import core.stdc.stdlib;
 
+// D modules
+import std.algorithm : sort;
+
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.curand;
@@ -200,6 +203,45 @@ struct Population
 	unittest
 	{
 		mixin(notTested!evaluate);
+	}
+	
+	void sort()
+	{
+		Individual[] individRange = individual[0 .. size];
+		individRange.sort!"a < b"();
+		delete individRange;
+	}
+	
+	///
+	unittest
+	{
+		mixin(writetest!sort);
+		
+		// Initialize cuRAND generator
+		curandGenerator_t generator;
+		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+		curandSetPseudoRandomGeneratorSeed(generator, 0);
+		scope(exit) curandDestroyGenerator(generator);
+		
+		// Initialize network params
+		NetworkParams params;
+		params.inputs  = 2;
+		params.outputs = 1;
+		params.neurons = 3;
+		params.layers  = 2;
+		
+		immutable size = 10;
+		
+		auto p = Population(params, size, generator);
+		cudaDeviceSynchronize();
+		
+		// Fill fitness values with random data
+		for (ulong i = 0; i < size; ++i)
+			p.individual[i].fitness = p.individual[i].inputLayer.weights[0];	
+		
+		p.sort();
+		for (ulong i = 0; i < size - 1; ++i)
+			assert (p.individual[i].fitness <= p.individual[i + 1].fitness);
 	}
 }
 
