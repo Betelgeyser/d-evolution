@@ -203,8 +203,13 @@ unittest
 	immutable m = 5;
 	
 	auto A = Matrix(n, k);
+	scope(exit) A.freeMem();
+	
 	auto B = Matrix(k, m);
+	scope(exit) B.freeMem();
+	
 	auto C = Matrix(n, m);
+	scope(exit) C.freeMem();
 	
 	for (ulong i = 0; i < A.length; ++i)
 		A[i] = i;
@@ -269,8 +274,13 @@ unittest
 	immutable size = 10;
 	
 	auto A = Matrix(size, size);
+	scope(exit) A.freeMem();
+	
 	auto B = Matrix(size, size);
+	scope(exit) B.freeMem();
+	
 	auto C = Matrix(size, size);
+	scope(exit) C.freeMem();
 	
 	for (ulong i = 0; i < A.length; ++i)
 		A[i] = i;
@@ -327,7 +337,10 @@ unittest
 	immutable n = 3;
 	
 	auto A = Matrix(m, n);
+	scope(exit) A.freeMem();
+	
 	auto C = Matrix(n, m);
+	scope(exit) C.freeMem();
 	
 	for (ulong i = 0; i < A.length; ++i)
 		A[i] = i;
