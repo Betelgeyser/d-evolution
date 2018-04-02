@@ -202,7 +202,12 @@ struct Population
 		mixin(notTested!evaluate);
 	}
 	
-	void sort() nothrow @nogc
+	/**
+	 * Order population by fitness values ascending.
+	 *
+	 * As currently only MASE fitness function is supported, the first individuals with lower fitness values are better ones.
+	 */
+	void order() nothrow @nogc
 	{
 		individual.sort!"a < b"();
 	}

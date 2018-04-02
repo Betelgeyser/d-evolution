@@ -253,11 +253,9 @@ struct Layer
  */
 struct Network
 {
-	Layer   inputLayer;   /// Self explaining.
-	Layer[] hiddenLayers; /// ditto
-	Layer   outputLayer;  /// ditto
-	
-//	uint depth; /// Number of hidden layers (input and output does not count).
+	Layer   inputLayer;   /// Input layer.
+	Layer[] hiddenLayers; /// Hidden layers. It is possible to have 0 hidden layers.
+	Layer   outputLayer;  /// Output layer.
 	
 	invariant
 	{
@@ -268,7 +266,10 @@ struct Network
 			);
 	}
 	
-	@property depth() const pure nothrow @safe @nogc
+	/**
+	 * Number of hidden layers (input and output does not count).
+	 */
+	@property uint depth() const pure nothrow @safe @nogc
 	{
 		return hiddenLayers.length;
 	}
