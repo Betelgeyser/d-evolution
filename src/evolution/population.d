@@ -15,9 +15,6 @@
  */
 module evolution.population;
 
-// C modules
-import core.stdc.stdlib;
-
 // D modules
 import std.algorithm : sort;
 
@@ -101,22 +98,23 @@ struct Individual
 
 struct Population
 {
-	ulong size;
-	
-	Individual* individual;
+	Individual[] individual;
 	
 	Matrix inputs;
 	Matrix outputs;
+	
+	@property size() const pure nothrow @safe @nogc
+	{
+		return individual.length;
+	}
 	
 	this(in NetworkParams params, in ulong size, curandGenerator_t generator) nothrow @nogc
 	{
 		scope(failure) freeMem();
 		
-		this.size = size;
-		
-		individual = cast(Individual*)malloc(size * Individual.sizeof);
-		for (ulong i = 0; i < size; i++)
-			individual[i] = Network(params, generator);
+		individual = nogcMalloc!Individual(size);
+		foreach (ref i; individual)
+			i = Network(params, generator);
 	}
 	
 	///
@@ -163,12 +161,11 @@ struct Population
 	 */
 	void freeMem() nothrow @nogc
 	{
+		foreach (ref i; individual)
+			i.freeMem();
+		
 		if (size > 0)
-		{
-			for (ulong i = 0; i < size; i++)
-				individual[i].freeMem();
 			free(individual);
-		}
 	}
 	
 	/**
@@ -190,13 +187,13 @@ struct Population
 		
 		transpose(outputs, outputs_t, cublasHandle);
 		
-		for (uint i = 0; i < size; i++)
+		foreach (i; individual)
 		{
-			individual[i](inputs, approx, cublasHandle);
+			i(inputs, approx, cublasHandle);
 			
 			transpose(approx, approx_t, cublasHandle);
 			
-			individual[i].fitness = MASE(outputs_t, approx_t, cublasHandle);
+			i.fitness = MASE(outputs_t, approx_t, cublasHandle);
 		}
 	}
 	
@@ -205,11 +202,9 @@ struct Population
 		mixin(notTested!evaluate);
 	}
 	
-	void sort()
+	void sort() nothrow @nogc
 	{
-		Individual[] individRange = individual[0 .. size];
-		individRange.sort!"a < b"();
-		delete individRange;
+		individual.sort!"a < b"();
 	}
 	
 	///

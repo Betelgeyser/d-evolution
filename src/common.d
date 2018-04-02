@@ -15,6 +15,9 @@
  */
 module common;
 
+import core.stdc.stdlib : malloc, free;
+
+
 version (unittest)
 {
 	public import std.stdio  : write, writeln;
@@ -31,4 +34,14 @@ version (unittest)
 	{
 		enum notTested = "writeln(\"\x1b[1m" ~ fullyQualifiedName!T ~ "... \x1b[33mnot tested.\x1b[0m\");";
 	}
+}
+
+T[] nogcMalloc(T)(ulong items) nothrow @nogc
+{
+	return (cast(T*)malloc(items * T.sizeof))[0 .. items];
+}
+
+void free(T)(ref T[] array)
+{
+	free(array.ptr);
 }

@@ -17,9 +17,6 @@
  */
 module neural.network;
 
-// C modules
-import core.stdc.stdlib;
-
 // D modules
 import std.format;
 
@@ -256,19 +253,24 @@ struct Layer
  */
 struct Network
 {
-	Layer  inputLayer;   /// Self explaining.
-	Layer* hiddenLayers; /// ditto
-	Layer  outputLayer;  /// ditto
+	Layer   inputLayer;   /// Self explaining.
+	Layer[] hiddenLayers; /// ditto
+	Layer   outputLayer;  /// ditto
 	
-	uint depth; /// Number of hidden layers (input and output does not count).
+//	uint depth; /// Number of hidden layers (input and output does not count).
 	
 	invariant
 	{
-		for (ulong i = 0; i < depth; ++i)
+		foreach (l; hiddenLayers)
 			assert (
-				hiddenLayers[i].neurons == inputLayer.neurons,
+				l.neurons == inputLayer.neurons,
 				"Every hidden layer must have the same number of neurons as the input layer."
 			);
+	}
+	
+	@property depth() const pure nothrow @safe @nogc
+	{
+		return hiddenLayers.length;
 	}
 	
 	/**
@@ -298,11 +300,9 @@ struct Network
 		inputLayer  = Layer(params.inputs,  params.neurons, generator);
 		outputLayer = Layer(params.neurons, params.outputs, generator);
 		
-		depth = params.layers;
-		
-		hiddenLayers = cast(Layer*)malloc(depth * Layer.sizeof);
-		for (ulong i = 0; i < depth; ++i)
-			hiddenLayers[i] = Layer(params.neurons, params.neurons, generator);
+		hiddenLayers = nogcMalloc!Layer(params.layers);
+		foreach (ref l; hiddenLayers)
+			l = Layer(params.neurons, params.neurons, generator);
 	}
 	
 	///
@@ -335,10 +335,10 @@ struct Network
 		assert (n.outputLayer.connections == params.neurons + biasLength);
 		assert (n.outputLayer.neurons     == params.outputs);
 		
-		for (ulong i = 0; i < n.depth; ++i)
+		foreach (l; n.hiddenLayers)
 		{
-			assert (n.hiddenLayers[i].connections == params.neurons + biasLength);
-			assert (n.hiddenLayers[i].neurons     == params.neurons);
+			assert (l.connections == params.neurons + biasLength);
+			assert (l.neurons     == params.neurons);
 		}
 	}
 	
@@ -355,12 +355,11 @@ struct Network
 		inputLayer.freeMem();
 		outputLayer.freeMem();
 		
+		foreach (ref l; hiddenLayers)
+			l.freeMem();
+		
 		if (depth > 0)
-		{
-			for (ulong i = 0; i < depth; ++i)
-				hiddenLayers[i].freeMem();
 			free(hiddenLayers);
-		}
 	}
 	
 	/**
@@ -383,9 +382,9 @@ struct Network
 		inputLayer(inputs, prev, cublasHandle);
 		cuda_fill(prev + extensionOffset, biasWeight, neuronsPerLayer + biasLength);
 		
-		for (ulong i = 0; i < depth; ++i)
+		foreach (l; hiddenLayers)
 		{
-			hiddenLayers[i](prev, next, cublasHandle);
+			l(prev, next, cublasHandle);
 			prev = next;
 			
 			// TODO: need extemded matrix instead. Extended part should not be activated.
@@ -435,18 +434,18 @@ struct Network
 		 *   1 - 1.00     1 - -2.00       1 - 0.75  0.971843   */
 		auto network = Network(params, generator);
 		cudaDeviceSynchronize();
-		network.inputLayer.weights[0]   =  0.00;
-		network.inputLayer.weights[1]   =  1.00; // bias
-		network.hiddenLayers.weights[0] =  2.00;
-		network.hiddenLayers.weights[1] = -2.00; // bias
-		network.outputLayer.weights[0]  = -0.50;
-		network.outputLayer.weights[1]  =  0.75; // bias
+		network.inputLayer.weights[0]      =  0.00;
+		network.inputLayer.weights[1]      =  1.00; // bias
+		network.hiddenLayers[0].weights[0] =  2.00;
+		network.hiddenLayers[0].weights[1] = -2.00; // bias
+		network.outputLayer.weights[0]     = -0.50;
+		network.outputLayer.weights[1]     =  0.75; // bias
 		
 		network(inputs, outputs, handle);
 		cudaDeviceSynchronize();
 		
 		float[] result = [0.971843, 0.971843];
-		for(ulong i = 0; i < outputs.length; ++i)
+		for (ulong i = 0; i < outputs.length; ++i)
 			assert (
 				approxEqual(
 					outputs[i], result[i],
