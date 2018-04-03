@@ -62,6 +62,39 @@ unittest
 }
 
 /**
+ * Set absolute value for each element in an array in place on GPU.
+ *
+ * Params:
+ *     x = Pointer to an array.
+ *     n = Size of array. If n is less than atual x size, only the ferst n elements will be calculated.
+ */
+void cuda_abs(float *x, const size_t n) nothrow @nogc;
+
+///
+unittest
+{
+	mixin(writetest!cuda_abs);
+	
+	import std.math : approxEqual;
+	
+	immutable accuracy = 0.000_001;
+	immutable length   = 3;
+	
+	float* data;
+	cudaMallocManaged(data, length);
+	data[0] = -1;
+	data[1] =  0;
+	data[2] =  1;
+	
+	cuda_abs(data, length);
+	cudaDeviceSynchronize();
+	
+	immutable float[] result = [1, 0, 1];
+	for (ulong i = 0; i < length; ++i)
+		assert ( approxEqual(data[i], result[i], accuracy) );
+}
+
+/**
  * Fill an array on GPU.
  *
  * Params:

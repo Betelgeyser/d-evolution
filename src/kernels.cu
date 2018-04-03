@@ -39,6 +39,27 @@ void cuda_tanh(float *x, const size_t n)
 }
 
 /**
+ * Set absolute value for each element in an array in place on GPU.
+ *
+ * Params:
+ *     x = Pointer to an array.
+ *     n = Size of array. If n is less than atual x size, only the ferst n elements will be calculated.
+ */
+__global__
+void kernel_abs(float *x, const size_t n)
+{
+	for (int i = 0; i < n; ++i)
+		x[i] = fabsf(x[i]);
+}
+
+/// ditto
+__host__
+void cuda_abs(float *x, const size_t n)
+{
+	kernel_abs<<<1, 1>>>(x, n);
+}
+
+/**
  * Fill array on GPU.
  *
  * Params:
