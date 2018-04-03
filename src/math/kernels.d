@@ -132,3 +132,40 @@ unittest
 		assert ( approxEqual(norm[i], result[i], accuracy) );
 }
 
+/**
+ * Scale (0; 1] to (min; max].
+ *
+ * Params:
+ *     ptr = Pointer to an array to scale.
+ *     min = Minimum scaled value.
+ *     max = Maximum scaled value.
+ *     count = Number of values to scale.
+ */
+void cuda_scale(float* ptr, in float min, in float max, in size_t count);
+
+///
+unittest
+{
+	mixin(writetest!cuda_scale);
+	
+	import std.math : approxEqual;
+	
+	immutable accuracy = 0.000_001;
+	immutable min      = -200;
+	immutable max      =  600;
+	immutable length   =    5;
+	
+	float* data;
+	cudaMallocManaged(data, length);
+	
+	for (ulong i = 0; i < length; ++i)
+		data[i] = cast(float) i / length;
+	
+	cuda_scale(data, min, max, length);
+	cudaDeviceSynchronize();
+	
+	immutable float[] result = [-200, -40, 120, 280, 440];
+	for (ulong i = 0; i < length; ++i)
+		assert ( approxEqual(data[i], result[i], accuracy) );
+}
+

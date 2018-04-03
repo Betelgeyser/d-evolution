@@ -84,3 +84,26 @@ void cuda_L2(const float *x, float *y, const int dim, const size_t count)
 	kernel_L2<<<1, 1>>>(x, y, dim, count);
 }
 
+/**
+ * Scale (0; 1] to (min; max].
+ *
+ * Params:
+ *     ptr = Pointer to an array to scale.
+ *     min = Minimum scaled value.
+ *     max = Maximum scaled value.
+ *     count = Number of values to scale.
+ */
+__global__
+void kernel_scale(float *ptr, const float min, const float max, const size_t count)
+{
+	for (int i = 0; i < count; ++i)
+		ptr[i] = ptr[i] * fabsf(max - min) + min;
+}
+
+/// ditto
+__host__
+void cuda_scale(float *ptr, const float min, const float max, const size_t count)
+{
+	kernel_scale<<<1, 1>>>(ptr, min, max, count);
+}
+
