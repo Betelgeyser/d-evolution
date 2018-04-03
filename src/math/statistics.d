@@ -23,6 +23,8 @@ import cuda.curand;
 // DNN modules
 import common;
 import math.matrix;
+import math.kernels;
+
 
 version (unittest)
 {
@@ -252,103 +254,4 @@ unittest
 		)
 	);
 }
-
-extern (C++):
-	/**
-	 * Calculate hyperbolic tangent for each element of an array `x` on GPU.
-	 *
-	 * Params:
-	 *     x = A pointer to an array. Could point to not the first element.
-	 *     n = Size of the array. If n is less than the actual x size, only the first n elements starting from the pointer p
-	 *         will be calculated.
-	 */
-	void cuda_tanh(float* x, size_t n) nothrow @nogc;
-	
-	///
-	unittest
-	{
-		mixin(writetest!cuda_tanh);
-		
-		immutable length = 5;
-		
-		float* data;
-		cudaMallocManaged(data, length);
-		data[0] = -1_000;
-		data[1] =     -1;
-		data[2] =      0;
-		data[3] =      1;
-		data[4] =  1_000;
-		
-		cuda_tanh(data, length);
-		cudaDeviceSynchronize();
-		
-		immutable float[] result = [-1.000000, -0.761594, 0.000000,  0.761594, 1.000000];
-		for (ulong i = 0; i < length; ++i)
-			assert ( approxEqual(data[i], result[i], accuracy) );
-	}
-	
-	/**
-	 * Fill an array on GPU.
-	 *
-	 * Params:
-	 *     x = A pointer to an array. Could point to not the first element.
-	 *     val = A value to fill with.
-	 *     n = Size of the array. If n is less than the actual x size, only the first n elements starting from the pointer p
-	 *         will be filled.
-	 */
-	void cuda_fill(float* x, float val, size_t n) nothrow @nogc;
-	
-	///
-	unittest
-	{
-		mixin(writetest!cuda_fill);
-		
-		immutable length = 5;
-		
-		float* data;
-		cudaMallocManaged(data, length);
-		
-		cuda_fill(data,     1, length);
-		cuda_fill(data + 1, 2, length - 2);
-		cudaDeviceSynchronize();
-		
-		immutable float[] result = [1, 2, 2, 2, 1];
-		for (ulong i = 0; i < length; ++i)
-			assert ( approxEqual(data[i], result[i], accuracy) );
-	}
-	
-	/**
-	 * Per-vector calculation of the Euclidean distance (L2 norm) of a vector array on GPU.
-	 *
-	 * Params:
-	 *     x = A pointer to an array of vectors. Must have size of `dim * count` or less but be multiple to `dim`.
-	 *     y = A pointer to the resulting array of L2 norm values. Must contain `count` elements.
-	 *     dim = Vectors dimention.
-	 *     count = Number of vectors in the `x` array and resulting values in the `y` array.
-	 */
-	void cuda_L2(const(float)* x, float* y, int dim, size_t count) nothrow @nogc;
-	
-	///
-	unittest
-	{
-		mixin(writetest!cuda_L2);
-		
-		immutable dim    = 4;
-		immutable length = 2;
-		
-		float* data;
-		float* norm;
-		cudaMallocManaged(data, dim * length);
-		cudaMallocManaged(norm, length);
-		
-		for (ulong i = 0; i < dim * length; ++i)
-			data[i] = i;
-		
-		cuda_L2(data, norm, dim, length);
-		cudaDeviceSynchronize();
-		
-		immutable float[] result = [3.741657, 11.224972];
-		for (ulong i = 0; i < length; ++i)
-			assert ( approxEqual(norm[i], result[i], accuracy) );
-	}
 
