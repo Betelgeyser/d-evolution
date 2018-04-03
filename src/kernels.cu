@@ -12,6 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This file contains implementations and interfaces for cuda kernels. They are compiled to a standalone dynamic library
+ * to be linked with D code later.
  */
 
 /**
@@ -22,7 +25,7 @@
  *     n = Size of array. If n is less than atual x size, only the ferst n elements will be calculated.
  */
 __global__
-void kernel_tanh(float *x, size_t n)
+void kernel_tanh(float *x, const size_t n)
 {
 	for (int i = 0; i < n; i++)
 		x[i] = tanhf(x[i]);
@@ -30,7 +33,7 @@ void kernel_tanh(float *x, size_t n)
 
 /// ditto
 __host__
-void cuda_tanh(float *x, size_t n)
+void cuda_tanh(float *x, const size_t n)
 {
 	kernel_tanh<<<1, 1>>>(x, n);
 }
@@ -45,7 +48,7 @@ void cuda_tanh(float *x, size_t n)
  *         will be filled.
  */
 __global__
-void kernel_fill(float *x, float val, size_t count)
+void kernel_fill(float *x, const float val, const size_t count)
 {
 	for (int i = 0; i < count; i++)
 		x[i] = val;
@@ -53,7 +56,7 @@ void kernel_fill(float *x, float val, size_t count)
 
 /// ditto
 __host__
-void cuda_fill(float *x, float val, size_t count)
+void cuda_fill(float *x, const float val, const size_t count)
 {
 	kernel_fill<<<1, 1>>>(x, val, count);
 }
@@ -68,7 +71,7 @@ void cuda_fill(float *x, float val, size_t count)
  *     count = Number of vectors in the `x` array and resulting values in the `y` array.
  */
 __global__
-void kernel_L2(const float *x, float *y, int dim, size_t count)
+void kernel_L2(const float *x, float *y, const int dim, const size_t count)
 {
 	for (int i = 0; i < count; i++)
 		y[i] = normf(dim, x + dim * i);
@@ -76,7 +79,7 @@ void kernel_L2(const float *x, float *y, int dim, size_t count)
 
 /// ditto
 __host__
-void cuda_L2(const float *x, float *y, int dim, size_t count)
+void cuda_L2(const float *x, float *y, const int dim, const size_t count)
 {
 	kernel_L2<<<1, 1>>>(x, y, dim, count);
 }
