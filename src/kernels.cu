@@ -60,6 +60,71 @@ void cuda_abs(float *x, const size_t n)
 }
 
 /**
+ * Scale [0; 1] to [min; max].
+ *
+ * Params:
+ *     min = Minimum scaled value.
+ *     max = Maximum scaled value.
+ *     alpha = Value to scale.
+ */
+__device__
+float scale(const float min, const float max, const float alpha)
+{
+	return alpha * fabsf(max - min) + min;
+}
+
+/**
+ * Scale array of values from [0; 1] to [min; max].
+ *
+ * Params:
+ *     ptr = Pointer to an array to scale.
+ *     min = Minimum scaled value.
+ *     max = Maximum scaled value.
+ *     count = Number of values to scale.
+ */
+__global__
+void kernel_scale(float *ptr, const float min, const float max, const size_t count)
+{
+	for (int i = 0; i < count; ++i)
+		ptr[i] = scale(min, max, ptr[i]);
+}
+
+/// ditto
+__host__
+void cuda_scale(float *ptr, const float min, const float max, const size_t count)
+{
+	kernel_scale<<<1, 1>>>(ptr, min, max, count);
+}
+
+/**
+ * BLX-α crossover.
+ *
+ * Params:
+ *     x, y = Pointers to parent arrays.
+ *     offspring = Pointer to an offspring array.
+ *     u = Pointer to an array of random uniform values in the range of (0; 1].
+ *     alpha = α parameter of BLX-α crossover.
+ *     n = Number of values to crossover.
+ */
+__global__
+void kernel_BLX_a(const float *x, const float *y, float *offspring, const float *u, const float alpha, const size_t n)
+{
+	for (int i = 0; i < n; ++i)
+		offspring[i] = scale(
+			fminf(x[i], y[i]) - alpha * fabsf(x[i] - y[i]),
+			fmaxf(x[i], y[i]) + alpha * fabsf(x[i] - y[i]),
+			u[i]
+		);
+}
+
+/// ditto
+__host__
+void cuda_BLX_a(const float *x, const float *y, float *offspring, const float *u, const float alpha, const size_t n)
+{
+	kernel_BLX_a<<<1, 1>>>(x, y, offspring, u, alpha, n);
+}
+
+/**
  * Fill array on GPU.
  *
  * Params:
@@ -103,28 +168,5 @@ __host__
 void cuda_L2(const float *x, float *y, const int dim, const size_t count)
 {
 	kernel_L2<<<1, 1>>>(x, y, dim, count);
-}
-
-/**
- * Scale (0; 1] to (min; max].
- *
- * Params:
- *     ptr = Pointer to an array to scale.
- *     min = Minimum scaled value.
- *     max = Maximum scaled value.
- *     count = Number of values to scale.
- */
-__global__
-void kernel_scale(float *ptr, const float min, const float max, const size_t count)
-{
-	for (int i = 0; i < count; ++i)
-		ptr[i] = ptr[i] * fabsf(max - min) + min;
-}
-
-/// ditto
-__host__
-void cuda_scale(float *ptr, const float min, const float max, const size_t count)
-{
-	kernel_scale<<<1, 1>>>(ptr, min, max, count);
 }
 

@@ -95,6 +95,62 @@ unittest
 }
 
 /**
+ * BLX-α crossover.
+ *
+ * Params:
+ *     x = Pointer to a parent array.
+ *     y = Pointer to a parent array.
+ *     offspring = Pointer to an offspring array.
+ *     u = Pointer to an array of random uniform values in the range of [0; 1].
+ *     alpha = α parameter of BLX-α crossover.
+ *     n = Number of values to crossover.
+ */
+void cuda_BLX_a(const(float*) x, const(float*) y, float* offspring, const(float*) u, const float alpha, const size_t n) nothrow @nogc;
+
+///
+unittest
+{
+	mixin(writetest!cuda_BLX_a);
+	
+	import std.math : approxEqual;
+	
+	immutable accuracy = 0.000_001;
+	immutable length   = 3;
+	immutable alpha    = 0.2;
+	
+	// Initialize parents
+	float* x;
+	cudaMallocManaged(x, length);
+	scope(exit) cudaFree(x);
+	
+	float* y;
+	cudaMallocManaged(y, length);
+	scope(exit) cudaFree(y);
+	
+	x[0..length] = [-1, 0, 1];
+	y[0..length] = [ 2, 0, 0];
+	
+	// An offspring does not need to be initialized, just allocate memory
+	float* offspring;
+	cudaMallocManaged(offspring, length);
+	scope(exit) cudaFree(offspring);
+	
+	// There should be pregenerated random values in the range [0; 1]
+	float* u;
+	cudaMallocManaged(u, length);
+	scope(exit) cudaFree(u);
+	u[0..length] = [0.0, 0.2, 0.8];
+	
+	// Artificial crossover. It will be more random in the wilderness
+	cuda_BLX_a(x, y, offspring, u, alpha, length);
+	cudaDeviceSynchronize();
+	
+	immutable float[] result = [-1.6, 0, 0.92];
+	for (ulong i = 0; i < length; ++i)
+		assert ( approxEqual(offspring[i], result[i], accuracy) );
+}
+
+/**
  * Fill an array on GPU.
  *
  * Params:
