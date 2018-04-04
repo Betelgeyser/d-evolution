@@ -64,6 +64,127 @@ struct NetworkParams
 }
 
 /**
+ * Pool of random numbers.
+ *
+ * As cuRAND achieves maximun performance generating big amounts of data, this structure will generate pool of random numbers
+ * and return them on request. If all numbers in the pool was used or there is not enought values in a pool, then new pool
+ * will be generated.
+ */
+struct RandomPool
+{
+	private float* _values; /// Random values cache.
+	
+	private immutable ulong _size;  /// Pool size. 
+	private           ulong _index; /// Last returned pointer to a pool element.
+	
+	invariant
+	{
+		assert (_size >= 1, "RandomPool must contain at least 1 value.");
+	}
+	
+	/**
+	 * Setup a pool and generate new numbers.
+	 *
+	 * Params:
+	 *     generator = Curand pseudorandom number generator.
+	 *     size = Pool size. The maximun amount of generated values to store. Defaults to the size of 2GiB values.
+	 */
+	this(curandGenerator_t generator, in uint size = 536_870_912) nothrow @nogc
+	{
+		_size = size;
+		
+		cudaMallocManaged(_values, _size);
+		scope(failure) freeMem();
+		
+		curandGenerate(generator, _values, _size);
+		cudaDeviceSynchronize();
+	}
+	
+	/**
+	 * Get `count` new random values from the pool.
+	 *
+	 * If there is not enought values in a pool, than new values will be generated.
+	 *
+	 * Params:
+	 *     generator = Curand pseudorandom number generator. Might be not used but required in the case of regeneration.
+	 *     count = How many values to return.
+	 *
+	 * Returns:
+	 *     Pointer to random numbers that were not used.
+	 */
+	const(float)* opCall(curandGenerator_t generator, in ulong count) nothrow @nogc
+	in
+	{
+		assert (count >= 1 && count <= _size, "RandomPool(gen, count) count must be >= 1 and <= pool size.");
+	}
+	body
+	{
+		if (_size - _index < count) // not enought new values in the pool
+		{
+			_index = 0;
+			curandGenerate(generator, _values, _size);
+			cudaDeviceSynchronize();
+		}
+		
+		float* result = _values + _index;
+		_index += count;
+		return result;
+	}
+	
+	/**
+	 * Free memory.
+	 *
+	 * For the reason how D works with structs memory freeing moved from destructor to
+	 * the the distinct function. Either allocating structs on stack or in heap or both
+	 * causes spontaneous destructors calls. Apparently structs are not intended
+	 * to be used with dynamic memory, probably it should be implemented as a class.  
+	 */
+	void freeMem() nothrow @nogc
+	{
+		cudaFree(_values);
+	}
+}
+
+///
+unittest
+{
+	mixin(writetest!RandomPool);
+	
+	import std.math : approxEqual;
+	immutable accuracy = 0.000_001;
+	
+	// Initialize cuRAND generator.
+	curandGenerator_t generator;
+	curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
+	curandSetPseudoRandomGeneratorSeed(generator, 0);
+	scope(exit) curandDestroyGenerator(generator);
+	
+	// Initialize pool
+	auto p = RandomPool(generator, 100);
+	scope(exit) p.freeMem();
+	
+	// There is a chance of getting two equal floats in a row, but it's virtually impossible
+	assert (
+		!approxEqual( 
+			p(generator, 1)[0],
+			p(generator, 1)[0],
+			accuracy
+		)
+	);
+	
+	p(generator, 100); // force pool to regenerate
+	
+	// Ensure pool regenerates its values
+	assert (
+		!approxEqual(
+			p(generator, 55)[0],
+			p(generator, 55)[0],
+			accuracy
+		)
+	);
+}
+
+/**
  * Feedforward layer.
  *
  * Each neuron of this layer is connected to each neuron of the previous layer.
