@@ -225,10 +225,12 @@ unittest
 /**
  * Simpified version of geam function.
  *
- * Performs matrix addition. C = A + B.
+ * Performs matrix addition. C = αA + βB.
  *
  * Params:
+ *     alpha = α constant multiplier.
  *     A = The first matrix.
+ *     beta = β constant multiplier.
  *     B = The second matrix.
  *     C = Output matrix.
  *     cublasHandle = Cublas handle.

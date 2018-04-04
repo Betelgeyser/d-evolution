@@ -12,6 +12,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This module contains basic structs, subroutines and cuda kernel interfaces for mathematics.
  */
 module math.kernels;
 
@@ -224,7 +226,7 @@ unittest
 }
 
 /**
- * Scale (0; 1] to (min; max].
+ * Scale [0; 1] to [min; max].
  *
  * Params:
  *     ptr = Pointer to an array to scale.

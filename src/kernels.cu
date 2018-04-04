@@ -18,10 +18,10 @@
  */
 
 /**
- * Calculate hyperbolic tangent for each element in array on GPU.
+ * Calculate hyperbolic tangent for each element in an array in place on GPU.
  *
  * Params:
- *     x = Array to calculate.
+ *     x = Pointer to an array.
  *     n = Size of array. If n is less than atual x size, only the ferst n elements will be calculated.
  */
 __global__
