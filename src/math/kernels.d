@@ -52,6 +52,7 @@ unittest
 	data[2] =      0;
 	data[3] =      1;
 	data[4] =  1_000;
+	scope(exit) cudaFree(data);
 	
 	cuda_tanh(data, length);
 	cudaDeviceSynchronize();
@@ -85,6 +86,7 @@ unittest
 	data[0] = -1;
 	data[1] =  0;
 	data[2] =  1;
+	scope(exit) cudaFree(data);
 	
 	cuda_abs(data, length);
 	cudaDeviceSynchronize();
@@ -173,6 +175,7 @@ unittest
 	
 	float* data;
 	cudaMallocManaged(data, length);
+	scope(exit) cudaFree(data);
 	
 	cuda_fill(data,     1, length);
 	cuda_fill(data + 1, 2, length - 2);
@@ -206,9 +209,12 @@ unittest
 	immutable length   = 2;
 	
 	float* data;
-	float* norm;
 	cudaMallocManaged(data, dim * length);
+	scope(exit) cudaFree(data);
+	
+	float* norm;
 	cudaMallocManaged(norm, length);
+	scope(exit) cudaFree(norm);
 	
 	for (ulong i = 0; i < dim * length; ++i)
 		data[i] = i;
@@ -246,6 +252,7 @@ unittest
 	
 	float* data;
 	cudaMallocManaged(data, length);
+	scope(exit) cudaFree(data);
 	
 	for (ulong i = 0; i < length; ++i)
 		data[i] = cast(float) i / length;
