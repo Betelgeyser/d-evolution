@@ -47,12 +47,9 @@ unittest
 	
 	float* data;
 	cudaMallocManaged(data, length);
-	data[0] = -1_000;
-	data[1] =     -1;
-	data[2] =      0;
-	data[3] =      1;
-	data[4] =  1_000;
 	scope(exit) cudaFree(data);
+	
+	data[0..length] = [-1_000, -1, 0, 1, 1_000];
 	
 	cuda_tanh(data, length);
 	cudaDeviceSynchronize();
@@ -83,10 +80,9 @@ unittest
 	
 	float* data;
 	cudaMallocManaged(data, length);
-	data[0] = -1;
-	data[1] =  0;
-	data[2] =  1;
 	scope(exit) cudaFree(data);
+	
+	data[0..length] = [-1, 0, 1];
 	
 	cuda_abs(data, length);
 	cudaDeviceSynchronize();
