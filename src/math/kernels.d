@@ -101,11 +101,11 @@ unittest
  *     x = Pointer to a parent array.
  *     y = Pointer to a parent array.
  *     offspring = Pointer to an offspring array.
- *     u = Pointer to an array of random uniform values in the range of [0; 1].
  *     alpha = α parameter of BLX-α crossover.
+ *     u = Pointer to an array of random uniform values in the range of [0; 1].
  *     n = Number of values to crossover.
  */
-void cuda_BLX_a(const(float*) x, const(float*) y, float* offspring, const(float*) u, const float alpha, const size_t n) nothrow @nogc;
+void cuda_BLX_a(const(float*) x, const(float*) y, float* offspring, const float alpha, const(float*) u, const size_t n) nothrow @nogc;
 
 ///
 unittest
@@ -142,7 +142,7 @@ unittest
 	u[0..length] = [0.0, 0.2, 0.8];
 	
 	// Artificial crossover. It will be more random in the wilderness
-	cuda_BLX_a(x, y, offspring, u, alpha, length);
+	cuda_BLX_a(x, y, offspring, alpha, u, length);
 	cudaDeviceSynchronize();
 	
 	immutable float[] result = [-1.6, 0, 0.92];

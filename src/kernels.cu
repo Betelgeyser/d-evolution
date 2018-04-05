@@ -102,12 +102,12 @@ void cuda_scale(float *ptr, const float min, const float max, const size_t count
  * Params:
  *     x, y = Pointers to parent arrays.
  *     offspring = Pointer to an offspring array.
- *     u = Pointer to an array of random uniform values in the range of (0; 1].
  *     alpha = α parameter of BLX-α crossover.
+ *     u = Pointer to an array of random uniform values in the range of [0; 1].
  *     n = Number of values to crossover.
  */
 __global__
-void kernel_BLX_a(const float *x, const float *y, float *offspring, const float *u, const float alpha, const size_t n)
+void kernel_BLX_a(const float *x, const float *y, float *offspring, const float alpha, const float *u, const size_t n)
 {
 	for (int i = 0; i < n; ++i)
 		offspring[i] = scale(
@@ -119,9 +119,9 @@ void kernel_BLX_a(const float *x, const float *y, float *offspring, const float 
 
 /// ditto
 __host__
-void cuda_BLX_a(const float *x, const float *y, float *offspring, const float *u, const float alpha, const size_t n)
+void cuda_BLX_a(const float *x, const float *y, float *offspring, const float alpha, const float *u, const size_t n)
 {
-	kernel_BLX_a<<<1, 1>>>(x, y, offspring, u, alpha, n);
+	kernel_BLX_a<<<1, 1>>>(x, y, offspring, alpha, u, n);
 }
 
 /**
