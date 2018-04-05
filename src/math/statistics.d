@@ -26,33 +26,6 @@ import math.matrix;
 import math.kernels;
 
 
-version (unittest)
-{
-	import std.math : approxEqual;
-	
-	private immutable accuracy = 0.000_001;
-	
-	private curandGenerator_t generator;
-	private cublasHandle_t handle;
-	
-	static this()
-	{
-		// Initialize cuRAND generator.
-		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, 0);
-		
-		// Initialize cuBLAS
-		cublasCreate(handle);
-	}
-	
-	static ~this()
-	{
-		curandDestroyGenerator(generator);
-		cublasDestroy(handle);
-	}
-}
-
-
 /**
  * Calculate an Absolute Error between $(D_PARAM A) and $(D_PARAM B) arrays of vectors on GPU.
  *
@@ -105,6 +78,14 @@ body
 unittest
 {
 	mixin(writetest!AE);
+	
+	import std.math : approxEqual;
+	immutable accuracy = 0.000_001;
+	
+	// Initialize cuBLAS
+	cublasHandle_t handle;
+	cublasCreate(handle);
+	scope(exit) cublasDestroy(handle);
 	
 	auto A = Matrix(3, 4);
 	auto B = Matrix(3, 4);
@@ -164,6 +145,14 @@ unittest
 {
 	mixin(writetest!MAE);
 	
+	import std.math : approxEqual;
+	immutable accuracy = 0.000_001;
+	
+	// Initialize cuBLAS
+	cublasHandle_t handle;
+	cublasCreate(handle);
+	scope(exit) cublasDestroy(handle);
+	
 	auto A = Matrix(3, 4);
 	auto B = Matrix(3, 4);
 	
@@ -204,6 +193,14 @@ unittest
 {
 	mixin(writetest!MAENaive);
 	
+	import std.math : approxEqual;
+	immutable accuracy = 0.000_001;
+	
+	// Initialize cuBLAS
+	cublasHandle_t handle;
+	cublasCreate(handle);
+	scope(exit) cublasDestroy(handle);
+	
 	auto data = Matrix(2, 3);
 	for (ulong i = 0; i < data.length; ++i)
 		data[i] = i * i;
@@ -237,6 +234,14 @@ body
 unittest
 {
 	mixin(writetest!MASE);
+	
+	import std.math : approxEqual;
+	immutable accuracy = 0.000_001;
+	
+	// Initialize cuBLAS
+	cublasHandle_t handle;
+	cublasCreate(handle);
+	scope(exit) cublasDestroy(handle);
 	
 	auto measured = Matrix(3, 4);
 	for (ulong i = 0; i < measured.length; ++i)

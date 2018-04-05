@@ -15,32 +15,3 @@
  */
 module cuda.curand.functions;
 
-import cuda.common;
-import cuda.curand.types;
-static import curand = cuda.curand.exp;
-
-void curandCreateGenerator(ref curandGenerator_t generator, curandRngType_t rng_type) nothrow @nogc
-{
-	enforceCurand(curand.curandCreateGenerator(&generator, rng_type));
-}
-
-void curandDestroyGenerator(curandGenerator_t generator) nothrow @nogc
-{
-	enforceCurand(curand.curandDestroyGenerator(generator));
-}
-
-void curandSetPseudoRandomGeneratorSeed(curandGenerator_t generator, ulong seed) nothrow @nogc
-{
-	enforceCurand(curand.curandSetPseudoRandomGeneratorSeed(generator, seed));
-}
-
-void curandGenerate(curandGenerator_t generator, float* outputPtr, size_t num) nothrow @nogc
-{
-	enforceCurand(curand.curandGenerate(generator, outputPtr, num));
-}
-
-package void enforceCurand(curandStatus_t error) pure nothrow @safe @nogc
-{
-	assert (error == curandStatus_t.CURAND_STATUS_SUCCESS, error.toString);
-}
-

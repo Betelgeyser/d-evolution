@@ -122,11 +122,10 @@ struct Population
 	{
 		mixin(writetest!__ctor);
 		
-		// Initialize cuRAND generator
-		curandGenerator_t generator;
-		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, 0);
-		scope(exit) curandDestroyGenerator(generator);
+		// Initialize cuRAND generator.
+		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
+		generator.setPseudoRandomGeneratorSeed(0);
+		scope(exit) generator.destroy;
 		
 		// Initialize network params
 		NetworkParams params;
@@ -217,11 +216,10 @@ struct Population
 	{
 		mixin(writetest!sort);
 		
-		// Initialize cuRAND generator
-		curandGenerator_t generator;
-		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, 0);
-		scope(exit) curandDestroyGenerator(generator);
+		// Initialize cuRAND generator.
+		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
+		generator.setPseudoRandomGeneratorSeed(0);
+		scope(exit) generator.destroy;
 		
 		// Initialize network params
 		NetworkParams params;
