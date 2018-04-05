@@ -84,36 +84,12 @@ struct Matrix
 		cudaMallocManaged(values, length);
 	}
 	
-	/// ditto
-	this(in uint rows, in uint cols, curandGenerator_t generator) nothrow @nogc
-	in
-	{
-		assert (rows >= 1, "Matrix must containg at least 1 row.");
-		assert (cols >= 1, "Matrix must containg at least 1 column.");
-	}
-	body
-	{
-		this(rows, cols);
-		
-		{
-			// To prevent a double free error, additional freeMem() is moved from this(...) scope.
-			scope(failure) freeMem();
-			curandGenerate(generator, values, length);
-		}
-	}
-	
 	///
 	unittest
 	{
 		mixin(writetest!__ctor);
 		
-		// Initialize cuRAND generator
-		curandGenerator_t generator;
-		curandCreateGenerator(generator, curandRngType_t.CURAND_RNG_PSEUDO_DEFAULT);
-		curandSetPseudoRandomGeneratorSeed(generator, 0);
-		scope(exit) curandDestroyGenerator(generator);
-		
-		auto m = Matrix(3, 2, generator);
+		auto m = Matrix(3, 2);
 		scope(exit) m.freeMem();
 		
 		cudaDeviceSynchronize();
