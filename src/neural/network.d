@@ -208,6 +208,12 @@ struct Layer
 {
 	Matrix weights; /// Connection weights.
 	
+	invariant
+	{
+		assert (&weights, "The weights matrix is incorrect.");
+		assert (weights.rows >= 1 + biasLength, "A layer must have at least 2 connections."); // connections()
+	}
+	
 	/**
 	 * Number of connections per neuron (including bias).
 	 */
@@ -224,12 +230,6 @@ struct Layer
 		return weights.cols;
 	}
 	
-	invariant
-	{
-		assert (&weights, "The weights matrix is incorrect.");
-		assert (weights.rows >= 1 + biasLength, "A layer must have at least 2 connections."); // connections()
-	}
-	
 	/**
 	 * Constructor for random layer.
 	 *
@@ -238,7 +238,7 @@ struct Layer
 	 *     neurons = Number of neurons in the layer.
 	 *     generator = Pseudorandom number generator.
 	 */
-	this(in uint inputs, in uint neurons, curandGenerator_t generator) nothrow @nogc
+	this(in uint inputs, in uint neurons) nothrow @nogc
 	in
 	{
 		assert (inputs  >= 1, "A layer must have at least 1 input connection.");
@@ -248,11 +248,24 @@ struct Layer
 	{
 		scope(failure) freeMem();
 		
-		weights = Matrix(
-			inputs + biasLength,
-			neurons,
-			generator
-		);
+		weights = Matrix(inputs + biasLength, neurons);
+	}
+	
+	/// ditto
+	this(in uint inputs, in uint neurons, curandGenerator generator) nothrow @nogc
+	in
+	{
+		assert (inputs  >= 1, "A layer must have at least 1 input connection.");
+		assert (neurons >= 1, "A layer must have at least 1 neuron.");
+	}
+	body
+	{
+		this(inputs, neurons);
+		
+		{
+			scope(failure) freeMem();
+			generator.generate(weights, weights.length);
+		}
 	}
 	
 	///
@@ -405,7 +418,7 @@ struct Network
 	/**
 	 * Number of hidden layers (input and output does not count).
 	 */
-	@property uint depth() const pure nothrow @safe @nogc
+	@property ulong depth() const pure nothrow @safe @nogc
 	{
 		return hiddenLayers.length;
 	}
