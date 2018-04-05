@@ -64,34 +64,27 @@ struct NetworkParams
 }
 
 /**
- * Pool of random numbers.
+ * Pool of uniformly distributed random numbers in range (0; 1].
  *
  * As cuRAND achieves maximun performance generating big amounts of data, this structure will generate pool of random numbers
  * and return them on request. If all numbers in the pool was used or there is not enought values in a pool, then new pool
  * will be generated.
- *
- * Currently generates values on range (0; 1].
  */
 struct RandomPool
 {
-	private float* _values; /// Random values cache.
+	immutable ulong size;  /// Pool size. 
 	
-	private immutable ulong _size;  /// Pool size. 
-	private           ulong _index; /// Last returned pointer to a pool element.
-	
-	private curandGenerator _generator; /// Generator regenerates numbers as the pool runs out of them.
+	private
+	{
+		float[] _values; /// Random values cache.
+		ulong   _index;  /// Last returned pointer to a pool element.
+		curandGenerator _generator; /// Generator regenerates numbers as the pool runs out of them.
+	}
 	
 	invariant
 	{
-		assert (_size >= 1, "RandomPool must contain at least 1 value.");
-	}
-	
-	/**
-	 * Pool size which is a maximum number of values pool can store.
-	 */
-	@property ulong size() const pure nothrow @safe @nogc
-	{
-		return _size;
+		assert (_values.length == size);
+		assert (_index <= size);
 	}
 	
 	/**
@@ -102,15 +95,46 @@ struct RandomPool
 	 *     size = Pool size. The maximun amount of generated values to store. Defaults to the size of 2GiB values.
 	 */
 	this(curandGenerator generator, in uint size = 536_870_912) nothrow @nogc
+	in
 	{
-		_size = size;
+		assert (size >= 1);
+	}
+	body
+	{
+		this.size = size;
 		_generator = generator;
 		
-		cudaMallocManaged(_values, _size);
+		cudaMallocManaged(_values, size);
 		scope(failure) freeMem();
 		
-		_generator.generateUniform(_values, _size);
+		_generator.generateUniform(_values.ptr, size);
 		cudaDeviceSynchronize();
+	}
+	
+	/**
+	 * Get `count` new random values from the pool.
+	 *
+	 * If there is not enought values in a pool, than new values will be generated.
+	 *
+	 * Params:
+	 *     count = How many values to return.
+	 *
+	 * Returns:
+	 *     Pointer to random numbers that were not used.
+	 */
+	const(float)[] opCall(in ulong count) nothrow @nogc
+	in
+	{
+		assert (count >= 1 && count <= size);
+	}
+	body
+	{
+		if (count > available)
+			regenerate();
+		
+		const(float)[] result = _values[_index .. _index + count];
+		_index += count;
+		return result;
 	}
 	
 	/**
@@ -126,40 +150,25 @@ struct RandomPool
 		cudaFree(_values);
 	}
 	
-	/**
-	 * Get `count` new random values from the pool.
-	 *
-	 * If there is not enought values in a pool, than new values will be generated.
-	 *
-	 * Params:
-	 *     count = How many values to return.
-	 *
-	 * Returns:
-	 *     Pointer to random numbers that were not used.
-	 */
-	const(float)* opCall(in ulong count) nothrow @nogc
-	in
+	private
 	{
-		assert (count >= 1 && count <= _size, "RandomPool(gen, count) count must be >= 1 and <= pool size.");
-	}
-	body
-	{
-		if (_size - _index < count)
-			regenerate();
+		/**
+		 * Number of values that has not been used.
+		 */
+		@property ulong available() const pure nothrow @safe @nogc
+		{
+			return size - _index;
+		}
 		
-		float* result = _values + _index;
-		_index += count;
-		return result;
-	}
-	
-	/**
-	 * Generates new values and resets _index.
-	 */
-	private void regenerate() nothrow @nogc
-	{
-		_index = 0;
-		_generator.generateUniform(_values, _size);
-		cudaDeviceSynchronize();
+		/**
+		 * Generates new values and resets _index.
+		 */
+		void regenerate() nothrow @nogc
+		{
+			_index = 0;
+			_generator.generateUniform(_values.ptr, size);
+			cudaDeviceSynchronize();
+		}
 	}
 }
 

@@ -29,9 +29,10 @@ struct curandGenerator
 {
 	private curandGenerator_t _generator;
 	
-	this(curandRngType_t rng_type) nothrow @nogc
+	this(curandRngType_t rng_type, ulong seed = 0) nothrow @nogc
 	{
 		enforceCurand(curandCreateGenerator(&_generator, rng_type));
+		setPseudoRandomGeneratorSeed(seed);
 	}
 	
 	void destroy() nothrow @nogc
