@@ -69,6 +69,8 @@ struct NetworkParams
  * As cuRAND achieves maximun performance generating big amounts of data, this structure will generate pool of random numbers
  * and return them on request. If all numbers in the pool was used or there is not enought values in a pool, then new pool
  * will be generated.
+ *
+ * Currently generates values on range (0; 1].
  */
 struct RandomPool
 {
@@ -112,6 +114,19 @@ struct RandomPool
 	}
 	
 	/**
+	 * Free memory.
+	 *
+	 * For the reason how D works with structs memory freeing moved from destructor to
+	 * the the distinct function. Either allocating structs on stack or in heap or both
+	 * causes spontaneous destructors calls. Apparently structs are not intended
+	 * to be used with dynamic memory, probably it should be implemented as a class.  
+	 */
+	void freeMem() nothrow @nogc
+	{
+		cudaFree(_values);
+	}
+	
+	/**
 	 * Get `count` new random values from the pool.
 	 *
 	 * If there is not enought values in a pool, than new values will be generated.
@@ -129,12 +144,8 @@ struct RandomPool
 	}
 	body
 	{
-		if (_size - _index < count) // not enought new values in the pool
-		{
-			_index = 0;
-			_generator.generateUniform(_values, _size);
-			cudaDeviceSynchronize();
-		}
+		if (_size - _index < count)
+			regenerate();
 		
 		float* result = _values + _index;
 		_index += count;
@@ -142,16 +153,13 @@ struct RandomPool
 	}
 	
 	/**
-	 * Free memory.
-	 *
-	 * For the reason how D works with structs memory freeing moved from destructor to
-	 * the the distinct function. Either allocating structs on stack or in heap or both
-	 * causes spontaneous destructors calls. Apparently structs are not intended
-	 * to be used with dynamic memory, probably it should be implemented as a class.  
+	 * Generates new values and resets _index.
 	 */
-	void freeMem() nothrow @nogc
+	private void regenerate() nothrow @nogc
 	{
-		cudaFree(_values);
+		_index = 0;
+		_generator.generateUniform(_values, _size);
+		cudaDeviceSynchronize();
 	}
 }
 
