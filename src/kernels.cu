@@ -17,6 +17,9 @@
  * to be linked with D code later.
  */
 
+const float float_max = 3.402823466e+38;
+const float float_min = 1.175494351e-38;
+
 /**
  * Calculate hyperbolic tangent for each element in an array in place on GPU.
  *
@@ -110,11 +113,15 @@ __global__
 void kernel_BLX_a(const float *x, const float *y, float *offspring, const float alpha, const float *u, const size_t n)
 {
 	for (int i = 0; i < n; ++i)
+	{
+		float min = fminf(x[i], y[i]) - alpha * fabsf(x[i] - y[i]);
+		float max = fmaxf(x[i], y[i]) + alpha * fabsf(x[i] - y[i]);
 		offspring[i] = scale(
-			fminf(x[i], y[i]) - alpha * fabsf(x[i] - y[i]),
-			fmaxf(x[i], y[i]) + alpha * fabsf(x[i] - y[i]),
+			isinf(min) ? float_min : min,
+			isinf(max) ? float_max : max,
 			u[i]
 		);
+	}
 }
 
 /// ditto
