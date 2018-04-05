@@ -18,7 +18,7 @@
  */
 
 const float float_max = 3.402823466e+38;
-const float float_min = 1.175494351e-38;
+const float float_min = -float_max;
 
 /**
  * Calculate hyperbolic tangent for each element in an array in place on GPU.
