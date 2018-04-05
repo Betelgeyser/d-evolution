@@ -20,4 +20,5 @@ module math;
 public import math.kernels;
 public import math.matrix;
 public import math.statistics;
+public import math.random;
 
