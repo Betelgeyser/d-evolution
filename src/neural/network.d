@@ -318,6 +318,76 @@ struct Layer
 				)
 			);
 	}
+	
+	/**
+	 * Cross over parents to generate an offspring. The operation is performed on place.
+	 *
+	 * As the constructor allocates new memory for a new layer, to optimize performance and avoid memory reallocations
+	 * this operation is performed in place assuming the calling struct is an offspring.
+	 *
+	 * Currently only BLX-α crossover is implemented and is a default algorithm.
+	 *
+	 * Params:
+	 *     x = The first parent.
+	 *     y = The second parent.
+	 *     alpha = α parameter of BLX-α crossover. Simply put, determines how far to extend a search space from the parents
+	 *         where 0 means not to extend at all. Generally, 0.5 is considered to show the best results.
+	 *     pool = Pool of random numbers. It is supposed to improve performance of a crossover as cuRAND acheives maximum
+	 *         efficiency generating large quontities of numbers.
+	 */
+	void crossover(in Layer x, in Layer y, in float alpha, RandomPool pool) nothrow @nogc
+	in
+	{
+		assert (this.weights.length == y.weights.length, "Parents and an offspring must be the same size.");
+		assert (this.weights.length == x.weights.length, "Parents and an offspring must be the same size.");
+		assert (this.weights.length <= pool.size, "An offspring must not contain more values than a random pool does.");
+		
+		assert (alpha >= 0 && alpha <= 1, "α parameter must be in the range [0; 1]");
+	}
+	body
+	{
+		immutable length = this.weights.length;
+		cuda_BLX_a(x.weights, y.weights, this.weights, alpha, pool(length).ptr, length);
+	}
+	
+	///
+	unittest
+	{
+		mixin(writetest!crossover);
+		
+		import std.algorithm : max, min;
+		import std.math : approxEqual, abs;
+		immutable accuracy = 0.000_001;
+		
+		immutable LayerParams params = { inputs : 200, neurons : 300, min : -1.0e30, max : 2.0e31 };
+		immutable alpha = 0.5;
+		
+		// Initialize cuRAND generator.
+		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
+		generator.setPseudoRandomGeneratorSeed(0);
+		scope(exit) generator.destroy();
+		
+		auto parent1 = Layer(params, generator);
+		scope(exit) parent1.freeMem();
+		
+		auto parent2 = Layer(params, generator);
+		scope(exit) parent2.freeMem();
+		
+		auto offspring = Layer(params.inputs, params.neurons);
+		scope(exit) offspring.freeMem();
+		
+		auto pool = RandomPool(generator, 1_000_000);
+		scope(exit) pool.freeMem();
+		
+		offspring.crossover(parent1, parent2, alpha, pool);
+		cudaDeviceSynchronize();
+		
+		for (ulong i = 0; i < offspring.weights.length; ++i)
+			assert (
+				offspring.weights[i] >= min(parent1.weights[i], parent2.weights[i]) - alpha * abs(parent1.weights[i] - parent2.weights[i]) && 
+				offspring.weights[i] <= max(parent1.weights[i], parent2.weights[i]) + alpha * abs(parent1.weights[i] - parent2.weights[i])
+			);
+	}
 }
 
 /**
