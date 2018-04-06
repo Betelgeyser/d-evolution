@@ -19,6 +19,7 @@ module neural.network;
 
 // D modules
 import std.format;
+import std.math : isFinite;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
@@ -33,33 +34,71 @@ import math;
 immutable biasLength = 1; /// Number of bias weights per neuron.
 immutable biasWeight = 1; /// Weight of every bias connection.
 
+enum LayerType { Input, Hidden, Output }; /// Layer types.
+
+/**
+ * Random layer generation parameters.
+ */
+struct LayerParams
+{
+	uint  inputs;  /// Number of layer input connections.
+	uint  neurons; /// Number of neurons.
+
+	float min = -float.max; /// Minimal generated weight.
+	float max =  float.max; /// Maximal generated weight.
+	
+	invariant
+	{
+		assert (inputs  >= 1);
+		assert (neurons >= 1);
+		
+		assert (max >= min);
+		assert (isFinite(min));
+		assert (isFinite(max));
+	}
+}
+
 /**
  * Random network generation parameters.
  */
 struct NetworkParams
 {
-	uint inputs;  /// Number of network's inputs.
-	uint outputs; /// Number of network's outputs.
-	uint layers;  /// Number of hidden layers (excluding input and output layers).
-	uint neurons; /// Number of neurons in every hidden layer.
+	uint  inputs;  /// Number of network's inputs.
+	uint  outputs; /// Number of network's outputs.
+	uint  neurons; /// Number of neurons in every hidden layer.
+	uint  layers;  /// Number of hidden layers (excluding input and output layers).
+
+	float min = -float.max; /// Minimal generated weight.
+	float max =  float.max; /// Maximal generated weight.
 	
 	invariant
 	{
-		assert (inputs  >= 1, "Neural network must have at least 1 input neuron.");
-		assert (outputs >= 1, "Neural network must have at least 1 output neuron.");
-		assert (neurons >= 1, "Neural network must have at least 1 neuron in every hidden layer.");
+		assert (inputs  >= 1);
+		assert (outputs >= 1);
+		assert (neurons >= 1);
+		
+		assert (max >= min);
+		assert (isFinite(min));
+		assert (isFinite(max));
 	}
 	
 	/**
-	 * String representation.
+	 * Extract layer parameters from network parameters depending on a layer role in a net.
+	 *
+	 * Params:
+	 *     type = Layer role in a network.
 	 */
-	@property string toString() pure const @safe
+	LayerParams getLayerParams(in LayerType type) const pure nothrow @safe @nogc
 	{
-		return "NetworkParams(inputs = %d, outputs = %d, neurons = %d)".format(
-			inputs,
-			outputs,
-			neurons
-		);
+		LayerParams result;
+		
+		result.min = min;
+		result.min = max;
+		
+		result.inputs  = (type == LayerType.Input  ? inputs  : neurons);
+		result.neurons = (type == LayerType.Output ? outputs : neurons);
+		
+		return result;
 	}
 }
 
@@ -70,18 +109,18 @@ struct NetworkParams
  */
 struct Layer
 {
-	Matrix weights; /// Connection weights.
+	private Matrix weights; /// Connection weights.
 	
 	invariant
 	{
 		assert (&weights, "The weights matrix is incorrect.");
-		assert (weights.rows >= 1 + biasLength, "A layer must have at least 2 connections."); // connections()
+		assert (weights.rows >= 1 + biasLength); // connections()
 	}
 	
 	/**
 	 * Number of connections per neuron (including bias).
 	 */
-	@property uint connections() const pure nothrow @safe @nogc
+	@property uint connectionsLength() const pure nothrow @safe @nogc
 	{
 		return weights.rows;
 	}
@@ -89,24 +128,31 @@ struct Layer
 	/**
 	 * Number of neurons in the layer.
 	 */
-	@property uint neurons() const pure nothrow @safe @nogc
+	@property uint neuronsLength() const pure nothrow @safe @nogc
 	{
 		return weights.cols;
 	}
 	
 	/**
-	 * Constructor for random layer.
+	 * Total number of weights.
+	 */
+	@property ulong length() const pure nothrow @safe @nogc
+	{
+		return weights.length;
+	}
+	
+	/**
+	 * Constructor without initialization.
 	 *
 	 * Params:
 	 *     inputs = Number of weights per neuron.
 	 *     neurons = Number of neurons in the layer.
-	 *     generator = Pseudorandom number generator.
 	 */
 	this(in uint inputs, in uint neurons) nothrow @nogc
 	in
 	{
-		assert (inputs  >= 1, "A layer must have at least 1 input connection.");
-		assert (neurons >= 1, "A layer must have at least 1 neuron.");
+		assert (inputs  >= 1);
+		assert (neurons >= 1);
 	}
 	body
 	{
@@ -115,20 +161,26 @@ struct Layer
 		weights = Matrix(inputs + biasLength, neurons);
 	}
 	
-	/// ditto
-	this(in uint inputs, in uint neurons, curandGenerator generator) nothrow @nogc
+	/**
+	 * Consctroctor with random initialization.
+	 *
+	 * Params:
+	 *     params = Layer parameters.
+	 *     generator = Pseudorandom number generator.
+	 */
+	this(in LayerParams params, curandGenerator generator) nothrow @nogc
 	in
 	{
-		assert (inputs  >= 1, "A layer must have at least 1 input connection.");
-		assert (neurons >= 1, "A layer must have at least 1 neuron.");
+		assert (&params, "Incorrect layer parameters.");
 	}
 	body
 	{
-		this(inputs, neurons);
+		this(params.inputs, params.neurons);
 		
 		{
 			scope(failure) freeMem();
-			generator.generate(weights, weights.length);
+			generator.generateUniform(weights, length);
+			cuda_scale(weights, params.min, params.max, length);
 		}
 	}
 	
@@ -137,17 +189,26 @@ struct Layer
 	{
 		mixin(writetest!__ctor);
 		
+		import std.math : isFinite;
+		
 		// Initialize cuRAND generator.
 		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
-		generator.setPseudoRandomGeneratorSeed(0);
-		scope(exit) generator.destroy;
+		scope(exit) generator.destroy();
 		
-		auto l = Layer(3, 2, generator);
+		immutable LayerParams params = { inputs : 200, neurons : 300, min : -1.0e30, max : 2.0e31 };
+		
+		auto l = Layer(params, generator);
 		scope(exit) l.freeMem();
 		cudaDeviceSynchronize();
 		
-		assert (l.connections == 3 + biasLength);
-		assert (l.neurons     == 2);
+		assert (l.connectionsLength == params.inputs + biasLength);
+		assert (l.neuronsLength     == params.neurons);
+		
+		for (ulong i = 0; i < l.length; ++i)
+		{
+			assert (isFinite(l.weights[i]));
+			assert (l.weights[i] >= params.min && l.weights[i] <= params.max);
+		}
 	}
 	
 	/**
@@ -183,9 +244,9 @@ struct Layer
 	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle, in bool activate = true) const nothrow @nogc
 	in
 	{
-		assert (inputs.cols == connections, "The number of matrix columns must be equal to the layer's connections number.");
-		assert (inputs.rows == outputs.rows, "The input and the output matrix must have the same number of rows.");
-		assert (neurons     <= outputs.cols, "The output matrix must not have less columns than the layer's neurons number.");
+		assert (inputs.cols    == connectionsLength, "The number of matrix columns must be equal to the layer's connections number.");
+		assert (inputs.rows    == outputs.rows, "The input and the output matrix must have the same number of rows.");
+		assert (neuronsLength  <= outputs.cols, "The output matrix must not have less columns than the layer's neurons number.");
 	}
 	body
 	{
@@ -208,13 +269,15 @@ struct Layer
 		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
 		generator.setPseudoRandomGeneratorSeed(0);
 		scope(exit) generator.destroy;
-	
+		
 		// Initialize cuBLAS
 		cublasHandle_t handle;
 		cublasCreate(handle);
 		scope(exit) cublasDestroy(handle);
 		
-		Layer l = Layer(2, 2, generator);
+		immutable LayerParams params = { inputs : 2, neurons : 2 };
+		
+		Layer l = Layer(params, generator);
 		scope(exit) l.freeMem();
 		cudaDeviceSynchronize();
 		
@@ -226,10 +289,8 @@ struct Layer
 		for (ulong i = 0; i < l.weights.length; ++i)
 			l.weights[i] = i / 50f;
 		
-		Matrix inputs;
-		inputs.rows = 4;
-		inputs.cols = 3;
-		cudaMallocManaged(inputs, inputs.rows * inputs.cols);
+		auto inputs = Matrix(4, 3);
+		scope(exit) inputs.freeMem();
 		
 		/* 0 4  8 *
 		 * 1 5  9 *
@@ -238,10 +299,8 @@ struct Layer
 		for (ulong i = 0; i < inputs.length; ++i)
 			inputs[i] = i;
 		
-		Matrix outputs;
-		outputs.rows = 4;
-		outputs.cols = 2;
-		cudaMallocManaged(outputs, outputs.rows * outputs.cols);
+		auto outputs = Matrix(4, 2);
+		scope(exit) outputs.freeMem();
 		
 		l(inputs, outputs, handle);
 		cudaDeviceSynchronize();
@@ -274,7 +333,7 @@ struct Network
 	{
 		foreach (l; hiddenLayers)
 			assert (
-				l.neurons == inputLayer.neurons,
+				l.neuronsLength == inputLayer.neuronsLength,
 				"Every hidden layer must have the same number of neurons as the input layer."
 			);
 	}
@@ -292,7 +351,7 @@ struct Network
 	 */
 	@property uint neuronsPerLayer() const pure nothrow @safe @nogc
 	{
-		return inputLayer.neurons;
+		return inputLayer.neuronsLength;
 	}
 	
 	/**
@@ -311,12 +370,21 @@ struct Network
 	{
 		scope(failure) freeMem();
 		
-		inputLayer  = Layer(params.inputs,  params.neurons, generator);
-		outputLayer = Layer(params.neurons, params.outputs, generator);
+		inputLayer = Layer(
+			params.getLayerParams(LayerType.Input),
+			generator
+		);
+		outputLayer = Layer(
+			params.getLayerParams(LayerType.Output),
+			generator
+		);
 		
 		hiddenLayers = nogcMalloc!Layer(params.layers);
 		foreach (ref l; hiddenLayers)
-			l = Layer(params.neurons, params.neurons, generator);
+			l = Layer(
+				params.getLayerParams(LayerType.Hidden),
+				generator
+			);
 	}
 	
 	///
@@ -341,16 +409,16 @@ struct Network
 		assert (n.depth           == params.layers);
 		assert (n.neuronsPerLayer == params.neurons);
 		
-		assert (n.inputLayer.connections == params.inputs + biasLength);
-		assert (n.inputLayer.neurons     == params.neurons);
+		assert (n.inputLayer.connectionsLength == params.inputs + biasLength);
+		assert (n.inputLayer.neuronsLength     == params.neurons);
 		
-		assert (n.outputLayer.connections == params.neurons + biasLength);
-		assert (n.outputLayer.neurons     == params.outputs);
+		assert (n.outputLayer.connectionsLength == params.neurons + biasLength);
+		assert (n.outputLayer.neuronsLength     == params.outputs);
 		
 		foreach (l; n.hiddenLayers)
 		{
-			assert (l.connections == params.neurons + biasLength);
-			assert (l.neurons     == params.neurons);
+			assert (l.connectionsLength == params.neurons + biasLength);
+			assert (l.neuronsLength     == params.neurons);
 		}
 	}
 	

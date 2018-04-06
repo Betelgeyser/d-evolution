@@ -234,7 +234,7 @@ unittest
  *     max = Maximum scaled value.
  *     count = Number of values to scale.
  */
-void cuda_scale(float* ptr, in float min, in float max, in size_t count);
+void cuda_scale(float* ptr, in float min, in float max, in size_t count) nothrow @nogc;
 
 ///
 unittest
