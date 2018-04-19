@@ -23,6 +23,24 @@ import cuda.curand;
 // DNN modules
 import common;
 
+version (unittest)
+{
+	import std.math : approxEqual;
+	immutable accuracy = 0.000_001;
+	
+	cublasHandle_t cublasHandle;
+	
+	static this()
+	{
+		cublasCreate(cublasHandle);
+	}
+	
+	static ~this()
+	{
+		cublasDestroy(cublasHandle);
+	}
+}
+
 
 /**
  * Convenient struct to handle cuBLAS matricies.
@@ -156,14 +174,6 @@ unittest
 {
 	mixin(writetest!gemm);
 	
-	import std.math : approxEqual;
-	immutable accuracy = 0.000_001;
-	
-	// Initialize cuBLAS
-	cublasHandle_t handle;
-	cublasCreate(handle);
-	scope(exit) cublasDestroy(handle);
-	
 	immutable n = 7;
 	immutable k = 3;
 	immutable m = 5;
@@ -183,7 +193,7 @@ unittest
 	for (ulong i = 0; i < B.length; ++i)
 		B[i] = i;
 	
-	gemm(A, B, C, handle);
+	gemm(A, B, C, cublasHandle);
 	cudaDeviceSynchronize();
 	
 	// cuBLAS is column-major
@@ -236,14 +246,6 @@ unittest
 {
 	mixin(writetest!geam);
 	
-	import std.math : approxEqual;
-	immutable accuracy = 0.000_001;
-	
-	// Initialize cuBLAS
-	cublasHandle_t handle;
-	cublasCreate(handle);
-	scope(exit) cublasDestroy(handle);
-	
 	immutable size = 10;
 	
 	auto A = Matrix(size, size);
@@ -261,7 +263,7 @@ unittest
 	for (ulong i = 0; i < B.length; ++i)
 		B[i] = i;
 	
-	geam(1, A, 2, B, C, handle);
+	geam(1, A, 2, B, C, cublasHandle);
 	cudaDeviceSynchronize();
 	
 	for (ulong i = 0; i < C.length; ++i)
@@ -306,14 +308,6 @@ unittest
 {
 	mixin(writetest!transpose);
 	
-	import std.math : approxEqual;
-	immutable accuracy = 0.000_001;
-	
-	// Initialize cuBLAS
-	cublasHandle_t handle;
-	cublasCreate(handle);
-	scope(exit) cublasDestroy(handle);
-	
 	immutable m = 5;
 	immutable n = 3;
 	
@@ -326,7 +320,7 @@ unittest
 	for (ulong i = 0; i < A.length; ++i)
 		A[i] = i;
 	
-	transpose(A, C, handle);
+	transpose(A, C, cublasHandle);
 	cudaDeviceSynchronize();
 	
 	// cuBLAS is column-major

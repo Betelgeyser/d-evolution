@@ -30,6 +30,27 @@ import cuda.cublas;
 import common;
 import math;
 
+version (unittest)
+{
+	import std.math : approxEqual;
+	immutable accuracy = 0.000_001;
+	
+	CurandGenerator curandGenerator;
+	cublasHandle_t  cublasHandle;
+		 
+	static this()
+	{
+		curandGenerator = CurandGenerator(curandRngType_t.PSEUDO_DEFAULT);
+		cublasCreate(cublasHandle);
+	}
+	
+	static ~this()
+	{
+		curandGenerator.destroy;
+		cublasDestroy(cublasHandle);
+	}
+}
+
 
 immutable biasLength = 1; /// Number of bias weights per neuron.
 immutable biasWeight = 1; /// Weight of every bias connection.
@@ -191,13 +212,10 @@ struct Layer
 		
 		import std.math : isFinite;
 		
-		// Initialize cuRAND generator.
-		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
-		scope(exit) generator.destroy();
 		
 		immutable LayerParams params = { inputs : 200, neurons : 300, min : -1.0e30, max : 2.0e31 };
 		
-		auto l = Layer(params, generator);
+		auto l = Layer(params, curandGenerator);
 		scope(exit) l.freeMem();
 		cudaDeviceSynchronize();
 		
@@ -262,22 +280,9 @@ struct Layer
 	{
 		mixin(writetest!opCall);
 		
-		import std.math : approxEqual;
-		immutable accuracy = 0.000_001;
-		
-		// Initialize cuRAND generator.
-		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
-		generator.setPseudoRandomGeneratorSeed(0);
-		scope(exit) generator.destroy;
-		
-		// Initialize cuBLAS
-		cublasHandle_t handle;
-		cublasCreate(handle);
-		scope(exit) cublasDestroy(handle);
-		
 		immutable LayerParams params = { inputs : 2, neurons : 2 };
 		
-		Layer l = Layer(params, generator);
+		Layer l = Layer(params, curandGenerator);
 		scope(exit) l.freeMem();
 		cudaDeviceSynchronize();
 		
@@ -302,7 +307,7 @@ struct Layer
 		auto outputs = Matrix(4, 2);
 		scope(exit) outputs.freeMem();
 		
-		l(inputs, outputs, handle);
+		l(inputs, outputs, cublasHandle);
 		cudaDeviceSynchronize();
 		
 		/* 0.379949 0.807569 *
@@ -356,27 +361,20 @@ struct Layer
 		mixin(writetest!crossover);
 		
 		import std.algorithm : max, min;
-		import std.math : approxEqual, abs;
-		immutable accuracy = 0.000_001;
 		
 		immutable LayerParams params = { inputs : 200, neurons : 300, min : -1.0e30, max : 2.0e31 };
 		immutable alpha = 0.5;
 		
-		// Initialize cuRAND generator.
-		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
-		generator.setPseudoRandomGeneratorSeed(0);
-		scope(exit) generator.destroy();
-		
-		auto parent1 = Layer(params, generator);
+		auto parent1 = Layer(params, curandGenerator);
 		scope(exit) parent1.freeMem();
 		
-		auto parent2 = Layer(params, generator);
+		auto parent2 = Layer(params, curandGenerator);
 		scope(exit) parent2.freeMem();
 		
 		auto offspring = Layer(params.inputs, params.neurons);
 		scope(exit) offspring.freeMem();
 		
-		auto pool = RandomPool(generator, 1_000_000);
+		auto pool = RandomPool(curandGenerator, 1_000_000);
 		scope(exit) pool.freeMem();
 		
 		offspring.crossover(parent1, parent2, alpha, pool);
@@ -468,10 +466,6 @@ struct Network
 		params.neurons = 3;
 		params.outputs = 1;
 		
-		// Initialize cuRAND generator.
-		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
-		generator.setPseudoRandomGeneratorSeed(0);
-		scope(exit) generator.destroy;
 		
 		Network n = Network(params, generator); scope(exit) n.freeMem();
 		cudaDeviceSynchronize();
@@ -549,18 +543,6 @@ struct Network
 	{
 		mixin(writetest!opCall);
 		
-		import std.math : approxEqual;
-		immutable accuracy = 0.000_001;
-		
-		// Initialize cuRAND generator.
-		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
-		generator.setPseudoRandomGeneratorSeed(0);
-		scope(exit) generator.destroy;
-		
-		// Initialize cuBLAS
-		cublasHandle_t handle;
-		cublasCreate(handle);
-		scope(exit) cublasDestroy(handle);
 		
 		NetworkParams params;
 		params.inputs  = 1;

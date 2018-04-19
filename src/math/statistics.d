@@ -25,6 +25,24 @@ import common;
 import math.matrix;
 import math.kernels;
 
+version (unittest)
+{
+	import std.math : approxEqual;
+	immutable accuracy = 0.000_001;
+	
+	cublasHandle_t cublasHandle;
+	
+	static this()
+	{
+		cublasCreate(cublasHandle);
+	}
+	
+	static ~this()
+	{
+		cublasDestroy(cublasHandle);
+	}
+}
+
 
 /**
  * Calculate an Absolute Error between $(D_PARAM A) and $(D_PARAM B) arrays of vectors on GPU.
@@ -79,13 +97,6 @@ unittest
 {
 	mixin(writetest!AE);
 	
-	import std.math : approxEqual;
-	immutable accuracy = 0.000_001;
-	
-	// Initialize cuBLAS
-	cublasHandle_t handle;
-	cublasCreate(handle);
-	scope(exit) cublasDestroy(handle);
 	
 	auto A = Matrix(3, 4);
 	auto B = Matrix(3, 4);
@@ -97,7 +108,7 @@ unittest
 		B[i] = i * 1.5;
 	}
 	
-	AE(A, B, E, handle);
+	AE(A, B, E, cublasHandle);
 	cudaDeviceSynchronize();
 	
 	float[] result = [1.118034, 3.535534, 6.103278, 8.689074];
@@ -145,13 +156,6 @@ unittest
 {
 	mixin(writetest!MAE);
 	
-	import std.math : approxEqual;
-	immutable accuracy = 0.000_001;
-	
-	// Initialize cuBLAS
-	cublasHandle_t handle;
-	cublasCreate(handle);
-	scope(exit) cublasDestroy(handle);
 	
 	auto A = Matrix(3, 4);
 	auto B = Matrix(3, 4);
@@ -196,10 +200,6 @@ unittest
 	import std.math : approxEqual;
 	immutable accuracy = 0.000_001;
 	
-	// Initialize cuBLAS
-	cublasHandle_t handle;
-	cublasCreate(handle);
-	scope(exit) cublasDestroy(handle);
 	
 	auto data = Matrix(2, 3);
 	for (ulong i = 0; i < data.length; ++i)
@@ -235,13 +235,6 @@ unittest
 {
 	mixin(writetest!MASE);
 	
-	import std.math : approxEqual;
-	immutable accuracy = 0.000_001;
-	
-	// Initialize cuBLAS
-	cublasHandle_t handle;
-	cublasCreate(handle);
-	scope(exit) cublasDestroy(handle);
 	
 	auto measured = Matrix(3, 4);
 	for (ulong i = 0; i < measured.length; ++i)
