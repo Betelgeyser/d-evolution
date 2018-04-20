@@ -90,6 +90,7 @@ body
 	float beta  = -1;
 	
 	auto C = Matrix(A.rows, A.cols);
+	scope(exit) C.freeMem();
 	
 	geam(1, A, -1, B, C, cublasHandle);
 	cuda_L2(C.ptr, error.ptr, C.rows, error.cols);
@@ -141,6 +142,7 @@ in
 body
 {
 	auto error = Matrix(1, A.cols);
+	scope(exit) error.freeMem();
 	
 	AE(A, B, error, cublasHandle);
 	cudaDeviceSynchronize();
