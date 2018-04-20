@@ -54,7 +54,7 @@ version (unittest)
 
 
 immutable biasLength = 1; /// Number of bias weights per neuron.
-immutable biasWeight = 1; /// Weight of every bias connection.
+immutable biasWeight = 1.0; /// Weight of every bias connection.
 
 enum LayerType { Input, Hidden, Output }; /// Layer types.
 
@@ -476,9 +476,8 @@ struct Network
 		
 		NetworkParams params = { layers : 2, inputs : 2, neurons : 3, outputs : 1 };
 		
-		
-		Network n = Network(params, generator); scope(exit) n.freeMem();
-		cudaDeviceSynchronize();
+		Network n = Network(params, curandGenerator);
+		scope(exit) n.freeMem();
 		
 		assert (n.depth           == params.layers);
 		assert (n.neuronsPerLayer == params.neurons);
