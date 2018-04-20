@@ -37,7 +37,7 @@ struct RandomPool
 	{
 		float[] _values; /// Random values cache.
 		ulong   _index;  /// Last returned pointer to a pool element.
-		curandGenerator _generator; /// Generator regenerates numbers as the pool runs out of them.
+		CurandGenerator _generator; /// Generator regenerates numbers as the pool runs out of them.
 	}
 	
 	invariant
@@ -53,7 +53,7 @@ struct RandomPool
 	 *     generator = Curand pseudorandom number generator.
 	 *     size = Pool size. The maximun amount of generated values to store. Defaults to the size of 2GiB values.
 	 */
-	this(curandGenerator generator, in uint size = 536_870_912) nothrow @nogc
+	this(CurandGenerator generator, in uint size = 536_870_912) nothrow @nogc
 	in
 	{
 		assert (size >= 1);
@@ -142,7 +142,7 @@ unittest
 	immutable size = 1_000;
 	
 	// Initialize cuRAND generator.
-	auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
+	auto generator = CurandGenerator(curandRngType_t.PSEUDO_DEFAULT);
 	generator.setPseudoRandomGeneratorSeed(0);
 	scope(exit) generator.destroy;
 	

@@ -190,7 +190,7 @@ struct Layer
 	 *     params = Layer parameters.
 	 *     generator = Pseudorandom number generator.
 	 */
-	this(in LayerParams params, curandGenerator generator) nothrow @nogc
+	this(in LayerParams params, CurandGenerator generator) nothrow @nogc
 	in
 	{
 		assert (&params, "Incorrect layer parameters.");
@@ -417,7 +417,7 @@ struct Network
 	 *     params = Network parameters.
 	 *     generator = Pseudorandom number generator.
 	 */
-	this(in NetworkParams params, curandGenerator generator) nothrow @nogc
+	this(in NetworkParams params, CurandGenerator generator) nothrow @nogc
 	in
 	{
 		assert (&params, "Neural network parameters are incorrect.");

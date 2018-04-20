@@ -25,7 +25,7 @@ public import cuda.curand.types;
 /**
  * Higer level wrapper around cuRAND generator. It provides D-style access to functions on a curandGenerator_t.
  */
-struct curandGenerator
+struct CurandGenerator
 {
 	private curandGenerator_t _generator;
 	
