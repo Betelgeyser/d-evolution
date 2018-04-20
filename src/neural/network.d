@@ -213,8 +213,12 @@ struct Layer
 		
 		import std.math : isFinite;
 		
-		
-		immutable LayerParams params = { inputs : 200, neurons : 300, min : -1.0e30, max : 2.0e31 };
+		immutable LayerParams params = {
+			inputs  :  200,
+			neurons :  300,
+			min     : -1.0e30,
+			max     :  2.0e31
+		};
 		
 		auto l = Layer(params, curandGenerator);
 		scope(exit) l.freeMem();
@@ -347,7 +351,13 @@ struct Layer
 		import std.algorithm : max, min;
 		import std.math      : abs;
 		
-		immutable LayerParams params = { inputs : 200, neurons : 300, min : -1.0e30, max : 2.0e31 };
+		immutable LayerParams params = {
+			inputs  : 200,
+			neurons : 300,
+			min     : -1.0e30,
+			max     : 2.0e31
+		};
+		
 		immutable alpha = 0.5;
 		
 		auto parent1 = Layer(params, curandGenerator);
@@ -444,11 +454,7 @@ struct Network
 	{
 		mixin(writetest!__ctor);
 		
-		NetworkParams params;
-		params.inputs  = 2;
-		params.layers  = 2;
-		params.neurons = 3;
-		params.outputs = 1;
+		NetworkParams params = { layers : 2, inputs : 2, neurons : 3, outputs : 1 };
 		
 		
 		Network n = Network(params, generator); scope(exit) n.freeMem();
@@ -523,13 +529,6 @@ struct Network
 	{
 		mixin(writetest!opCall);
 		
-		
-		NetworkParams params;
-		params.inputs  = 1;
-		params.outputs = 1;
-		params.neurons = 1;
-		params.layers  = 1;
-		
 		auto inputs = Matrix(2, 2);
 		inputs.values[0] = 0;
 		inputs.values[1] = 1;
@@ -537,6 +536,12 @@ struct Network
 		inputs.values[3] = 1;
 		
 		auto outputs = Matrix(2, 1);
+		immutable NetworkParams params = {
+			inputs  : 2,
+			outputs : 1,
+			neurons : 3,
+			layers  : 3
+		};
 		
 		/* This is how test network works for 1st input value: *
 		 *                                                     *
