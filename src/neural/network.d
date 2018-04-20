@@ -17,9 +17,10 @@
  */
 module neural.network;
 
-// D modules
+// Standard D modules
 import std.format;
-import std.math : isFinite;
+import std.math      : isFinite;
+import std.algorithm : each, all, copy, swap;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
@@ -200,8 +201,8 @@ struct Layer
 		
 		{
 			scope(failure) freeMem();
-			generator.generateUniform(weights, length);
-			cuda_scale(weights, params.min, params.max, length);
+			generator.generateUniform(weights.ptr, length);
+			cuda_scale(weights.ptr, params.min, params.max, length);
 		}
 	}
 	
@@ -222,11 +223,9 @@ struct Layer
 		assert (l.connectionsLength == params.inputs + biasLength);
 		assert (l.neuronsLength     == params.neurons);
 		
-		for (ulong i = 0; i < l.length; ++i)
-		{
-			assert (isFinite(l.weights[i]));
-			assert (l.weights[i] >= params.min && l.weights[i] <= params.max);
-		}
+		assert ( l.weights.values.all!(x => isFinite(x)) );
+		assert ( l.weights.values.all!(x => x >= params.min) );
+		assert ( l.weights.values.all!(x => x <= params.max) );
 	}
 	
 	/**
@@ -272,7 +271,7 @@ struct Layer
 		
 		// TODO: need extended matrix here. Extended part should not be activated.
 		if (activate)
-			cuda_tanh(outputs, outputs.rows * outputs.cols);
+			cuda_tanh(outputs.ptr, outputs.length);
 	}
 	
 	///
@@ -284,44 +283,33 @@ struct Layer
 		
 		Layer l = Layer(params, curandGenerator);
 		scope(exit) l.freeMem();
-		cudaDeviceSynchronize();
+		
+		auto inputs = Matrix(4, 3);
+		scope(exit) inputs.freeMem();
+		
+		auto outputs = Matrix(4, 2);
+		scope(exit) outputs.freeMem();
 		
 		/*   Neurons
 		 *   V    V
 		 * 0.00 0.06 * <- weights
 		 * 0.02 0.08 * <- weights
 		 * 0.04 0.10 * <- biases */
-		for (ulong i = 0; i < l.weights.length; ++i)
-			l.weights[i] = i / 50f;
+		cudaDeviceSynchronize();
+		l.weights.each!"a = i / 50f";
 		
-		auto inputs = Matrix(4, 3);
-		scope(exit) inputs.freeMem();
-		
-		/* 0 4  8 *
-		 * 1 5  9 *
-		 * 2 6 10 *
-		 * 3 7 11 */
-		for (ulong i = 0; i < inputs.length; ++i)
-			inputs[i] = i;
-		
-		auto outputs = Matrix(4, 2);
-		scope(exit) outputs.freeMem();
+		inputs.each!"a = i";
 		
 		l(inputs, outputs, cublasHandle);
 		cudaDeviceSynchronize();
 		
-		/* 0.379949 0.807569 *
-		 * 0.430084 0.876393 *
-		 * 0.477700 0.921669 *
-		 * 0.522665 0.950795 */
-		immutable float[] result = [0.379949, 0.430084, 0.477700, 0.522665, 0.807569, 0.876393, 0.921669, 0.950795];
-		for (ulong i = 0; i < outputs.length; ++i)
-			assert (
-				approxEqual(
-					outputs[i], result[i],
-					accuracy
-				)
-			);
+		// cuBLAS matrices are column-major.
+		immutable float[] result = [
+			0.379949, 0.430084, 0.477700, 0.522665,
+			0.807569, 0.876393, 0.921669, 0.950795
+		];
+		foreach (i, o; outputs)
+			assert ( approxEqual(o, result[i], accuracy) );
 	}
 	
 	/**
@@ -352,7 +340,7 @@ struct Layer
 	body
 	{
 		immutable length = this.weights.length;
-		cuda_BLX_a(x.weights, y.weights, this.weights, alpha, pool(length).ptr, length);
+		cuda_BLX_a(x.weights.ptr, y.weights.ptr, this.weights.ptr, alpha, pool(length).ptr, length);
 	}
 	
 	///
@@ -361,6 +349,7 @@ struct Layer
 		mixin(writetest!crossover);
 		
 		import std.algorithm : max, min;
+		import std.math      : abs;
 		
 		immutable LayerParams params = { inputs : 200, neurons : 300, min : -1.0e30, max : 2.0e31 };
 		immutable alpha = 0.5;
@@ -380,10 +369,10 @@ struct Layer
 		offspring.crossover(parent1, parent2, alpha, pool);
 		cudaDeviceSynchronize();
 		
-		for (ulong i = 0; i < offspring.weights.length; ++i)
+		foreach (i, off; offspring.weights)
 			assert (
-				offspring.weights[i] >= min(parent1.weights[i], parent2.weights[i]) - alpha * abs(parent1.weights[i] - parent2.weights[i]) && 
-				offspring.weights[i] <= max(parent1.weights[i], parent2.weights[i]) + alpha * abs(parent1.weights[i] - parent2.weights[i])
+				off >= min(parent1.weights[i], parent2.weights[i]) - alpha * abs(parent1.weights[i] - parent2.weights[i]) &&
+				off <= max(parent1.weights[i], parent2.weights[i]) + alpha * abs(parent1.weights[i] - parent2.weights[i])
 			);
 	}
 }
@@ -399,11 +388,10 @@ struct Network
 	
 	invariant
 	{
-		foreach (l; hiddenLayers)
-			assert (
-				l.neuronsLength == inputLayer.neuronsLength,
-				"Every hidden layer must have the same number of neurons as the input layer."
-			);
+		assert (
+			hiddenLayers.all!(x => x.neuronsLength == inputLayer.neuronsLength),
+			"Every hidden layer must have the same number of neurons as the input layer."
+		);
 	}
 	
 	/**
@@ -479,11 +467,8 @@ struct Network
 		assert (n.outputLayer.connectionsLength == params.neurons + biasLength);
 		assert (n.outputLayer.neuronsLength     == params.outputs);
 		
-		foreach (l; n.hiddenLayers)
-		{
-			assert (l.connectionsLength == params.neurons + biasLength);
-			assert (l.neuronsLength     == params.neurons);
-		}
+		assert ( n.hiddenLayers.all!(x => x.connectionsLength == params.neurons + biasLength) );
+		assert ( n.hiddenLayers.all!(x => x.neuronsLength     == params.neurons) );
 	}
 	
 	/**

@@ -15,6 +15,9 @@
  */
 module math.statistics;
 
+// Standard D modules
+import std.algorithm : each, mean;
+
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.cublas;
@@ -89,7 +92,7 @@ body
 	auto C = Matrix(A.rows, A.cols);
 	
 	geam(1, A, -1, B, C, cublasHandle);
-	cuda_L2(C, error, C.rows, error.cols);
+	cuda_L2(C.ptr, error.ptr, C.rows, error.cols);
 }
 
 ///
@@ -97,23 +100,22 @@ unittest
 {
 	mixin(writetest!AE);
 	
+	immutable cols = 3;
+	immutable rows = 4;
 	
-	auto A = Matrix(3, 4);
-	auto B = Matrix(3, 4);
-	auto E = Matrix(1, 4);
+	auto A = Matrix(cols, rows);
+	auto B = Matrix(cols, rows);
+	auto E = Matrix(1,    rows);
 	
-	for (ulong i = 0; i < A.length; ++i)
-	{
-		A[i] = i;
-		B[i] = i * 1.5;
-	}
+	A.each!"a = i";
+	B.each!"a = 1.5 * i";
 	
 	AE(A, B, E, cublasHandle);
 	cudaDeviceSynchronize();
 	
-	float[] result = [1.118034, 3.535534, 6.103278, 8.689074];
-	for (ulong i = 0; i < E.length; ++i)
-		assert ( approxEqual(E[i], result[i], accuracy) );
+	immutable float[] result = [1.118034, 3.535534, 6.103278, 8.689074];
+	foreach (i, e; E)
+		assert (approxEqual(e, result[i], accuracy));
 }
 
 /**
@@ -138,17 +140,12 @@ in
 }
 body
 {
-	float result = 0;
-	
 	auto error = Matrix(1, A.cols);
 	
 	AE(A, B, error, cublasHandle);
 	cudaDeviceSynchronize();
 	
-	for (ulong i = 0; i < error.length; ++i)
-		result += error[i] / error.length;
-	
-	return result;
+	return error.values.mean;
 }
 
 ///
@@ -156,17 +153,19 @@ unittest
 {
 	mixin(writetest!MAE);
 	
+	immutable rows = 3;
+	immutable cols = 4;
 	
-	auto A = Matrix(3, 4);
-	auto B = Matrix(3, 4);
+	auto A = Matrix(rows, cols);
+	scope(exit) A.freeMem();
 	
-	for (ulong i = 0; i < A.length; ++i)
-	{
-		A[i] = i;
-		B[i] = i * 1.5;
-	}
+	auto B = Matrix(rows, cols);
+	scope(exit) B.freeMem();
 	
-	assert ( approxEqual(MAE(A, B, handle), 4.861480, accuracy) );
+	A.each!"a = i";
+	B.each!"a = 1.5 * i";
+	
+	assert ( approxEqual(MAE(A, B, cublasHandle), 4.861480, accuracy) );
 }
 
 /**
@@ -197,15 +196,12 @@ unittest
 {
 	mixin(writetest!MAENaive);
 	
-	import std.math : approxEqual;
-	immutable accuracy = 0.000_001;
-	
-	
 	auto data = Matrix(2, 3);
-	for (ulong i = 0; i < data.length; ++i)
-		data[i] = i * i;
+	scope(exit) data.freeMem();
 	
-	assert ( approxEqual(MAENaive(data, handle), 14.472136, accuracy) );
+	data.each!"a = i * i";
+	
+	assert ( approxEqual(MAENaive(data, cublasHandle), 14.472136, accuracy) );
 }
 
 /**
@@ -235,21 +231,18 @@ unittest
 {
 	mixin(writetest!MASE);
 	
+	immutable cols = 3;
+	immutable rows = 4;
 	
-	auto measured = Matrix(3, 4);
-	for (ulong i = 0; i < measured.length; ++i)
-		measured[i] = i;
+	auto measured = Matrix(cols, rows);
+	scope(exit) measured.freeMem();
 	
-	auto approximated = Matrix(3, 4);
-	for (ulong i = 0; i < approximated.length; ++i)
-		approximated[i] = i + 1;
+	auto approximated = Matrix(cols, rows);
+	scope(exit) approximated.freeMem();
 	
-	assert (
-		approxEqual(
-			MASE(measured, approximated, handle),
-			0.333333,
-			accuracy
-		)
-	);
+	measured.each!"a = i";
+	approximated.each!"a = i + 1";
+	
+	assert ( approxEqual(MASE(measured, approximated, cublasHandle), 0.333333, accuracy) );
 }
 

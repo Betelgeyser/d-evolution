@@ -15,6 +15,9 @@
  */
 module math.matrix;
 
+// Standard D modules
+import std.algorithm : each;
+
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.cublas;
@@ -54,9 +57,36 @@ struct Matrix
 {
 	alias values this;
 	
-	float* values; /// A pointer to an allocated memory.
-	uint   rows;   /// Rows number.
-	uint   cols;   /// Columns number.
+	float[] values; /// A pointer to an allocated memory.
+	
+	private
+	{
+		uint _rows; /// Number of rows.
+		uint _cols; /// Number of columns.
+	}
+	
+	invariant
+	{
+		assert (_rows >= 1);
+		assert (_cols >= 1);
+		assert (values.length == _rows * _cols);
+	}
+	
+	/**
+	 * Number of rows.
+	 */
+	@property uint rows() const pure nothrow @safe @nogc
+	{
+		return _rows;
+	}
+	
+	/**
+	 * Number of cols.
+	 */
+	@property uint cols() const pure nothrow @safe @nogc
+	{
+		return _cols;
+	}
 	
 	/**
 	 * The length of the matrix.
@@ -64,15 +94,9 @@ struct Matrix
 	 * Returns:
 	 *     Number of elements.
 	 */
-	@property uint length() const pure nothrow @safe @nogc
+	@property ulong length() const pure nothrow @safe @nogc
 	{
-		return rows * cols;
-	}
-	
-	invariant
-	{
-		assert (rows >= 1, "Matrix must containg at least 1 row.");
-		assert (cols >= 1, "Matrix must containg at least 1 column.");
+		return values.length;
 	}
 	
 	/**
@@ -84,22 +108,24 @@ struct Matrix
 	 * Params:
 	 *     rows = Number of rows.
 	 *     cols = Number of columns.
-	 *     generator = Pseudorandom number generator.
+	 *     values = Array of values.
 	 */
 	this(in uint rows, in uint cols) nothrow @nogc
-	in
-	{
-		assert (rows >= 1, "Matrix must containg at least 1 row.");
-		assert (cols >= 1, "Matrix must containg at least 1 column.");
-	}
-	body
 	{
 		scope(failure) freeMem();
 		
-		this.rows = rows;
-		this.cols = cols;
+		_rows = rows;
+		_cols = cols;
 		
-		cudaMallocManaged(values, length);
+		cudaMallocManaged(values, _rows * _cols);
+	}
+	
+	/// ditto
+	this(in uint rows, in uint cols, inout(float)[] values) inout nothrow @safe @nogc
+	{
+		_rows = rows;
+		_cols = cols;
+		this.values = values;
 	}
 	
 	///
@@ -107,17 +133,20 @@ struct Matrix
 	{
 		mixin(writetest!__ctor);
 		
-		auto m = Matrix(3, 2);
+		immutable rows = 2;
+		immutable cols = 3;
+		
+		auto m = Matrix(rows, cols);
 		scope(exit) m.freeMem();
 		
 		cudaDeviceSynchronize();
 		
-		assert (m.rows == 3);
-		assert (m.cols == 2);
+		assert (m.rows == rows);
+		assert (m.cols == cols);
 		
 		// Check memory accessebility
-		assert (m.values[0] == m.values[0]);
-		assert (m.values[m.length - 1] == m.values[m.length - 1]);
+		assert (m[0] == m[0]);
+		assert (m[m.length - 1] == m[m.length - 1]);
 	}
 	
 	/**
@@ -150,7 +179,7 @@ in
 {
 	assert (A.cols == B.rows);
 	assert (A.rows == C.rows);
-	assert (B.cols <= C.cols);
+	assert (B.cols == C.cols);
 }
 body
 {
@@ -162,10 +191,10 @@ body
 		cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
 		A.rows, B.cols, A.cols,
 		&alpha,
-		A, A.rows,
-		B, B.rows,
+		A.ptr, A.rows,
+		B.ptr, B.rows,
 		&beta,
-		C, C.rows
+		C.ptr, C.rows
 	);
 }
 
@@ -187,25 +216,22 @@ unittest
 	auto C = Matrix(n, m);
 	scope(exit) C.freeMem();
 	
-	for (ulong i = 0; i < A.length; ++i)
-		A[i] = i;
-	
-	for (ulong i = 0; i < B.length; ++i)
-		B[i] = i;
+	A.each!"a = i";
+	B.each!"a = i";
 	
 	gemm(A, B, C, cublasHandle);
 	cudaDeviceSynchronize();
 	
 	// cuBLAS is column-major
 	immutable float[] result = [
-		35,  38,  41,  44,  47,  50,  53,
-		98,  110, 122, 134, 146, 158, 170,
+		 35,  38,  41,  44,  47,  50,  53,
+		 98, 110, 122, 134, 146, 158, 170,
 		161, 182, 203, 224, 245, 266, 287,
 		224, 254, 284, 314, 344, 374, 404,
 		287, 326, 365, 404, 443, 482, 521
 	];
-	for (ulong i = 0; i < C.length; ++i)
-		assert ( approxEqual(C[i], result[i], accuracy) );
+	foreach (i, c; C)
+		assert (approxEqual(c, result[i], accuracy));
 }
 
 /**
@@ -234,10 +260,10 @@ body
 		cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
 		C.rows, C.cols,
 		&alpha,
-		A, A.rows,
+		A.ptr, A.rows,
 		&beta,
-		B, B.rows,
-		C, C.rows
+		B.ptr, B.rows,
+		C.ptr, C.rows
 	);
 }
 
@@ -257,17 +283,14 @@ unittest
 	auto C = Matrix(size, size);
 	scope(exit) C.freeMem();
 	
-	for (ulong i = 0; i < A.length; ++i)
-		A[i] = i;
-	
-	for (ulong i = 0; i < B.length; ++i)
-		B[i] = i;
+	A.each!"a = i";
+	B.each!"a = i";
 	
 	geam(1, A, 2, B, C, cublasHandle);
 	cudaDeviceSynchronize();
 	
-	for (ulong i = 0; i < C.length; ++i)
-		assert ( approxEqual(C[i], 3 * i, accuracy) );
+	foreach (i, c; C)
+		assert (approxEqual(c, 3 * i, accuracy));
 }
 
 /**
@@ -296,10 +319,10 @@ body
 		cublasOperation_t.CUBLAS_OP_T, cublasOperation_t.CUBLAS_OP_N,
 		A.cols, A.rows,
 		&alpha,
-		A, A.rows,
+		A.ptr, A.rows,
 		&beta,
-		A, A.rows,
-		C, C.rows
+		A.ptr, A.rows,
+		C.ptr, C.rows
 	);
 }
 
@@ -317,8 +340,7 @@ unittest
 	auto C = Matrix(n, m);
 	scope(exit) C.freeMem();
 	
-	for (ulong i = 0; i < A.length; ++i)
-		A[i] = i;
+	A.each!"a = i";
 	
 	transpose(A, C, cublasHandle);
 	cudaDeviceSynchronize();
@@ -331,7 +353,7 @@ unittest
 		3, 8, 13,
 		4, 9, 14
 	];
-	for (ulong i = 0; i < C.length; ++i)
-		assert ( approxEqual(C[i], result[i], accuracy) );
+	foreach (i, c; C)
+		assert (approxEqual(c, result[i], accuracy));
 }
 
