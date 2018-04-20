@@ -41,7 +41,8 @@ T[] nogcMalloc(T)(ulong items) nothrow @nogc
 	return (cast(T*)malloc(items * T.sizeof))[0 .. items];
 }
 
-void free(T)(ref T[] array)
+void free(T)(ref T[] array) nothrow @nogc
 {
 	free(array.ptr);
+	array.destroy();
 }

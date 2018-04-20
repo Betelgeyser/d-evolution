@@ -487,8 +487,7 @@ struct Network
 		foreach (ref l; hiddenLayers)
 			l.freeMem();
 		
-		if (depth > 0)
-			free(hiddenLayers);
+		free(hiddenLayers);
 	}
 	
 	/**
