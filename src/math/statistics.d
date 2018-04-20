@@ -182,11 +182,8 @@ unittest
  */
 float MAENaive(in Matrix data, cublasHandle_t cublasHandle) nothrow @nogc
 {
-	auto measured = Matrix(data.rows, data.cols - 1);
-	measured.values = cast(float*)data.values; // Just pointers, no copying here
-	
-	auto naive = Matrix(data.rows, data.cols - 1);
-	naive.values = cast(float*)data.values + data.rows; // Shift one column to the begining
+	auto measured = data.colSlice(0, data.cols - 1);
+	auto naive    = data.colSlice(1, data.cols);
 	
 	return MAE(measured, naive, cublasHandle);
 }

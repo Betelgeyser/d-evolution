@@ -161,6 +161,44 @@ struct Matrix
 	{
 		cudaFree(values);
 	}
+	
+	/**
+	 * Returns a column slice of a matrix from i column to `j - 1`.
+	 *
+	 * This function acts like a normal slice but a unit of slicing is a single column rather than single value. The resulting
+	 * matrix points to a part of the original matrix and does not copy it.
+	 */
+	inout(Matrix) colSlice(in uint i, in uint j) inout nothrow @safe @nogc
+	in
+	{
+		assert (i < j, "No columns is returned.");
+		assert (j <= _cols, "Column index is out of range.");
+	}
+	body
+	{
+		return inout Matrix(_rows, j - i, values[i * _rows .. j * _rows]);
+	}
+	
+	///
+	unittest
+	{
+		mixin(writetest!colSlice);
+		
+		immutable size = 10;
+		immutable from =  2;
+		immutable to   =  5;
+		
+		auto m = Matrix(size, size);
+		scope(exit) m.freeMem();
+		
+		auto copy = m.colSlice(from, to);
+		
+		assert (copy.cols == to - from);
+		assert (copy.rows == m.rows);
+		
+		foreach (i, c; copy)
+			assert (c == m[i + from * m.rows]);
+	}
 }
 
 /**
