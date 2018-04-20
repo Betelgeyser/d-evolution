@@ -122,6 +122,27 @@ struct NetworkParams
 		
 		return result;
 	}
+	
+	///
+	unittest
+	{
+		mixin(writetest!getLayerParams);
+		
+		immutable NetworkParams params = {
+			inputs  :  5,
+			outputs :  3,
+			neurons : 10
+		};
+		
+		assert (params.getLayerParams(LayerType.Input).inputs  == params.inputs);
+		assert (params.getLayerParams(LayerType.Input).neurons == params.neurons);
+		
+		assert (params.getLayerParams(LayerType.Hidden).inputs  == params.neurons);
+		assert (params.getLayerParams(LayerType.Hidden).neurons == params.neurons);
+		
+		assert (params.getLayerParams(LayerType.Output).inputs  == params.neurons);
+		assert (params.getLayerParams(LayerType.Output).neurons == params.outputs);
+	}
 }
 
 /**
