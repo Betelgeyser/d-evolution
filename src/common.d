@@ -36,11 +36,21 @@ version (unittest)
 	}
 }
 
+/**
+ * Manual GC-free memory allocation for D dynamic arrays.
+ *
+ * Bug-prone, use it carefully...
+ */
 T[] nogcMalloc(T)(ulong items) nothrow @nogc
 {
 	return (cast(T*)malloc(items * T.sizeof))[0 .. items];
 }
 
+/**
+ * Manual GC-free memory releasing for D dynamic arrays.
+ *
+ * Bug-prone, use it carefully...
+ */
 void free(T)(ref T[] array) nothrow @nogc
 {
 	free(array.ptr);

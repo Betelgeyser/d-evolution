@@ -125,6 +125,8 @@ unittest
  * Though $(D_PARAM A) and $(D_PARAM B) are of the type `Matrix` this is a technical convinience. They are interpreted
  * as arrays of vectors where a single column is a single vector.
  *
+ * Calls cudaDeviceSyncronize() internally.
+ *
  * Params:
  *     A = The first array of vectors.
  *     B = The second array of vectors.
@@ -178,6 +180,8 @@ unittest
  * Though $(D_PARAM data) is of the type `Matrix` this is a technical convinience. It is interpreted as an array of vectors
  * where a single column is a single vector.
  *
+ * Calls cudaDeviceSyncronize() internally.
+ *
  * Params:
  *     data = An array of input vectors.
  *     cublasHandle = cuBLAS handle.
@@ -208,6 +212,8 @@ unittest
  *
  * Though $(D_PARAM data) is of the type `Matrix` this is a technical convinience. It is interpreted as an array of vectors
  * where a single column is a single vector.
+ *
+ * Calls cudaDeviceSyncronize() internally.
  *
  * Params:
  *     measured = An array of vectors of measured/actual/real data.

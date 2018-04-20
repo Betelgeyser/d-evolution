@@ -244,13 +244,9 @@ struct Layer
 	/**
 	 * Evaluate the layer.
 	 *
-	 * Evaluates a result of feeding inpit matrix to the layer.
+	 * Evaluates a result of feeding input matrix to the layer.
 	 *
 	 * Currently uses tanh() as activation function.
-	 *
-	 * Although sizes of matricies are checked before multiplication, output matrix is allowed to have more columns than
-	 * there is neurons in the layer. This restriction is omited to make possible to pass output matricies with additional
-	 * column to multiply bias of the netx layer on.
 	 *
 	 * Params:
 	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
@@ -261,9 +257,9 @@ struct Layer
 	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle, in bool activate = true) const nothrow @nogc
 	in
 	{
-		assert (inputs.cols    == connectionsLength, "The number of matrix columns must be equal to the layer's connections number.");
-		assert (inputs.rows    == outputs.rows, "The input and the output matrix must have the same number of rows.");
-		assert (neuronsLength  <= outputs.cols, "The output matrix must not have less columns than the layer's neurons number.");
+		assert (inputs.cols   == connectionsLength);
+		assert (inputs.rows   == outputs.rows);
+		assert (neuronsLength == outputs.cols);
 	}
 	body
 	{
@@ -383,7 +379,7 @@ struct Layer
 struct Network
 {
 	Layer   inputLayer;   /// Input layer.
-	Layer[] hiddenLayers; /// Hidden layers. It is possible to have 0 hidden layers.
+	Layer[] hiddenLayers; /// Hidden layers. It is possible to have no hidden layers at all.
 	Layer   outputLayer;  /// Output layer.
 	
 	invariant
