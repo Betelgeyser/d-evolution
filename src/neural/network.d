@@ -290,7 +290,6 @@ struct Layer
 	{
 		gemm(inputs, weights, outputs, cublasHandle);
 		
-		// TODO: need extended matrix here. Extended part should not be activated.
 		if (activate)
 			cuda_tanh(outputs.ptr, outputs.length);
 	}
@@ -525,23 +524,21 @@ struct Network
 	 */
 	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const nothrow @nogc
 	{
-		immutable extensionOffset = inputs.cols * neuronsPerLayer;
+		auto prev = Matrix(inputs.rows, neuronsPerLayer + biasLength);
+		scope(exit) prev.freeMem();
 		
-		auto prev = Matrix(inputs.cols, neuronsPerLayer + biasLength);
-		auto next = Matrix(inputs.cols, neuronsPerLayer + biasLength);
+		auto next = Matrix(inputs.rows, neuronsPerLayer + biasLength);
+		scope(exit) next.freeMem();
 		
-		inputLayer(inputs, prev, cublasHandle);
-		cuda_fill(prev + extensionOffset, biasWeight, neuronsPerLayer + biasLength);
+		cuda_fill(prev.colSlice(prev.cols - 1, prev.cols).ptr, biasWeight, prev.rows);
+		cuda_fill(next.colSlice(next.cols - 1, next.cols).ptr, biasWeight, next.rows);
 		
+		inputLayer(inputs, prev.colSlice(0, prev.cols - 1), cublasHandle);
 		foreach (l; hiddenLayers)
 		{
-			l(prev, next, cublasHandle);
-			prev = next;
-			
-			// TODO: need extemded matrix instead. Extended part should not be activated.
-			cuda_fill(prev + extensionOffset, biasWeight, neuronsPerLayer + biasLength);
+			l(prev, next.colSlice(0, next.cols - 1), cublasHandle);
+			swap(prev, next);
 		}
-		
 		outputLayer(prev, outputs, cublasHandle, false);
 	}
 	
@@ -550,13 +547,6 @@ struct Network
 	{
 		mixin(writetest!opCall);
 		
-		auto inputs = Matrix(2, 2);
-		inputs.values[0] = 0;
-		inputs.values[1] = 1;
-		inputs.values[2] = 1;
-		inputs.values[3] = 1;
-		
-		auto outputs = Matrix(2, 1);
 		immutable NetworkParams params = {
 			inputs  : 2,
 			outputs : 1,
@@ -564,31 +554,63 @@ struct Network
 			layers  : 3
 		};
 		
-		/* This is how test network works for 1st input value: *
-		 *                                                     *
-		 * 0 - 0.00 - (in) - 2.00 - (hn) - -0.50 - (on) ---- o *
-		 *           /             /              /         /  *
-		 *   1 - 1.00     1 - -2.00       1 - 0.75  0.971843   */
-		auto network = Network(params, generator);
-		cudaDeviceSynchronize();
-		network.inputLayer.weights[0]      =  0.00;
-		network.inputLayer.weights[1]      =  1.00; // bias
-		network.hiddenLayers[0].weights[0] =  2.00;
-		network.hiddenLayers[0].weights[1] = -2.00; // bias
-		network.outputLayer.weights[0]     = -0.50;
-		network.outputLayer.weights[1]     =  0.75; // bias
+		immutable measures = 4;
 		
-		network(inputs, outputs, handle);
+		auto inputs = Matrix(measures, params.neurons);
+		scope(exit) inputs.freeMem();
+		
+		auto outputs = Matrix(measures, params.outputs);
+		scope(exit) outputs.freeMem();
+		
+		auto network = Network(params, curandGenerator);
+		scope(exit) network.freeMem();
+		
+		copy(
+			[ 1.0,        2.0,        3.0,        4.0,
+			  5.0,        6.0,        7.0,        8.0,
+			  biasWeight, biasWeight, biasWeight, biasWeight ], // column for bias
+			inputs
+		);
+		
+		copy( //        bias
+			[ 0.1, 0.2, 0.3,   // <- 1st neuron
+			  0.4, 0.5, 0.6,   // <- 2nd neuron
+			  0.7, 0.8, 0.9 ], // <- 3rd neuron
+			network.inputLayer.weights
+		);
+		
+		copy( //                bias
+			[ -0.1, -0.2, -0.3, -0.4,   // <- 1st neuron
+			  -0.5, -0.6, -0.7, -0.8,   // <- 2nd neuron
+			  -0.9, -1.0, -1.1, -1.2 ], // <- 3rd neuron
+			network.hiddenLayers[0].weights
+		);
+		
+		copy( //             bias
+			[ 0.1, 0.2, 0.3, 0.4,   // <- 1st neuron
+			  0.5, 0.6, 0.7, 0.8,   // <- 2nd neuron
+			  0.9, 1.0, 1.1, 1.2 ], // <- 3rd neuron
+			network.hiddenLayers[1].weights
+		);
+		
+		copy( //                bias
+			[ -0.1, -0.2, -0.3, -0.4,   // <- 1st neuron
+			  -0.5, -0.6, -0.7, -0.8,   // <- 2nd neuron
+			  -0.9, -1.0, -1.1, -1.2 ], // <- 3rd neuron
+			network.hiddenLayers[2].weights
+		);
+		
+		copy(
+			[ 0, 1, 2, 3 ], // the only neuron
+			network.outputLayer.weights
+		);
+		
+		network(inputs, outputs, cublasHandle);
 		cudaDeviceSynchronize();
 		
-		float[] result = [0.971843, 0.971843];
-		for (ulong i = 0; i < outputs.length; ++i)
-			assert (
-				approxEqual(
-					outputs[i], result[i],
-					accuracy
-				)
-			);
+		immutable float[] result = [4.497191, 4.500117, 4.501695, 4.502563];
+		foreach (i, o; outputs)
+			assert ( approxEqual(o, result[i], accuracy) );
 	}
 }
 
