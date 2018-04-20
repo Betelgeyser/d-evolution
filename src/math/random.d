@@ -81,7 +81,7 @@ struct RandomPool
 	 * Returns:
 	 *     Pointer to random numbers that were not used.
 	 */
-	const(float)[] opCall(in ulong count) nothrow @nogc
+	const(float[]) opCall(in ulong count) nothrow @nogc
 	in
 	{
 		assert (count >= 1 && count <= size);
@@ -91,7 +91,7 @@ struct RandomPool
 		if (count > available)
 			regenerate();
 		
-		const(float)[] result = _values[_index .. _index + count];
+		const(float[]) result = _values[_index .. _index + count];
 		_index += count;
 		return result;
 	}
