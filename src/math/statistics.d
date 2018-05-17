@@ -29,7 +29,6 @@ import math.kernels;
 
 version (unittest)
 {
-	immutable accuracy = 0.000_001;
 	import std.algorithm : each, equal;
 	import std.math      : approxEqual;
 	
@@ -115,8 +114,7 @@ unittest
 	cudaDeviceSynchronize();
 	
 	immutable float[] result = [1.118034, 3.535534, 6.103278, 8.689074];
-	foreach (i, e; E)
-		assert (approxEqual(e, result[i], accuracy));
+	assert (equal!approxEqual(E.values, result));
 }
 
 /**
@@ -169,7 +167,9 @@ unittest
 	A.each!"a = i";
 	B.each!"a = 1.5 * i";
 	
-	assert ( approxEqual(MAE(A, B, cublasHandle), 4.861480, accuracy) );
+	float error = MAE(A, B, cublasHandle);
+	
+	assert (approxEqual(error, 4.861480));
 }
 
 /**
@@ -204,7 +204,9 @@ unittest
 	
 	data.each!"a = i * i";
 	
-	assert ( approxEqual(MAENaive(data, cublasHandle), 14.472136, accuracy) );
+	float error = MAENaive(data, cublasHandle);
+	
+	assert (approxEqual(error, 14.472136));
 }
 
 /**
@@ -248,6 +250,8 @@ unittest
 	measured.each!"a = i";
 	approximated.each!"a = i + 1";
 	
-	assert ( approxEqual(MASE(measured, approximated, cublasHandle), 0.333333, accuracy) );
+	float error = MASE(measured, approximated, cublasHandle);
+	
+	assert (approxEqual(error, 0.333333));
 }
 
