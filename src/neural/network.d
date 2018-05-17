@@ -343,13 +343,13 @@ struct Layer
 		
 		immutable alpha = 0.5;
 		
-		auto parent1 = Layer(params, curandGenerator);
+		auto parent1 = Layer(params, randomPool);
 		scope(exit) parent1.freeMem();
 		
-		auto parent2 = Layer(params, curandGenerator);
+		auto parent2 = Layer(params, randomPool);
 		scope(exit) parent2.freeMem();
 		
-		auto offspring = Layer(params.inputs, params.neurons);
+		auto offspring = Layer(params, randomPool);
 		scope(exit) offspring.freeMem();
 		
 		auto pool = RandomPool(curandGenerator, 1_000_000);
