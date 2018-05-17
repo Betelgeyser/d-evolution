@@ -21,7 +21,6 @@ import std.algorithm : each, mean;
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.cublas;
-import cuda.curand;
 
 // DNN modules
 import common;
