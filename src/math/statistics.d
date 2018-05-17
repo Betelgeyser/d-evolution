@@ -93,7 +93,7 @@ body
 	scope(exit) C.freeMem();
 	
 	geam(1, A, -1, B, C, cublasHandle);
-	cuda_L2(C.ptr, error.ptr, C.rows, error.cols);
+	cudaL2(C, error);
 }
 
 ///
