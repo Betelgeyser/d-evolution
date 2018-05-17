@@ -266,8 +266,8 @@ struct Layer
 		
 		immutable LayerParams params = { inputs : 2, neurons : 2 };
 		
-		Layer l = Layer(params, curandGenerator);
-		scope(exit) l.freeMem();
+		Layer layer = Layer(params, randomPool);
+		scope(exit) layer.freeMem();
 		
 		auto inputs = Matrix(4, 3);
 		scope(exit) inputs.freeMem();
@@ -280,12 +280,11 @@ struct Layer
 		 * 0.00 0.06 * <- weights
 		 * 0.02 0.08 * <- weights
 		 * 0.04 0.10 * <- biases */
-		cudaDeviceSynchronize();
-		l.weights.each!"a = i / 50f";
+		layer.weights.each!"a = i / 50f";
 		
 		inputs.each!"a = i";
 		
-		l(inputs, outputs, cublasHandle);
+		layer(inputs, outputs, cublasHandle);
 		cudaDeviceSynchronize();
 		
 		// cuBLAS matrices are column-major.
