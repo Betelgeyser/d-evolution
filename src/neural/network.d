@@ -115,7 +115,7 @@ struct NetworkParams
 	 * Params:
 	 *     type = Layer role in a network.
 	 */
-	LayerParams getLayerParams(in LayerType type) const pure nothrow @safe @nogc
+	@property LayerParams layerParams(in LayerType type) const @nogc nothrow pure @safe
 	{
 		LayerParams result;
 		
@@ -418,18 +418,18 @@ struct Network
 		scope(failure) freeMem();
 		
 		inputLayer = Layer(
-			params.getLayerParams(LayerType.Input),
+			params.layerParams(LayerType.Input),
 			pool
 		);
 		outputLayer = Layer(
-			params.getLayerParams(LayerType.Output),
+			params.layerParams(LayerType.Output),
 			pool
 		);
 		
 		hiddenLayers = nogcMalloc!Layer(params.layers);
 		foreach (ref l; hiddenLayers)
 			l = Layer(
-				params.getLayerParams(LayerType.Hidden),
+				params.layerParams(LayerType.Hidden),
 				pool
 			);
 	}
