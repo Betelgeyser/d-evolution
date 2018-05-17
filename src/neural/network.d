@@ -36,25 +36,31 @@ version (unittest)
 	import std.math : approxEqual;
 	immutable accuracy = 0.000_001;
 	
-	CurandGenerator curandGenerator;
-	cublasHandle_t  cublasHandle;
-		 
+	private
+	{
+		CurandGenerator curandGenerator;
+		RandomPool      randomPool;
+		cublasHandle_t  cublasHandle;
+	}
+	
 	static this()
 	{
 		curandGenerator = CurandGenerator(curandRngType_t.PSEUDO_DEFAULT);
+		randomPool      = RandomPool(curandGenerator);
 		cublasCreate(cublasHandle);
 	}
 	
 	static ~this()
 	{
 		curandGenerator.destroy;
+		randomPool.freeMem();
 		cublasDestroy(cublasHandle);
 	}
 }
 
 
-immutable biasLength = 1; /// Number of bias weights per neuron.
-immutable biasWeight = 1.0; /// Weight of every bias connection.
+immutable uint  biasLength = 1;   /// Number of bias weights per neuron.
+immutable float biasWeight = 1.0; /// Weight of every bias connection.
 
 enum LayerType { Input, Hidden, Output }; /// Layer types.
 

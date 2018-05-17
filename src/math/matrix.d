@@ -30,7 +30,7 @@ version (unittest)
 	import std.math : approxEqual;
 	immutable accuracy = 0.000_001;
 	
-	cublasHandle_t cublasHandle;
+	private cublasHandle_t cublasHandle;
 	
 	static this()
 	{
