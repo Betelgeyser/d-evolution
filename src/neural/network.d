@@ -256,7 +256,7 @@ struct Layer
 		gemm(inputs, weights, outputs, cublasHandle);
 		
 		if (activate)
-			cuda_tanh(outputs.ptr, outputs.length);
+			cudaTanh(outputs);
 	}
 	
 	///
