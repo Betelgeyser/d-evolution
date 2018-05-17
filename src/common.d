@@ -15,26 +15,9 @@
  */
 module common;
 
+// Standard D modules
 import core.stdc.stdlib : malloc, free;
 
-
-version (unittest)
-{
-	public import std.stdio  : write, writeln;
-	import std.traits : fullyQualifiedName;
-	
-	template writetest(alias T)
-	{
-		enum writetest = "write(\"\x1b[1m" ~ fullyQualifiedName!T ~ "...\x1b[0m\");
-			scope(failure) writeln(\"\x1b[1;31m failure!\x1b[0m\");
-			scope(success) writeln(\"\x1b[1;32m success =)\x1b[0m\");";
-	}
-	
-	template notTested(alias T)
-	{
-		enum notTested = "writeln(\"\x1b[1m" ~ fullyQualifiedName!T ~ "... \x1b[33mnot tested.\x1b[0m\");";
-	}
-}
 
 /**
  * Manual GC-free memory allocation for D dynamic arrays.
@@ -56,3 +39,22 @@ void free(T)(ref T[] array) nothrow @nogc
 	free(array.ptr);
 	array.destroy();
 }
+
+version (unittest)
+{
+	public import std.stdio  : write, writeln;
+	import std.traits : fullyQualifiedName;
+	
+	template writetest(alias T)
+	{
+		enum writetest = "write(\"\x1b[1m" ~ fullyQualifiedName!T ~ "...\x1b[0m\");
+			scope(failure) writeln(\"\x1b[1;31m failure!\x1b[0m\");
+			scope(success) writeln(\"\x1b[1;32m success =)\x1b[0m\");";
+	}
+	
+	template notTested(alias T)
+	{
+		enum notTested = "writeln(\"\x1b[1m" ~ fullyQualifiedName!T ~ "... \x1b[33mnot tested.\x1b[0m\");";
+	}
+}
+
