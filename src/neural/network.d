@@ -549,7 +549,7 @@ struct Network
 		auto outputs = Matrix(measures, params.outputs);
 		scope(exit) outputs.freeMem();
 		
-		auto network = Network(params, curandGenerator);
+		auto network = Network(params, randomPool);
 		scope(exit) network.freeMem();
 		
 		copy(
