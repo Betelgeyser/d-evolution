@@ -552,52 +552,38 @@ struct Network
 		auto network = Network(params, randomPool);
 		scope(exit) network.freeMem();
 		
-		copy(
-			[ 1.0,        2.0,        3.0,        4.0,
-			  5.0,        6.0,        7.0,        8.0,
-			  biasWeight, biasWeight, biasWeight, biasWeight ], // column for bias
-			inputs
-		);
+		inputs[0 .. $] = [ 1.0,        2.0,        3.0,        4.0,
+		                   5.0,        6.0,        7.0,        8.0,
+		                   biasWeight, biasWeight, biasWeight, biasWeight ]; // column for bias
 		
-		copy( //        bias
-			[ 0.1, 0.2, 0.3,   // <- 1st neuron
-			  0.4, 0.5, 0.6,   // <- 2nd neuron
-			  0.7, 0.8, 0.9 ], // <- 3rd neuron
-			network.inputLayer.weights
-		);
+		//                                               bias
+		network.inputLayer.weights[0 .. $] = [ 0.1, 0.2, 0.3,   // <- 1st neuron
+		                                       0.4, 0.5, 0.6,   // <- 2nd neuron
+		                                       0.7, 0.8, 0.9 ]; // <- 3rd neuron
 		
-		copy( //                bias
-			[ -0.1, -0.2, -0.3, -0.4,   // <- 1st neuron
-			  -0.5, -0.6, -0.7, -0.8,   // <- 2nd neuron
-			  -0.9, -1.0, -1.1, -1.2 ], // <- 3rd neuron
-			network.hiddenLayers[0].weights
-		);
+		//                                                            bias
+		network.hiddenLayers[0].weights[0 .. $] = [ -0.1, -0.2, -0.3, -0.4,   // <- 1st neuron
+		                                            -0.5, -0.6, -0.7, -0.8,   // <- 2nd neuron
+		                                            -0.9, -1.0, -1.1, -1.2 ]; // <- 3rd neuron
 		
-		copy( //             bias
-			[ 0.1, 0.2, 0.3, 0.4,   // <- 1st neuron
-			  0.5, 0.6, 0.7, 0.8,   // <- 2nd neuron
-			  0.9, 1.0, 1.1, 1.2 ], // <- 3rd neuron
-			network.hiddenLayers[1].weights
-		);
+		//                                                         bias
+		network.hiddenLayers[1].weights[0 .. $] = [ 0.1, 0.2, 0.3, 0.4,   // <- 1st neuron
+		                                            0.5, 0.6, 0.7, 0.8,   // <- 2nd neuron
+		                                            0.9, 1.0, 1.1, 1.2 ]; // <- 3rd neuron
 		
-		copy( //                bias
-			[ -0.1, -0.2, -0.3, -0.4,   // <- 1st neuron
-			  -0.5, -0.6, -0.7, -0.8,   // <- 2nd neuron
-			  -0.9, -1.0, -1.1, -1.2 ], // <- 3rd neuron
-			network.hiddenLayers[2].weights
-		);
+		//                                                            bias
+		network.hiddenLayers[2].weights[0 .. $] = [ -0.1, -0.2, -0.3, -0.4,   // <- 1st neuron
+		                                            -0.5, -0.6, -0.7, -0.8,   // <- 2nd neuron
+		                                            -0.9, -1.0, -1.1, -1.2 ]; // <- 3rd neuron
 		
-		copy(
-			[ 0, 1, 2, 3 ], // the only neuron
-			network.outputLayer.weights
-		);
+		network.outputLayer.weights[0 .. $] = [ 0, 1, 2, 3 ]; // the only neuron
 		
 		network(inputs, outputs, cublasHandle);
 		cudaDeviceSynchronize();
 		
 		immutable float[] result = [4.497191, 4.500117, 4.501695, 4.502563];
-		foreach (i, o; outputs)
-			assert ( approxEqual(o, result[i], accuracy) );
+		assert (equal!approxEqual(outputs, result));
+	}
 	}
 }
 
