@@ -169,26 +169,6 @@ struct Layer
 	}
 	
 	/**
-	 * Constructor without initialization.
-	 *
-	 * Params:
-	 *     inputs = Number of weights per neuron.
-	 *     neurons = Number of neurons in the layer.
-	 */
-	this(in uint inputs, in uint neurons) nothrow @nogc
-	in
-	{
-		assert (inputs  >= 1);
-		assert (neurons >= 1);
-	}
-	body
-	{
-		scope(failure) freeMem();
-		
-		weights = Matrix(inputs + biasLength, neurons);
-	}
-	
-	/**
 	 * Consctroctor with random initialization.
 	 *
 	 * Params:
