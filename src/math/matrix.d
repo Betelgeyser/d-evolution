@@ -69,7 +69,6 @@ struct Matrix
 	{
 		assert (_rows >= 1);
 		assert (_cols >= 1);
-		assert (values.length == _rows * _cols);
 	}
 	
 	/**
@@ -111,6 +110,13 @@ struct Matrix
 	 *     values = Array of values.
 	 */
 	this(in uint rows, in uint cols) nothrow @nogc
+	out
+	{
+		// Many std.algorithm's higher order functions on ranges will pop elements from `values` decreasing its lenght.
+		// That makes it imposible to place this check in the invariant section.
+		assert (values.length == _rows * _cols);
+	}
+	body
 	{
 		scope(failure) freeMem();
 		
