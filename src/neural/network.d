@@ -517,8 +517,8 @@ struct Network
 		auto next = Matrix(inputs.rows, neuronsPerLayer + biasLength);
 		scope(exit) next.freeMem();
 		
-		cuda_fill(prev.colSlice(prev.cols - 1, prev.cols).ptr, biasWeight, prev.rows);
-		cuda_fill(next.colSlice(next.cols - 1, next.cols).ptr, biasWeight, next.rows);
+		cudaFill(prev.colSlice(prev.cols - 1, prev.cols), biasWeight);
+		cudaFill(next.colSlice(next.cols - 1, next.cols), biasWeight);
 		
 		inputLayer(inputs, prev.colSlice(0, prev.cols - 1), cublasHandle);
 		foreach (l; hiddenLayers)
