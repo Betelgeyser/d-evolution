@@ -274,8 +274,8 @@ unittest
 		224, 254, 284, 314, 344, 374, 404,
 		287, 326, 365, 404, 443, 482, 521
 	];
-	foreach (i, c; C)
-		assert (approxEqual(c, result[i], accuracy));
+	
+	assert (equal!approxEqual(C.values, result));
 }
 
 /**
@@ -334,7 +334,7 @@ unittest
 	cudaDeviceSynchronize();
 	
 	foreach (i, c; C)
-		assert (approxEqual(c, 3 * i, accuracy));
+		assert (approxEqual(c, 3 * i));
 }
 
 /**
@@ -397,7 +397,7 @@ unittest
 		3, 8, 13,
 		4, 9, 14
 	];
-	foreach (i, c; C)
-		assert (approxEqual(c, result[i], accuracy));
+	
+	assert (equal!approxEqual(C.values, result));
 }
 
