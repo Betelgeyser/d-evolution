@@ -292,8 +292,7 @@ struct Layer
 			0.379949, 0.430084, 0.477700, 0.522665,
 			0.807569, 0.876393, 0.921669, 0.950795
 		];
-		foreach (i, o; outputs)
-			assert ( approxEqual(o, result[i], accuracy) );
+		assert (equal!approxEqual(outputs, result));
 	}
 	
 	/**
@@ -495,8 +494,7 @@ struct Network
 		inputLayer.freeMem();
 		outputLayer.freeMem();
 		
-		foreach (ref l; hiddenLayers)
-			l.freeMem();
+		hiddenLayers.each!(x => x.freeMem());
 		
 		free(hiddenLayers);
 	}
