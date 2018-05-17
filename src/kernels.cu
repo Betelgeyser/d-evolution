@@ -17,8 +17,8 @@
  * to be linked with D code later.
  */
 
-const float float_max = 3.402823466e+38;
-const float float_min = -float_max;
+
+const float uint_max_fp = 4294967295.0f; /// Maximum value of unsigned integer represented in floating point format.
 
 /**
  * Calculate hyperbolic tangent for each element in an array in place on GPU.
@@ -92,25 +92,42 @@ void cuda_scale(void *ptr, const float a, const float b, const size_t count)
  *     n = Number of values to crossover.
  */
 __global__
-void kernel_BLX_a(const float *x, const float *y, float *offspring, const float alpha, const float *u, const size_t n)
+void kernel_BLX_a(
+	const float *x, const float *y,
+	float *offspring,
+	const float a, const float b,
+	const float alpha,
+	const unsigned int *u,
+	const size_t n
+)
 {
-	for (int i = 0; i < n; ++i)
+	for (size_t i = 0; i < n; ++i)
 	{
-		float min = fminf(x[i], y[i]) - alpha * fabsf(x[i] - y[i]);
-		float max = fmaxf(x[i], y[i]) + alpha * fabsf(x[i] - y[i]);
-		offspring[i] = scale(
-			isinf(min) ? float_min : min,
-			isinf(max) ? float_max : max,
-			u[i]
-		);
+		float _a = fminf(x[i], y[i]) - alpha * fabsf(x[i] - y[i]);
+		float _b = fmaxf(x[i], y[i]) + alpha * fabsf(x[i] - y[i]);
+		
+		offspring[i] = scale(u[i], _a, _b);
+		
+		if (offspring[i] < a)
+			offspring[i] = a;
+		
+		if (offspring[i] > b)
+			offspring[i] = b;
 	}
 }
 
 /// ditto
 __host__
-void cuda_BLX_a(const float *x, const float *y, float *offspring, const float alpha, const float *u, const size_t n)
+void cuda_BLX_a(
+	const float *x, const float *y,
+	float *offspring,
+	const float a, const float b,
+	const float alpha,
+	const unsigned int *u,
+	const size_t n
+)
 {
-	kernel_BLX_a<<<1, 1>>>(x, y, offspring, alpha, u, n);
+	kernel_BLX_a<<<1, 1>>>(x, y, offspring, a, b, alpha, u, n);
 }
 
 /**
@@ -125,7 +142,7 @@ void cuda_BLX_a(const float *x, const float *y, float *offspring, const float al
 __global__
 void kernel_fill(float *x, const float val, const size_t count)
 {
-	for (int i = 0; i < count; ++i)
+	for (size_t i = 0; i < count; ++i)
 		x[i] = val;
 }
 

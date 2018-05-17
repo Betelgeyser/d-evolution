@@ -125,49 +125,73 @@ unittest
  *     u = Pointer to an array of random uniform values in the range of [0; 1].
  *     n = Number of values to crossover.
  */
-void cuda_BLX_a(const(float*) x, const(float*) y, float* offspring, const float alpha, const(float*) u, const size_t n) nothrow @nogc;
+private extern (C++) void cuda_BLX_a(
+	const(float*) x, const(float*) y,
+	float* offspring,
+	const float a, const float b,
+	const float alpha,
+	const(uint*) u,
+	const size_t n
+) nothrow @nogc;
+void cudaBLXa(in float[] x, in float[] y, float[] offspring, in float a, in float b, const float alpha, in uint[] u) nothrow @nogc
+in
+{
+	assert (offspring.length == x.length);
+	assert (offspring.length == y.length);
+	assert (offspring.length == u.length);
+	
+	assert (alpha >= 0 && alpha <= 1);
+}
+body
+{
+	cuda_BLX_a(x.ptr, y.ptr, offspring.ptr, a, b, alpha, u.ptr, offspring.length);
+}
 
 ///
 unittest
 {
-	mixin(writetest!cuda_BLX_a);
+	mixin(writetest!cudaBLXa);
 	
-	import std.math : approxEqual;
-	
-	immutable accuracy = 0.000_001;
-	immutable length   = 3;
-	immutable alpha    = 0.2;
+	immutable length = 3;
+	immutable alpha  = 0.5;
 	
 	// Initialize parents
-	float* x;
+	float[] x;
 	cudaMallocManaged(x, length);
 	scope(exit) cudaFree(x);
 	
-	float* y;
+	float[] y;
 	cudaMallocManaged(y, length);
 	scope(exit) cudaFree(y);
 	
-	x[0..length] = [-1, 0, 1];
-	y[0..length] = [ 2, 0, 0];
+	x[0 .. $] = [0, 1, -1];
+	y[0 .. $] = [0, 0,  2];
 	
 	// An offspring does not need to be initialized, just allocate memory
-	float* offspring;
+	float[] offspring;
 	cudaMallocManaged(offspring, length);
 	scope(exit) cudaFree(offspring);
 	
 	// There should be pregenerated random values in the range [0; 1]
-	float* u;
+	uint[] u;
 	cudaMallocManaged(u, length);
 	scope(exit) cudaFree(u);
-	u[0..length] = [0.0, 0.2, 0.8];
 	
-	// Artificial crossover. It will be more random in the wilderness
-	cuda_BLX_a(x, y, offspring, alpha, u, length);
+	u[0 .. $] = [0, uint.max / 2, uint.max];
+	
+	// Artificial crossover. u will be random in real calcilations.
+	cudaBLXa(x, y, offspring, -10, 10, alpha, u);
 	cudaDeviceSynchronize();
 	
-	immutable float[] result = [-1.6, 0, 0.92];
-	for (ulong i = 0; i < length; ++i)
-		assert ( approxEqual(offspring[i], result[i], accuracy) );
+	float[] result = [0.0, 0.5, 3.5];
+	assert (equal!approxEqual(offspring, result));
+	
+	// Clamp test
+	cudaBLXa(x, y, offspring, -2, 2, alpha, u);
+	cudaDeviceSynchronize();
+	
+	result = [0.0, 0.5, 2.0];
+	assert (equal!approxEqual(offspring, result));
 }
 
 /**

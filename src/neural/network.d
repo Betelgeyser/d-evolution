@@ -311,19 +311,21 @@ struct Layer
 	 *     pool = Pool of random numbers. It is supposed to improve performance of a crossover as cuRAND acheives maximum
 	 *         efficiency generating large quontities of numbers.
 	 */
-	void crossover(in Layer x, in Layer y, in float alpha, RandomPool pool) nothrow @nogc
+	void crossover(in Layer x, in Layer y, in float a, in float b, in float alpha, RandomPool pool) nothrow @nogc
 	in
 	{
-		assert (this.weights.length == y.weights.length, "Parents and an offspring must be the same size.");
-		assert (this.weights.length == x.weights.length, "Parents and an offspring must be the same size.");
-		assert (this.weights.length <= pool.size, "An offspring must not contain more values than a random pool does.");
+		assert (this.weights.length == y.weights.length);
+		assert (this.weights.length == x.weights.length);
 		
-		assert (alpha >= 0 && alpha <= 1, "α parameter must be in the range [0; 1]");
+		assert (a <= b);
+		
+		assert (alpha >= 0 && alpha <= 1, "α parameter must be in range [0; 1]");
+		
+		assert (this.weights.length <= pool.length, "RandomPool must contain at least as much numbers as a layer does.");
 	}
 	body
 	{
-		immutable length = this.weights.length;
-		cuda_BLX_a(x.weights.ptr, y.weights.ptr, this.weights.ptr, alpha, pool(length).ptr, length);
+		cudaBLXa(x.weights, y.weights, weights, a, b, alpha, pool(length));
 	}
 	
 	///
@@ -334,12 +336,7 @@ struct Layer
 		import std.algorithm : max, min;
 		import std.math      : abs;
 		
-		immutable LayerParams params = {
-			inputs  : 200,
-			neurons : 300,
-			min     : -1.0e30,
-			max     : 2.0e31
-		};
+		immutable LayerParams params = { inputs : 200, neurons : 300 };
 		
 		immutable alpha = 0.5;
 		
@@ -352,17 +349,24 @@ struct Layer
 		auto offspring = Layer(params, randomPool);
 		scope(exit) offspring.freeMem();
 		
-		auto pool = RandomPool(curandGenerator, 1_000_000);
-		scope(exit) pool.freeMem();
-		
-		offspring.crossover(parent1, parent2, alpha, pool);
+		offspring.crossover(parent1, parent2, params.min, params.max, alpha, randomPool);
 		cudaDeviceSynchronize();
 		
+		assert (
+			offspring.weights.values.all!(
+				x => isFinite(x)
+		));
+		
 		foreach (i, off; offspring.weights)
-			assert (
-				off >= min(parent1.weights[i], parent2.weights[i]) - alpha * abs(parent1.weights[i] - parent2.weights[i]) &&
-				off <= max(parent1.weights[i], parent2.weights[i]) + alpha * abs(parent1.weights[i] - parent2.weights[i])
-			);
+		{
+			float _min = min(parent1.weights[i], parent2.weights[i], params.min)
+				- alpha * abs(parent1.weights[i] - parent2.weights[i]);
+			
+			float _max = max(parent1.weights[i], parent2.weights[i], params.max)
+				+ alpha * abs(parent1.weights[i] - parent2.weights[i]);
+			
+			assert (off >= _min && off <= _max);
+		}
 	}
 }
 
@@ -584,6 +588,124 @@ struct Network
 		immutable float[] result = [4.497191, 4.500117, 4.501695, 4.502563];
 		assert (equal!approxEqual(outputs, result));
 	}
+	
+	/**
+	 * Cross over parents to generate an offspring. The operation is performed in place.
+	 *
+	 * As the constructor allocates new memory for a new layer, to optimize performance and avoid memory reallocations
+	 * this operation is performed in place assuming the calling struct is an offspring.
+	 *
+	 * Currently only BLX-α crossover is implemented and is a default algorithm.
+	 *
+	 * Params:
+	 *     x = The first parent.
+	 *     y = The second parent.
+	 *     alpha = α parameter of BLX-α crossover. Simply put, determines how far to extend a search space from the parents
+	 *         where 0 means not to extend at all. Generally, 0.5 is considered to show the best results.
+	 *     pool = Pool of random numbers. It is supposed to improve performance of a crossover as cuRAND acheives maximum
+	 *         efficiency generating large quontities of numbers.
+	 */
+	void crossover(in Network x, in Network y, in float a, in float b, in float alpha, RandomPool pool) nothrow @nogc
+	in
+	{
+//		assert (this.weights.length == y.weights.length, "Parents and an offspring must be the same size.");
+//		assert (this.weights.length == x.weights.length, "Parents and an offspring must be the same size.");
+//		assert (this.weights.length <= pool.size, "An offspring must not contain more values than a random pool does.");
+//		
+		assert (alpha >= 0 && alpha <= 1, "α parameter must be in the range [0; 1]");
+	}
+	body
+	{
+		inputLayer.crossover (x.inputLayer,  y.inputLayer,  a, b, alpha, pool);
+		outputLayer.crossover(x.outputLayer, y.outputLayer, a, b, alpha, pool);
+		
+		foreach (i, ref off; hiddenLayers)
+			off.crossover(x.hiddenLayers[i], y.hiddenLayers[i], a, b, alpha, pool);
+	}
+	
+	///
+	unittest
+	{
+		mixin(writetest!crossover);
+		
+		import std.algorithm : max, min;
+		import std.math      : abs;
+		
+		immutable NetworkParams params = {
+			inputs  :  20,
+			outputs :  10,
+			neurons :  30,
+			layers  :  10,
+			min     : -1.0e3,
+			max     :  1.0e3
+		};
+		
+		immutable alpha = 0.5;
+		
+		auto parent1 = Network(params, randomPool);
+		scope(exit) parent1.freeMem();
+		
+		auto parent2 = Network(params, randomPool);
+		scope(exit) parent2.freeMem();
+		
+		auto offspring = Network(params, randomPool);
+		scope(exit) offspring.freeMem();
+		
+		offspring.crossover(parent1, parent2, params.min, params.max, alpha, randomPool);
+		cudaDeviceSynchronize();
+		
+		with (offspring)
+		{
+			with (inputLayer)
+			{
+				assert (weights.values.all!(x => isFinite(x)));
+				
+				foreach (i, w; weights)
+				{
+					float _min = min(parent1.inputLayer.weights[i], parent2.inputLayer.weights[i], params.min)
+						- alpha * abs(parent1.inputLayer.weights[i] - parent2.inputLayer.weights[i]);
+					
+					float _max = max(parent1.inputLayer.weights[i], parent2.inputLayer.weights[i], params.max)
+						+ alpha * abs(parent1.inputLayer.weights[i] - parent2.inputLayer.weights[i]);
+					
+					assert (w >= _min && w <= _max);
+				}
+			}
+			
+			with (outputLayer)
+			{
+				assert (weights.values.all!(x => isFinite(x)));
+								
+				foreach (i, w; weights)
+				{
+					float _min = min(parent1.outputLayer.weights[i], parent2.outputLayer.weights[i], params.min)
+						- alpha * abs(parent1.outputLayer.weights[i] - parent2.outputLayer.weights[i]);
+					
+					float _max = max(parent1.outputLayer.weights[i], parent2.outputLayer.weights[i], params.max)
+						+ alpha * abs(parent1.outputLayer.weights[i] - parent2.outputLayer.weights[i]);
+					
+					assert (w >= _min && w <= _max);
+				}
+			}
+			
+			assert (
+				hiddenLayers.all!(
+					l => l.weights.values.all!(
+						x => isFinite(x)
+			)));
+			
+			foreach (i, layer; hiddenLayers)
+				foreach (j, w; layer.weights)
+				{
+					float _min = min(parent1.hiddenLayers[i].weights[j], parent2.hiddenLayers[i].weights[j], params.min)
+						- alpha * abs(parent1.hiddenLayers[i].weights[j] - parent2.hiddenLayers[i].weights[j]);
+					
+					float _max = max(parent1.hiddenLayers[i].weights[j], parent2.hiddenLayers[i].weights[j], params.max)
+						+ alpha * abs(parent1.hiddenLayers[i].weights[j] - parent2.hiddenLayers[i].weights[j]);
+					
+					assert (w >= _min && w <= _max);
+				}
+		}
 	}
 }
 
