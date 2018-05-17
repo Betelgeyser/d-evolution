@@ -175,7 +175,7 @@ struct Layer
 	 *     params = Layer parameters.
 	 *     generator = Pseudorandom number generator.
 	 */
-	this(in LayerParams params, CurandGenerator generator) nothrow @nogc
+	this(in LayerParams params, RandomPool pool) nothrow @nogc
 	in
 	{
 		assert (&params, "Incorrect layer parameters.");
