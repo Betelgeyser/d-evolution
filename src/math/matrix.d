@@ -15,9 +15,6 @@
  */
 module math.matrix;
 
-// Standard D modules
-import std.algorithm : each;
-
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.cublas;
@@ -27,8 +24,8 @@ import common;
 
 version (unittest)
 {
-	import std.math : approxEqual;
-	immutable accuracy = 0.000_001;
+	import std.algorithm : each, equal;
+	import std.math      : approxEqual;
 	
 	private cublasHandle_t cublasHandle;
 	

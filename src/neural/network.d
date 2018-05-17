@@ -19,8 +19,8 @@ module neural.network;
 
 // Standard D modules
 import std.format;
+import std.algorithm : all, each, swap;
 import std.math      : isFinite;
-import std.algorithm : each, all, copy, swap;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
@@ -33,8 +33,8 @@ import math;
 
 version (unittest)
 {
-	import std.math : approxEqual;
-	immutable accuracy = 0.000_001;
+	import std.algorithm : equal;
+	import std.math      : approxEqual;
 	
 	private
 	{

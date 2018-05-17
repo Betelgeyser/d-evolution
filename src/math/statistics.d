@@ -16,7 +16,7 @@
 module math.statistics;
 
 // Standard D modules
-import std.algorithm : each, mean;
+import std.algorithm : mean;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
@@ -29,8 +29,9 @@ import math.kernels;
 
 version (unittest)
 {
-	import std.math : approxEqual;
 	immutable accuracy = 0.000_001;
+	import std.algorithm : each, equal;
+	import std.math      : approxEqual;
 	
 	private cublasHandle_t cublasHandle;
 	
