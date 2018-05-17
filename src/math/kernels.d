@@ -19,10 +19,16 @@ module math.kernels;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
-import cuda.curand;
 
 // DNN modules
 import common;
+import math.matrix;
+
+version (unittest)
+{
+	import std.algorithm : each, equal;
+	import std.math      : approxEqual;
+}
 
 
 extern (C++):
@@ -35,30 +41,30 @@ extern (C++):
  *     n = Size of the array. If n is less than the actual x size, only the first n elements starting from the pointer p
  *         will be calculated.
  */
-void cuda_tanh(float* x, in size_t n) nothrow @nogc;
+private extern (C++) void cuda_tanh(float* x, const size_t n) nothrow @nogc;
+void cudaTanh(float[] x) nothrow @nogc
+{
+	cuda_tanh(x.ptr, x.length);
+}
 
 ///
 unittest
 {
-	mixin(writetest!cuda_tanh);
+	mixin(writetest!cudaTanh);
 	
-	import std.math : approxEqual;
+	immutable length = 5;
 	
-	immutable accuracy = 0.000_001;
-	immutable length   = 5;
-	
-	float* data;
+	float[] data;
 	cudaMallocManaged(data, length);
 	scope(exit) cudaFree(data);
 	
-	data[0..length] = [-1_000, -1, 0, 1, 1_000];
+	data[0 .. $] = [-1_000, -1, 0, 1, 1_000];
 	
-	cuda_tanh(data, length);
+	cudaTanh(data);
 	cudaDeviceSynchronize();
 	
 	immutable float[] result = [-1.000000, -0.761594, 0.000000,  0.761594, 1.000000];
-	for (ulong i = 0; i < length; ++i)
-		assert ( approxEqual(data[i], result[i], accuracy) );
+	assert (equal!approxEqual(data, result));
 }
 
 /**
@@ -68,30 +74,44 @@ unittest
  *     x = Pointer to an array.
  *     n = Size of array. If n is less than atual x size, only the ferst n elements will be calculated.
  */
-void cuda_abs(float *x, const size_t n) nothrow @nogc;
+private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, const size_t count) nothrow @nogc;
+const(float[]) cudaScale(uint[] x, in float a, in float b) nothrow @nogc
+in
+{
+	assert (a <= b);
+}
+body
+{
+	cuda_scale(x.ptr, a, b, x.length);
+	return cast(const(float)[])x;
+}
 
 ///
 unittest
 {
-	mixin(writetest!cuda_abs);
+	mixin(writetest!cudaScale);
 	
-	import std.math : approxEqual;
+	immutable length = 3;
 	
-	immutable accuracy = 0.000_001;
-	immutable length   = 3;
-	
-	float* data;
+	uint[] data;
 	cudaMallocManaged(data, length);
 	scope(exit) cudaFree(data);
 	
-	data[0..length] = [-1, 0, 1];
+	data[0 .. $]   = [uint.min, uint.max / 2, uint.max];
+	float[] result = [      -1,            0,        1];
 	
-	cuda_abs(data, length);
+	const(float)[] fData = cudaScale(data, -1, 1); // fData is just a copy pointer
 	cudaDeviceSynchronize();
 	
-	immutable float[] result = [1, 0, 1];
-	for (ulong i = 0; i < length; ++i)
-		assert ( approxEqual(data[i], result[i], accuracy) );
+	assert(equal!approxEqual(fData, result));
+	
+	data[0 .. $] = [uint.min, uint.max / 2,  uint.max];
+	result       = [       0,      500_000, 1_000_000];
+	
+	fData = cudaScale(data, 0, 1_000_000);
+	cudaDeviceSynchronize();
+	
+	assert(equal!approxEqual(fData, result));
 }
 
 /**
@@ -159,29 +179,29 @@ unittest
  *     n = Size of the array. If n is less than the actual x size, only the first n elements starting from the pointer p
  *         will be filled.
  */
-void cuda_fill(float* x, in float val, in size_t n) nothrow @nogc;
+private extern(C++) void cuda_fill(float* x, const float val, const size_t n) nothrow @nogc;
+void cudaFill(float[] x, in float val) nothrow @nogc
+{
+	cuda_fill(x.ptr, val, x.length);
+}
 
 ///
 unittest
 {
-	mixin(writetest!cuda_fill);
+	mixin(writetest!cudaFill);
 	
-	import std.math : approxEqual;
+	immutable length = 5;
 	
-	immutable accuracy = 0.000_001;
-	immutable length   = 5;
-	
-	float* data;
+	float[] data;
 	cudaMallocManaged(data, length);
 	scope(exit) cudaFree(data);
 	
-	cuda_fill(data,     1, length);
-	cuda_fill(data + 1, 2, length - 2);
+	cudaFill(data,           1);
+	cudaFill(data[1 .. $-1], 2);
 	cudaDeviceSynchronize();
 	
 	immutable float[] result = [1, 2, 2, 2, 1];
-	for (ulong i = 0; i < length; ++i)
-		assert ( approxEqual(data[i], result[i], accuracy) );
+	assert (equal!approxEqual(data, result));
 }
 
 /**
@@ -193,73 +213,38 @@ unittest
  *     dim = Vectors dimention.
  *     count = Number of vectors in the `x` array and resulting values in the `y` array.
  */
-void cuda_L2(const(float)* x, float* y, in int dim, in size_t count) nothrow @nogc;
+private extern(C++) void cuda_L2(const(float)* x, float* y, const uint dim, const size_t count) nothrow @nogc;
+void cudaL2(const Matrix x, float[] y) nothrow @nogc
+in
+{
+	assert (x.cols == y.length);
+}
+body
+{
+	cuda_L2(x.ptr, y.ptr, x.rows, x.cols);
+}
 
 ///
 unittest
 {
-	mixin(writetest!cuda_L2);
+	mixin(writetest!cudaL2);
 	
-	import std.math : approxEqual;
+	immutable dim    = 4;
+	immutable length = 2;
 	
-	immutable accuracy = 0.000_001;
-	immutable dim      = 4;
-	immutable length   = 2;
+	Matrix data = Matrix(dim, length);
+	scope(exit) data.freeMem();
 	
-	float* data;
-	cudaMallocManaged(data, dim * length);
-	scope(exit) cudaFree(data);
-	
-	float* norm;
+	float[] norm;
 	cudaMallocManaged(norm, length);
 	scope(exit) cudaFree(norm);
 	
-	for (ulong i = 0; i < dim * length; ++i)
-		data[i] = i;
+	data.values.each!"a = i";
 	
-	cuda_L2(data, norm, dim, length);
+	cudaL2(data, norm);
 	cudaDeviceSynchronize();
 	
 	immutable float[] result = [3.741657, 11.224972];
-	for (ulong i = 0; i < length; ++i)
-		assert ( approxEqual(norm[i], result[i], accuracy) );
-}
-
-/**
- * Scale [0; 1] to [min; max].
- *
- * Params:
- *     ptr = Pointer to an array to scale.
- *     min = Minimum scaled value.
- *     max = Maximum scaled value.
- *     count = Number of values to scale.
- */
-void cuda_scale(float* ptr, in float min, in float max, in size_t count) nothrow @nogc;
-
-///
-unittest
-{
-	mixin(writetest!cuda_scale);
-	
-	import std.math : approxEqual;
-	
-	immutable accuracy = 0.000_001;
-	immutable min      = -200;
-	immutable max      =  600;
-	immutable length   =    5;
-	
-	float* data;
-	cudaMallocManaged(data, length);
-	scope(exit) cudaFree(data);
-	
-	for (ulong i = 0; i < length; ++i)
-		data[i] = cast(float) i / length;
-	
-	cuda_scale(data, min, max, length);
-	cudaDeviceSynchronize();
-	
-	immutable float[] result = [-200, -40, 120, 280, 440];
-	for (ulong i = 0; i < length; ++i)
-		assert ( approxEqual(data[i], result[i], accuracy) );
+	assert (equal!approxEqual(norm, result));
 }
 
