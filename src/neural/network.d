@@ -18,7 +18,6 @@
 module neural.network;
 
 // Standard D modules
-import std.format;
 import std.algorithm : all, each, swap;
 import std.math      : isFinite;
 
