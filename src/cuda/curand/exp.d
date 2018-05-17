@@ -21,6 +21,6 @@ extern(C) package nothrow @nogc:
 	curandStatus_t curandCreateGenerator(curandGenerator_t* generator, curandRngType_t rng_type);
 	curandStatus_t curandDestroyGenerator(curandGenerator_t generator);
 	curandStatus_t curandSetPseudoRandomGeneratorSeed(curandGenerator_t generator, ulong seed);
-	curandStatus_t curandGenerate(curandGenerator_t generator, float* outputPtr, size_t num);
+	curandStatus_t curandGenerate(curandGenerator_t generator, uint* outputPtr, size_t num);
 	curandStatus_t curandGenerateUniform(curandGenerator_t generator, float* outputPtr, size_t num);
 
