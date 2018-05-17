@@ -31,19 +31,21 @@ import common;
  */
 struct RandomPool
 {
-	immutable ulong size;  /// Pool size. 
-	
 	private
 	{
-		float[] _values; /// Random values cache.
-		ulong   _index;  /// Last returned pointer to a pool element.
-		CurandGenerator _generator; /// Generator regenerates numbers as the pool runs out of them.
+		uint[] _values; /// Cached random bits.
+		size_t _index;  /// Index of the values that will be returned next.
+		CurandGenerator _generator; /// Curand generator.
 	}
 	
 	invariant
 	{
-		assert (_values.length == size);
-		assert (_index <= size);
+		assert (_index <= _values.length);
+	}
+	
+	@property size_t length() const pure nothrow @safe @nogc
+	{
+		return _values.length;
 	}
 	
 	/**
@@ -53,47 +55,24 @@ struct RandomPool
 	 *     generator = Curand pseudorandom number generator.
 	 *     size = Pool size. The maximun amount of generated values to store. Defaults to the size of 2GiB values.
 	 */
-	this(CurandGenerator generator, in uint size = 536_870_912) nothrow @nogc
+	this(CurandGenerator generator, in size_t size = 536_870_912) nothrow @nogc
 	in
 	{
 		assert (size >= 1);
 	}
+	out
+	{
+		assert (_values.length == size);
+	}
 	body
 	{
-		this.size = size;
 		_generator = generator;
 		
 		cudaMallocManaged(_values, size);
 		scope(failure) freeMem();
 		
-		_generator.generateUniform(_values.ptr, size);
+		_generator.generate(_values.ptr, _values.length);
 		cudaDeviceSynchronize();
-	}
-	
-	/**
-	 * Get `count` new random values from the pool.
-	 *
-	 * If there is not enought values in a pool, than new values will be generated.
-	 *
-	 * Params:
-	 *     count = How many values to return.
-	 *
-	 * Returns:
-	 *     Pointer to random numbers that were not used.
-	 */
-	const(float[]) opCall(in ulong count) nothrow @nogc
-	in
-	{
-		assert (count >= 1 && count <= size);
-	}
-	body
-	{
-		if (count > available)
-			regenerate();
-		
-		const(float[]) result = _values[_index .. _index + count];
-		_index += count;
-		return result;
 	}
 	
 	/**
@@ -109,14 +88,38 @@ struct RandomPool
 		cudaFree(_values);
 	}
 	
+	/**
+	 * Get `count` new random values from the pool.
+	 *
+	 * If there is not enought values in the pool, than new values will be generated.
+	 *
+	 * Params:
+	 *     count = How many values to return.
+	 *
+	 * Returns:
+	 *     a slice of random numbers that has not been used.
+	 */
+	uint[] opCall(in size_t count) nothrow @nogc
+	in
+	{
+		assert (count >= 1 && count <= length);
+	}
+	body
+	{
+		if (count > _available)
+			regenerate();
+		
+		return _values[_index .. _index += count];
+	}
+	
 	private
 	{
 		/**
 		 * Number of values that has not been used.
 		 */
-		@property ulong available() const pure nothrow @safe @nogc
+		@property size_t _available() const pure nothrow @safe @nogc
 		{
-			return size - _index;
+			return length - _index;
 		}
 		
 		/**
@@ -125,7 +128,7 @@ struct RandomPool
 		void regenerate() nothrow @nogc
 		{
 			_index = 0;
-			_generator.generateUniform(_values.ptr, size);
+			_generator.generate(_values.ptr, _values.length);
 			cudaDeviceSynchronize();
 		}
 	}
@@ -137,7 +140,6 @@ unittest
 	mixin(writetest!RandomPool);
 	
 	import std.math : approxEqual;
-	immutable accuracy = 0.000_001;
 	
 	immutable size = 1_000;
 	
@@ -147,23 +149,19 @@ unittest
 	scope(exit) generator.destroy;
 	
 	// Initialize pool
-	auto p = RandomPool(generator, size);
-	scope(exit) p.freeMem();
+	auto pool = RandomPool(generator, size);
+	scope(exit) pool.freeMem();
 	
 	// There is a chance of getting two equal floats in a row, but it's virtually impossible
 	assert ( !approxEqual(
-			p(1)[0],
-			p(1)[0],
-			accuracy
+		pool(1)[0],
+		pool(1)[0]
 	));
-	
-	p(size); // force pool to regenerate
 	
 	// Ensure pool regenerates its values
 	assert ( !approxEqual(
-			p(size / 2 + 1)[0],
-			p(size / 2 + 1)[0],
-			accuracy
+		pool(size)[0],
+		pool(size)[0]
 	));
 }
 
