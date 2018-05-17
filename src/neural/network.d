@@ -136,12 +136,12 @@ struct NetworkParams
  */
 struct Layer
 {
-	private Matrix weights; /// Connection weights.
+	private Matrix weights; /// Connections' weights.
 	
 	invariant
 	{
 		assert (&weights, "The weights matrix is incorrect.");
-		assert (weights.rows >= 1 + biasLength); // connections()
+		assert (weights.rows >= 1 + biasLength); // connectionsLength()
 	}
 	
 	/**
@@ -232,11 +232,11 @@ struct Layer
 	}
 	
 	/**
-	 * Evaluate the layer.
+	 * Activate the layer.
 	 *
-	 * Evaluates a result of feeding input matrix to the layer.
+	 * Calculates a result of feeding an input matrix to the layer.
 	 *
-	 * Currently uses tanh() as activation function.
+	 * Currently uses tanh() as an activation function.
 	 *
 	 * Params:
 	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
@@ -296,12 +296,12 @@ struct Layer
 	}
 	
 	/**
-	 * Cross over parents to generate an offspring. The operation is performed on place.
+	 * Cross over parents to generate an offspring. The operation is performed in place.
 	 *
 	 * As the constructor allocates new memory for a new layer, to optimize performance and avoid memory reallocations
 	 * this operation is performed in place assuming the calling struct is an offspring.
 	 *
-	 * Currently only BLX-α crossover is implemented and is a default algorithm.
+	 * Currently only BLX-α crossover is implemented and this is a default algorithm.
 	 *
 	 * Params:
 	 *     x = The first parent.
@@ -309,7 +309,7 @@ struct Layer
 	 *     alpha = α parameter of BLX-α crossover. Simply put, determines how far to extend a search space from the parents
 	 *         where 0 means not to extend at all. Generally, 0.5 is considered to show the best results.
 	 *     pool = Pool of random numbers. It is supposed to improve performance of a crossover as cuRAND acheives maximum
-	 *         efficiency generating large quontities of numbers.
+	 *         efficiency generating large quantities of numbers.
 	 */
 	void crossover(in Layer x, in Layer y, in float a, in float b, in float alpha, RandomPool pool) nothrow @nogc
 	in
@@ -504,9 +504,9 @@ struct Network
 	}
 	
 	/**
-	 * Evaluate the layer.
+	 * Activate the network.
 	 *
-	 * Evaluates a result of feeding inpit matrix to the network.
+	 * Claculates the result of feeding an inpit matrix to the network.
 	 *
 	 * Params:
 	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
@@ -538,12 +538,7 @@ struct Network
 	{
 		mixin(writetest!opCall);
 		
-		immutable NetworkParams params = {
-			inputs  : 2,
-			outputs : 1,
-			neurons : 3,
-			layers  : 3
-		};
+		immutable NetworkParams params = { inputs : 2, outputs : 1, neurons : 3, layers : 3 };
 		
 		immutable measures = 4;
 		

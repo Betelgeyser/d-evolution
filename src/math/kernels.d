@@ -31,15 +31,11 @@ version (unittest)
 }
 
 
-extern (C++):
-
-	/**
- * Calculate hyperbolic tangent for each element of an array `x` on GPU.
+/**
+ * Calculate hyperbolic tangent for each element of an array `x` on a GPU in place.
  *
  * Params:
- *     x = A pointer to an array. Could point to not the first element.
- *     n = Size of the array. If n is less than the actual x size, only the first n elements starting from the pointer p
- *         will be calculated.
+ *     x = An array to calculate.
  */
 private extern (C++) void cuda_tanh(float* x, const size_t n) nothrow @nogc;
 void cudaTanh(float[] x) nothrow @nogc
@@ -68,11 +64,18 @@ unittest
 }
 
 /**
- * Set absolute value for each element in an array in place on GPU.
+ * Transform uniformly distrubuted random bits into uniformly distributed random floating point numbers in range [a; b],
+ * where a <= b.
+ *
+ * Due to implementation details it is not recomended to pass a and b close to ±1.0e28.
  *
  * Params:
- *     x = Pointer to an array.
- *     n = Size of array. If n is less than atual x size, only the ferst n elements will be calculated.
+ *     x = Array of random bits.
+ *     a = Minimum value.
+ *     b = Maximum value.
+ *
+ * Returns:
+ *     a new pointer to the array `x` of float valus.
  */
 private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, const size_t count) nothrow @nogc;
 const(float[]) cudaScale(uint[] x, in float a, in float b) nothrow @nogc
@@ -195,13 +198,11 @@ unittest
 }
 
 /**
- * Fill an array on GPU.
+ * Fill an array on a GPU with `val`.
  *
  * Params:
- *     x = A pointer to an array. Could point to not the first element.
+ *     x = An array to fill.
  *     val = A value to fill with.
- *     n = Size of the array. If n is less than the actual x size, only the first n elements starting from the pointer p
- *         will be filled.
  */
 private extern(C++) void cuda_fill(float* x, const float val, const size_t n) nothrow @nogc;
 void cudaFill(float[] x, in float val) nothrow @nogc
@@ -229,7 +230,7 @@ unittest
 }
 
 /**
- * Per-vector calculation of the Euclidean distance (L2 norm) of a vector array on GPU.
+ * Per-vector calculation of the Euclidean distance (L2 norm) of a vector array on a GPU.
  *
  * Params:
  *     x = A pointer to an array of vectors. Must have size of `dim * count` or less but be multiple to `dim`.

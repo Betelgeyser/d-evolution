@@ -23,11 +23,11 @@ import cuda.curand;
 import common;
 
 /**
- * Pool of uniformly distributed random numbers in range (0; 1].
+ * Pool of random bits.
  *
- * As cuRAND achieves maximun performance generating big amounts of data, this structure will generate pool of random numbers
- * and return them on request. If all numbers in the pool was used or there is not enought values in a pool, then new pool
- * will be generated.
+ * As cuRAND achieves maximun performance generating big amounts of data, this structure will generate a pool of uniform
+ * random bits. If all numbers in the pool has been used or there is not enought values in the pool to return,
+ * then a new pool is generated. 
  */
 struct RandomPool
 {
@@ -49,11 +49,11 @@ struct RandomPool
 	}
 	
 	/**
-	 * Setup a pool and generate new numbers.
+	 * Setup the pool and generate new bits.
 	 *
 	 * Params:
 	 *     generator = Curand pseudorandom number generator.
-	 *     size = Pool size. The maximun amount of generated values to store. Defaults to the size of 2GiB values.
+	 *     size = Pool size in bytes. Defaults to 2GiB.
 	 */
 	this(CurandGenerator generator, in size_t size = 536_870_912) nothrow @nogc
 	in
@@ -78,7 +78,7 @@ struct RandomPool
 	/**
 	 * Free memory.
 	 *
-	 * For the reason how D works with structs memory freeing moved from destructor to
+	 * For the reason how D works with structs memory freeing is moved from destructor to
 	 * the the distinct function. Either allocating structs on stack or in heap or both
 	 * causes spontaneous destructors calls. Apparently structs are not intended
 	 * to be used with dynamic memory, probably it should be implemented as a class.  
@@ -152,7 +152,7 @@ unittest
 	auto pool = RandomPool(generator, size);
 	scope(exit) pool.freeMem();
 	
-	// There is a chance of getting two equal floats in a row, but it's virtually impossible
+	// There is a chance of getting two equal numbers in a row, but chance is low
 	assert ( !approxEqual(
 		pool(1)[0],
 		pool(1)[0]

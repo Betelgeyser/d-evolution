@@ -21,11 +21,11 @@
 const float uint_max_fp = 4294967295.0f; /// Maximum value of unsigned integer represented in floating point format.
 
 /**
- * Calculate hyperbolic tangent for each element in an array in place on GPU.
+ * Calculate hyperbolic tangent for each element of an array on a GPU in place.
  *
  * Params:
  *     x = Pointer to an array.
- *     n = Size of array. If n is less than atual x size, only the ferst n elements will be calculated.
+ *     n = Size of array. If n is less than atual x size, only the first n elements will be calculated.
  */
 __global__
 void kernel_tanh(float *x, const size_t n)
@@ -61,8 +61,10 @@ float scale(const unsigned int x, const float a, const float b)
  * The transformation is performed in place.
  *
  * Params:
- *     x = Pointer to an array.
- *     n = Size of array. If n is less than atual x size, only the ferst n elements will be calculated.
+ *     ptr = Pointer to an array of random bits/resulting floating point values.
+ *     a = Left bound of the segment.
+ *     b = Right bound of the segment.
+ *     count = Number of float values to scale.
  */
 __global__
 void kernel_scale(void *ptr, const float a, const float b, const size_t count)
@@ -86,9 +88,11 @@ void cuda_scale(void *ptr, const float a, const float b, const size_t count)
  *
  * Params:
  *     x, y = Pointers to parent arrays.
+ *     a = Minimum possible gene value.
+ *     b = Maximum possible gene value.
  *     offspring = Pointer to an offspring array.
  *     alpha = α parameter of BLX-α crossover.
- *     u = Pointer to an array of random uniform values in the range of [0; 1].
+ *     u = Pointer to an array of random bits.
  *     n = Number of values to crossover.
  */
 __global__
