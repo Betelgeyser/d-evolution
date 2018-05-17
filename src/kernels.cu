@@ -42,61 +42,43 @@ void cuda_tanh(float *x, const size_t n)
 }
 
 /**
- * Set absolute value for each element in an array in place on GPU.
+ * Returns a floating point value scaled from unsigned integer number x to a given segment [a; b]
+ * 
+ * Params:
+ *     x = Value to scale.
+ *     a = Left bound.
+ *     b = Right bound.
+ */
+__device__
+float scale(const unsigned int x, const float a, const float b)
+{
+	return a + (b - a) * (float)x / uint_max_fp;
+}
+
+/**
+ * Transform uniformly distrubuted random bits into uniformly distributed
+ * random floating point number in range [a; b], where a <= b.
+ * The transformation is performed in place.
  *
  * Params:
  *     x = Pointer to an array.
  *     n = Size of array. If n is less than atual x size, only the ferst n elements will be calculated.
  */
 __global__
-void kernel_abs(float *x, const size_t n)
+void kernel_scale(void *ptr, const float a, const float b, const size_t count)
 {
-	for (int i = 0; i < n; ++i)
-		x[i] = fabsf(x[i]);
+	unsigned int *uPtr = (unsigned int*)ptr;
+	float        *fPtr = (float*)ptr;
+	
+	for (size_t i = 0; i < count; ++i)
+		fPtr[i] = scale(uPtr[i], a, b);
 }
 
 /// ditto
 __host__
-void cuda_abs(float *x, const size_t n)
+void cuda_scale(void *ptr, const float a, const float b, const size_t count)
 {
-	kernel_abs<<<1, 1>>>(x, n);
-}
-
-/**
- * Scale [0; 1] to [min; max].
- *
- * Params:
- *     min = Minimum scaled value.
- *     max = Maximum scaled value.
- *     alpha = Value to scale.
- */
-__device__
-float scale(const float min, const float max, const float alpha)
-{
-	return alpha * fabsf(max - min) + min;
-}
-
-/**
- * Scale array of values from [0; 1] to [min; max].
- *
- * Params:
- *     ptr = Pointer to an array to scale.
- *     min = Minimum scaled value.
- *     max = Maximum scaled value.
- *     count = Number of values to scale.
- */
-__global__
-void kernel_scale(float *ptr, const float min, const float max, const size_t count)
-{
-	for (int i = 0; i < count; ++i)
-		ptr[i] = scale(min, max, ptr[i]);
-}
-
-/// ditto
-__host__
-void cuda_scale(float *ptr, const float min, const float max, const size_t count)
-{
-	kernel_scale<<<1, 1>>>(ptr, min, max, count);
+	kernel_scale<<<1, 1>>>(ptr, a, b, count);
 }
 
 /**
