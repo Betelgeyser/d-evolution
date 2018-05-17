@@ -17,47 +17,6 @@
  */
 module cuda.curand;
 
-import cuda.common;
-import cuda.curand.exp;
-
 public import cuda.curand.types;
-
-/**
- * Higer level wrapper around cuRAND generator. It provides D-style access to functions on a curandGenerator_t.
- */
-struct CurandGenerator
-{
-	private curandGenerator_t _generator;
-	
-	this(curandRngType_t rng_type, ulong seed = 0) nothrow @nogc
-	{
-		enforceCurand(curandCreateGenerator(&_generator, rng_type));
-		setPseudoRandomGeneratorSeed(seed);
-	}
-	
-	void destroy() nothrow @nogc
-	{
-		enforceCurand(curandDestroyGenerator(_generator));
-	}
-	
-	void setPseudoRandomGeneratorSeed(ulong seed) nothrow @nogc
-	{
-		enforceCurand(curandSetPseudoRandomGeneratorSeed(_generator, seed));
-	}
-	
-	void generate(float* outputPtr, size_t num) nothrow @nogc
-	{
-		enforceCurand(curandGenerate(_generator, outputPtr, num));
-	}
-
-	void generateUniform(float* outputPtr, size_t num) nothrow @nogc
-	{
-		enforceCurand(curandGenerateUniform(_generator, outputPtr, num));
-	}
-}
-
-package void enforceCurand(curandStatus_t error) pure nothrow @safe @nogc
-{
-	assert (error == curandStatus_t.SUCCESS, error.toString);
-}
+public import cuda.curand.functions;
 
