@@ -30,7 +30,7 @@ const float float_min = -float_max;
 __global__
 void kernel_tanh(float *x, const size_t n)
 {
-	for (int i = 0; i < n; ++i)
+	for (size_t i = 0; i < n; ++i)
 		x[i] = tanhf(x[i]);
 }
 
@@ -164,15 +164,15 @@ void cuda_fill(float *x, const float val, const size_t count)
  *     count = Number of vectors in the `x` array and resulting values in the `y` array.
  */
 __global__
-void kernel_L2(const float *x, float *y, const int dim, const size_t count)
+void kernel_L2(const float *x, float *y, const unsigned int dim, const size_t count)
 {
-	for (int i = 0; i < count; ++i)
+	for (size_t i = 0; i < count; ++i)
 		y[i] = normf(dim, x + dim * i);
 }
 
 /// ditto
 __host__
-void cuda_L2(const float *x, float *y, const int dim, const size_t count)
+void cuda_L2(const float *x, float *y, const unsigned int dim, const size_t count)
 {
 	kernel_L2<<<1, 1>>>(x, y, dim, count);
 }
