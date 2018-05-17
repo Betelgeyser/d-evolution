@@ -93,7 +93,7 @@ struct Matrix
 	 * Returns:
 	 *     Number of elements.
 	 */
-	@property ulong length() const pure nothrow @safe @nogc
+	@property size_t length() const pure nothrow @safe @nogc
 	{
 		return values.length;
 	}
