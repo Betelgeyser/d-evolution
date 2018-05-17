@@ -182,13 +182,13 @@ struct Layer
 	}
 	body
 	{
-		this(params.inputs, params.neurons);
+		scope(failure) freeMem();
 		
-		{
-			scope(failure) freeMem();
-			generator.generateUniform(weights.ptr, length);
-			cuda_scale(weights.ptr, params.min, params.max, length);
-		}
+		weights = Matrix(params.inputs + biasLength, params.neurons);
+		
+		auto tmpPtr = cudaScale(pool(length), params.min, params.max)[0 .. $];
+		cudaDeviceSynchronize();
+		weights.values[0 .. $] = tmpPtr[0 .. $];
 	}
 	
 	///
@@ -196,25 +196,26 @@ struct Layer
 	{
 		mixin(writetest!__ctor);
 		
-		import std.math : isFinite;
+		immutable LayerParams params = { inputs : 20, neurons : 30 };
 		
-		immutable LayerParams params = {
-			inputs  :  200,
-			neurons :  300,
-			min     : -1.0e30,
-			max     :  2.0e31
-		};
+		auto layer = Layer(params, randomPool);
+		scope(exit) layer.freeMem();
 		
-		auto l = Layer(params, curandGenerator);
-		scope(exit) l.freeMem();
-		cudaDeviceSynchronize();
-		
-		assert (l.connectionsLength == params.inputs + biasLength);
-		assert (l.neuronsLength     == params.neurons);
-		
-		assert ( l.weights.values.all!(x => isFinite(x)) );
-		assert ( l.weights.values.all!(x => x >= params.min) );
-		assert ( l.weights.values.all!(x => x <= params.max) );
+		with (layer)
+		{
+			assert (connectionsLength == params.inputs + biasLength);
+			assert (neuronsLength     == params.neurons);
+			
+			assert (
+				weights.values.all!(
+					x => isFinite(x)
+			));
+			
+			assert (
+				weights.values.all!(
+					x => x >= params.min && x <= params.max
+			));
+		}
 	}
 	
 	/**
@@ -407,7 +408,7 @@ struct Network
 	 *     params = Network parameters.
 	 *     generator = Pseudorandom number generator.
 	 */
-	this(in NetworkParams params, CurandGenerator generator) nothrow @nogc
+	this(in NetworkParams params, RandomPool pool) nothrow @nogc
 	in
 	{
 		assert (&params, "Neural network parameters are incorrect.");
@@ -418,18 +419,18 @@ struct Network
 		
 		inputLayer = Layer(
 			params.getLayerParams(LayerType.Input),
-			generator
+			pool
 		);
 		outputLayer = Layer(
 			params.getLayerParams(LayerType.Output),
-			generator
+			pool
 		);
 		
 		hiddenLayers = nogcMalloc!Layer(params.layers);
 		foreach (ref l; hiddenLayers)
 			l = Layer(
 				params.getLayerParams(LayerType.Hidden),
-				generator
+				pool
 			);
 	}
 	
@@ -440,20 +441,46 @@ struct Network
 		
 		NetworkParams params = { layers : 2, inputs : 2, neurons : 3, outputs : 1 };
 		
-		Network n = Network(params, curandGenerator);
-		scope(exit) n.freeMem();
+		Network network = Network(params, randomPool);
+		scope(exit) network.freeMem();
 		
-		assert (n.depth           == params.layers);
-		assert (n.neuronsPerLayer == params.neurons);
-		
-		assert (n.inputLayer.connectionsLength == params.inputs + biasLength);
-		assert (n.inputLayer.neuronsLength     == params.neurons);
-		
-		assert (n.outputLayer.connectionsLength == params.neurons + biasLength);
-		assert (n.outputLayer.neuronsLength     == params.outputs);
-		
-		assert ( n.hiddenLayers.all!(x => x.connectionsLength == params.neurons + biasLength) );
-		assert ( n.hiddenLayers.all!(x => x.neuronsLength     == params.neurons) );
+		with (network)
+		{
+			assert (depth           == params.layers);
+			assert (neuronsPerLayer == params.neurons);
+			
+			with (inputLayer)
+			{
+				assert (connectionsLength == params.inputs + biasLength);
+				assert (neuronsLength     == params.neurons);
+				
+				assert (weights.values.all!(x => isFinite(x)));
+				assert (weights.values.all!(x => x >= params.min && x <= params.max));
+			}
+			
+			with (outputLayer)
+			{
+				assert (connectionsLength == params.neurons + biasLength);
+				assert (neuronsLength     == params.outputs);
+				
+				assert (weights.values.all!(x => isFinite(x)));
+				assert (weights.values.all!(x => x >= params.min && x <= params.max));
+			}
+			
+			assert (hiddenLayers.all!(x => x.connectionsLength == params.neurons + biasLength));
+			assert (hiddenLayers.all!(x => x.neuronsLength == params.neurons));
+			
+			assert (
+				hiddenLayers.all!(
+					l => l.weights.values.all!(
+						x => isFinite(x)
+			)));
+			assert (
+				hiddenLayers.all!(
+					l => l.weights.values.all!(
+						x => x >= params.min && x <= params.max
+			)));
+		}
 	}
 	
 	/**
