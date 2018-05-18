@@ -317,14 +317,14 @@ struct Layer
 	void crossover(in Layer x, in Layer y, in float a, in float b, in float alpha, RandomPool pool) nothrow @nogc
 	in
 	{
-		assert (this.weights.length == y.weights.length);
-		assert (this.weights.length == x.weights.length);
+		assert (this.length == y.length);
+		assert (this.length == x.length);
 		
 		assert (a <= b);
 		
-		assert (alpha >= 0 && alpha <= 1, "α parameter must be in range [0; 1]");
+		assert (alpha >= 0, "α parameter must be >= 0");
 		
-		assert (this.weights.length <= pool.length, "RandomPool must contain at least as much numbers as a layer does.");
+		assert (this.length <= pool.length, "RandomPool must contain at least as much numbers as a layer does.");
 	}
 	body
 	{
@@ -609,11 +609,12 @@ struct Network
 	void crossover(in Network x, in Network y, in float a, in float b, in float alpha, RandomPool pool) nothrow @nogc
 	in
 	{
-//		assert (this.weights.length == y.weights.length, "Parents and an offspring must be the same size.");
-//		assert (this.weights.length == x.weights.length, "Parents and an offspring must be the same size.");
-//		assert (this.weights.length <= pool.size, "An offspring must not contain more values than a random pool does.");
-//		
-		assert (alpha >= 0 && alpha <= 1, "α parameter must be in the range [0; 1]");
+		assert (this.depth == x.depth);
+		assert (this.depth == y.depth);
+		
+		assert (a <= b);
+		
+		assert (alpha >= 0, "α parameter must be >= 0");
 	}
 	body
 	{
