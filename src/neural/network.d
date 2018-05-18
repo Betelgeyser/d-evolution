@@ -173,7 +173,7 @@ struct Layer
 	 *
 	 * Params:
 	 *     params = Layer parameters.
-	 *     generator = Pseudorandom number generator.
+	 *     pool = Pseudorandom number generator.
 	 */
 	this(in LayerParams params, RandomPool pool) nothrow @nogc
 	in
@@ -303,12 +303,15 @@ struct Layer
 	 *
 	 * Currently only BLX-α crossover is implemented and this is a default algorithm.
 	 *
+	 * From more details look $(LINK std.math.kernels.cudaBLXa).
+	 *
 	 * Params:
 	 *     x = The first parent.
 	 *     y = The second parent.
-	 *     alpha = α parameter of BLX-α crossover. Simply put, determines how far to extend a search space from the parents
-	 *         where 0 means not to extend at all. Generally, 0.5 is considered to show the best results.
-	 *     pool = Pool of random numbers. It is supposed to improve performance of a crossover as cuRAND acheives maximum
+	 *     a = Minimal crossover value.
+	 *     b = Maximal crossover value.
+	 *     alpha = α parameter of BLX-α crossover.
+	 *     pool = Pool of random bits. It is supposed to improve performance of a crossover as the cuRAND acheives maximum
 	 *         efficiency generating large quantities of numbers.
 	 */
 	void crossover(in Layer x, in Layer y, in float a, in float b, in float alpha, RandomPool pool) nothrow @nogc
@@ -408,7 +411,7 @@ struct Network
 	 *
 	 * Params:
 	 *     params = Network parameters.
-	 *     generator = Pseudorandom number generator.
+	 *     pool = Pseudorandom number generator.
 	 */
 	this(in NetworkParams params, RandomPool pool) nothrow @nogc
 	in
@@ -590,15 +593,18 @@ struct Network
 	 * As the constructor allocates new memory for a new layer, to optimize performance and avoid memory reallocations
 	 * this operation is performed in place assuming the calling struct is an offspring.
 	 *
-	 * Currently only BLX-α crossover is implemented and is a default algorithm.
+	 * Currently only BLX-α crossover is implemented and this is a default algorithm.
+	 *
+	 * From more details look $(LINK std.math.kernels.cudaBLXa).
 	 *
 	 * Params:
 	 *     x = The first parent.
 	 *     y = The second parent.
-	 *     alpha = α parameter of BLX-α crossover. Simply put, determines how far to extend a search space from the parents
-	 *         where 0 means not to extend at all. Generally, 0.5 is considered to show the best results.
-	 *     pool = Pool of random numbers. It is supposed to improve performance of a crossover as cuRAND acheives maximum
-	 *         efficiency generating large quontities of numbers.
+	 *     a = Minimal crossover value.
+	 *     b = Maximal crossover value.
+	 *     alpha = α parameter of BLX-α crossover.
+	 *     pool = Pool of random bits. It is supposed to improve performance of a crossover as the cuRAND acheives maximum
+	 *         efficiency generating large quantities of numbers.
 	 */
 	void crossover(in Network x, in Network y, in float a, in float b, in float alpha, RandomPool pool) nothrow @nogc
 	in
