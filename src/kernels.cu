@@ -21,28 +21,32 @@
 const float uint_max_fp = 4294967295.0f; /// Maximum value of unsigned integer represented in floating point format.
 
 /**
- * Calculate hyperbolic tangent for each element of an array on a GPU in place.
+ * Calculate hyperbolic tangent of each element of an array x on a GPU in place.
  *
  * Params:
- *     x = Pointer to an array.
- *     n = Size of array. If n is less than atual x size, only the first n elements will be calculated.
+ *     x = A pointer to an array to calculate.
+ *     count = Size of the array.
  */
 __global__
-void kernel_tanh(float *x, const size_t n)
+void kernel_tanh(float *x, const size_t count)
 {
-	for (size_t i = 0; i < n; ++i)
+	for (size_t i = 0; i < count; ++i)
 		x[i] = tanhf(x[i]);
 }
 
 /// ditto
 __host__
-void cuda_tanh(float *x, const size_t n)
+void cuda_tanh(float *x, const size_t count)
 {
-	kernel_tanh<<<1, 1>>>(x, n);
+	kernel_tanh<<<1, 1>>>(x, count);
 }
 
 /**
- * Returns a floating point value scaled from unsigned integer number x to a given segment [a; b]
+ * Returns a floating point value scaled from unsigned integer number x to a given segment [a; b],
+ * meaning 0 will return a and MAX(unsigned int) will return b.
+ * 
+ * Due to implementation details it is not recomended to pass a and b close to ±1.0e28 as that will
+ * cause function to return infinity.
  * 
  * Params:
  *     x = Value to scale.
@@ -56,9 +60,16 @@ float scale(const unsigned int x, const float a, const float b)
 }
 
 /**
- * Transform uniformly distrubuted random bits into uniformly distributed
- * random floating point number in range [a; b], where a <= b.
- * The transformation is performed in place.
+ * Transform uniformly distrubuted random bits into uniformly distributed random floating point numbers in range 
+ * [a; b], where a <= b. 0 will translate to a and MAX(unsigned int) - b.
+ *
+ * The main goal of this function is to minimize rounding errors when scaling any other radnomly generated floating point
+ * numbers. Thus it takes uint bits directly as a source of randomness. If all bits are uniformly distributes
+ * then scaling them to arbitrary floating point segment must provide uniform distribution of random floating point numbers
+ * in a given range.
+ *
+ * Due to implementation details it is not recomended to pass $(D_PARAM a) and $(D_PARAM b) close to ±1.0e28 as that will
+ * cause function to generate infinities.
  *
  * Params:
  *     ptr = Pointer to an array of random bits/resulting floating point values.
@@ -86,14 +97,47 @@ void cuda_scale(void *ptr, const float a, const float b, const size_t count)
 /**
  * BLX-α crossover.
  *
+ * BLX-α crossover is used for real-coded problems. The idea is to pick a random offspring in the space between
+ * two parents x and y extended by the <math><mi>α</mi></math> parameter. Offspring's genes are picked randomly in the range
+ * <math><mrow><mfenced open="[" close="]" separators="; ">
+ *     <mrow>
+ *         <mtext>min</mtext><mfenced open="(" close=")" separators=", ">
+ *             <msub><mi>X</mi><mi>i</mi></msub><msub><mi>Y</mi><mi>i</mi></msub>
+ *         </mfenced>
+ *         <mo>-</mo>
+ *         <mi>α</mi><mo></mo><msub><mi>d</mi><mi>i</mi></msub>
+ *     </mrow>
+ *     <mrow>
+ *         <mtext>max</mtext><mfenced open="(" close=")" separators=", ">
+ *             <msub><mi>X</mi><mi>i</mi></msub><msub><mi>Y</mi><mi>i</mi></msub>
+ *         </mfenced>
+ *         <mo>+</mo>
+ *         <mi>α</mi><mo></mo><msub><mi>d</mi><mi>i</mi></msub>
+ *     </mrow>
+ * </mfenced></mrow></math>
+ * , where
+ * <math><mrow>
+ *     <mi>d</mi>
+ *     <mo>=</mo>
+ *     <mfenced open="|" close="|" separators="">
+ *         <msub><mi>x</mi><mi>i</mi></msub><mo>-</mo><msub><mi>y</mi><mi>i</mi></msub>
+ *     </mfenced>
+ * </mrow></math>.
+ * A picked value will not be out of the range
+ * <math><mfenced open="[" close="]" separators="; "><mi>a</mi><mi>b</mi></mfenced></math> which one is limiting
+ * the search space.
+ *
  * Params:
- *     x, y = Pointers to parent arrays.
- *     a = Minimum possible gene value.
- *     b = Maximum possible gene value.
- *     offspring = Pointer to an offspring array.
- *     alpha = α parameter of BLX-α crossover.
- *     u = Pointer to an array of random bits.
- *     n = Number of values to crossover.
+ *     x = Parent array.
+ *     y = Parent array.
+ *     offspring = Offspring array.
+ *     a = Minimal crossover value.
+ *     b = Maximal crossover value.
+ *     alpha = α parameter of BLX-α crossover. Must be &ge 0. Determines how much to extend the search space, where 0 means
+ *         not to extend at all. 
+ *     u = Pointer to an array of random bits. To prevent rounding errors it is of uint type rather than float value
+ *         in range [0; 1]. These bits will be translated to float, where 0 translates to the left bound of the search space
+ *         and uint.max - to the right bound.
  */
 __global__
 void kernel_BLX_a(
@@ -102,10 +146,10 @@ void kernel_BLX_a(
 	const float a, const float b,
 	const float alpha,
 	const unsigned int *u,
-	const size_t n
+	const size_t count
 )
 {
-	for (size_t i = 0; i < n; ++i)
+	for (size_t i = 0; i < count; ++i)
 	{
 		float _a = fminf(x[i], y[i]) - alpha * fabsf(x[i] - y[i]);
 		float _b = fmaxf(x[i], y[i]) + alpha * fabsf(x[i] - y[i]);
@@ -128,20 +172,19 @@ void cuda_BLX_a(
 	const float a, const float b,
 	const float alpha,
 	const unsigned int *u,
-	const size_t n
+	const size_t count
 )
 {
-	kernel_BLX_a<<<1, 1>>>(x, y, offspring, a, b, alpha, u, n);
+	kernel_BLX_a<<<1, 1>>>(x, y, offspring, a, b, alpha, u, count);
 }
 
 /**
- * Fill array on GPU.
+ * Fill the array $(D_PARAM x) on a GPU with the value $(D_PARAM val).
  *
  * Params:
- *     x = A pointer to an array. Could point to not the first element.
+ *     x = A pointer to an array to fill.
  *     val = A value to fill with.
- *     n = Size of the array. If n is less than the actual x size, only the first n elements starting from the pointer p
- *         will be filled.
+ *     n = Number of elements to fill.
  */
 __global__
 void kernel_fill(float *x, const float val, const size_t count)

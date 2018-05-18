@@ -31,13 +31,13 @@ version (unittest)
 }
 
 
+private extern (C++) void cuda_tanh(float* x, const size_t n) nothrow @nogc;
 /**
- * Calculate hyperbolic tangent for each element of an array `x` on a GPU in place.
+ * Calculate hyperbolic tangent of each element of an array $(D_PARAM x) on a GPU in place.
  *
  * Params:
  *     x = An array to calculate.
  */
-private extern (C++) void cuda_tanh(float* x, const size_t n) nothrow @nogc;
 void cudaTanh(float[] x) nothrow @nogc
 {
 	cuda_tanh(x.ptr, x.length);
@@ -63,22 +63,28 @@ unittest
 	assert (equal!approxEqual(data, result));
 }
 
+private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, const size_t count) nothrow @nogc;
 /**
- * Transform uniformly distrubuted random bits into uniformly distributed random floating point numbers in range [a; b],
- * where a <= b.
+ * Transform uniformly distrubuted random bits into uniformly distributed random floating point numbers in range 
+ * [$(D_PARAM a); $(D_PARAM b)], where $(D_PARAM a) &le $(D_PARAM b). 0 will translate to $(D_PARAM a) and uint.max -
+ * to $(D_PARAM b).
  *
- * Due to implementation details it is not recomended to pass a and b close to ±1.0e28.
+ * The main goal of this function is to minimize rounding errors when scaling any other radnomly generated floating point
+ * numbers. Thus it takes uint bits directly as a source of randomness. If all bits are uniformly distributes
+ * then scaling them to arbitrary floating point segment must provide uniform distribution of random floating point numbers
+ * in a given range.
+ *
+ * Due to implementation details it is not recomended to pass $(D_PARAM a) and $(D_PARAM b) close to ±1.0e28 as that will
+ * cause function to generate infinities.
  *
  * Params:
  *     x = Array of random bits.
- *     a = Minimum value.
- *     b = Maximum value.
+ *     a = Left bound of the segment.
+ *     b = Right bound of the segment.
  *
- * Returns:
- *     a new pointer to the array `x` of float valus.
+ * Returns: A new pointer to the array $(D_PARAM x) of float type.
  */
-private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, const size_t count) nothrow @nogc;
-const(float[]) cudaScale(uint[] x, in float a, in float b) nothrow @nogc
+float[] cudaScale(uint[] x, in float a, in float b) nothrow @nogc
 in
 {
 	assert (a <= b);
@@ -86,7 +92,7 @@ in
 body
 {
 	cuda_scale(x.ptr, a, b, x.length);
-	return cast(const(float)[])x;
+	return cast(float[])x;
 }
 
 ///
@@ -103,7 +109,8 @@ unittest
 	data[0 .. $]   = [uint.min, uint.max / 2, uint.max];
 	float[] result = [      -1,            0,        1];
 	
-	const(float)[] fData = cudaScale(data, -1, 1); // fData is just a copy pointer
+	// fData is just a copy pointer
+	float[] fData = cudaScale(data, -1, 1);
 	cudaDeviceSynchronize();
 	
 	assert(equal!approxEqual(fData, result));
@@ -117,17 +124,6 @@ unittest
 	assert(equal!approxEqual(fData, result));
 }
 
-/**
- * BLX-α crossover.
- *
- * Params:
- *     x = Pointer to a parent array.
- *     y = Pointer to a parent array.
- *     offspring = Pointer to an offspring array.
- *     alpha = α parameter of BLX-α crossover.
- *     u = Pointer to an array of random uniform values in the range of [0; 1].
- *     n = Number of values to crossover.
- */
 private extern (C++) void cuda_BLX_a(
 	const(float*) x, const(float*) y,
 	float* offspring,
@@ -136,6 +132,51 @@ private extern (C++) void cuda_BLX_a(
 	const(uint*) u,
 	const size_t n
 ) nothrow @nogc;
+/**
+ * BLX-α crossover.
+ *
+ * BLX-α crossover is used for real-coded problems. The idea is to pick a random offspring in the space between
+ * two parents x and y extended by the <math><mi>α</mi></math> parameter. Offspring's genes are picked randomly in the range
+ * <math><mrow><mfenced open="[" close="]" separators="; ">
+ *     <mrow>
+ *         <mtext>min</mtext><mfenced open="(" close=")" separators=", ">
+ *             <msub><mi>X</mi><mi>i</mi></msub><msub><mi>Y</mi><mi>i</mi></msub>
+ *         </mfenced>
+ *         <mo>-</mo>
+ *         <mi>α</mi><mo></mo><msub><mi>d</mi><mi>i</mi></msub>
+ *     </mrow>
+ *     <mrow>
+ *         <mtext>max</mtext><mfenced open="(" close=")" separators=", ">
+ *             <msub><mi>X</mi><mi>i</mi></msub><msub><mi>Y</mi><mi>i</mi></msub>
+ *         </mfenced>
+ *         <mo>+</mo>
+ *         <mi>α</mi><mo></mo><msub><mi>d</mi><mi>i</mi></msub>
+ *     </mrow>
+ * </mfenced></mrow></math>
+ * , where
+ * <math><mrow>
+ *     <mi>d</mi>
+ *     <mo>=</mo>
+ *     <mfenced open="|" close="|" separators="">
+ *         <msub><mi>x</mi><mi>i</mi></msub><mo>-</mo><msub><mi>y</mi><mi>i</mi></msub>
+ *     </mfenced>
+ * </mrow></math>.
+ * A picked value will not be out of the range
+ * <math><mfenced open="[" close="]" separators="; "><mi>a</mi><mi>b</mi></mfenced></math> which one is limiting
+ * the search space.
+ *
+ * Params:
+ *     x = Parent array.
+ *     y = Parent array.
+ *     offspring = Offspring array.
+ *     a = Minimal crossover value.
+ *     b = Maximal crossover value.
+ *     alpha = α parameter of BLX-α crossover. Must be &ge 0. Determines how much to extend the search space, where 0 means
+ *         not to extend at all. Apperantly it is considered 0.5 shows the best results.
+ *     u = Pointer to an array of random bits. To prevent rounding errors it is of uint type rather than float value
+ *         in range [0; 1]. These bits will be translated to float, where 0 translates to the left bound of the search space
+ *         and uint.max - to the right bound.
+ */
 void cudaBLXa(in float[] x, in float[] y, float[] offspring, in float a, in float b, const float alpha, in uint[] u) nothrow @nogc
 in
 {
@@ -143,7 +184,7 @@ in
 	assert (offspring.length == y.length);
 	assert (offspring.length == u.length);
 	
-	assert (alpha >= 0 && alpha <= 1);
+	assert (alpha >= 0);
 }
 body
 {
@@ -175,14 +216,14 @@ unittest
 	cudaMallocManaged(offspring, length);
 	scope(exit) cudaFree(offspring);
 	
-	// There should be pregenerated random values in the range [0; 1]
+	// There should be pregenerated random values
 	uint[] u;
 	cudaMallocManaged(u, length);
 	scope(exit) cudaFree(u);
 	
 	u[0 .. $] = [0, uint.max / 2, uint.max];
 	
-	// Artificial crossover. u will be random in real calcilations.
+	// Artificial crossover. u will be random in real calculations.
 	cudaBLXa(x, y, offspring, -10, 10, alpha, u);
 	cudaDeviceSynchronize();
 	
@@ -197,14 +238,14 @@ unittest
 	assert (equal!approxEqual(offspring, result));
 }
 
+private extern(C++) void cuda_fill(float* x, const float val, const size_t n) nothrow @nogc;
 /**
- * Fill an array on a GPU with `val`.
+ * Fill the array $(D_PARAM x) on a GPU with the value $(D_PARAM val).
  *
  * Params:
  *     x = An array to fill.
  *     val = A value to fill with.
  */
-private extern(C++) void cuda_fill(float* x, const float val, const size_t n) nothrow @nogc;
 void cudaFill(float[] x, in float val) nothrow @nogc
 {
 	cuda_fill(x.ptr, val, x.length);
@@ -229,16 +270,15 @@ unittest
 	assert (equal!approxEqual(data, result));
 }
 
+private extern(C++) void cuda_L2(const(float)* x, float* y, const uint dim, const size_t count) nothrow @nogc;
 /**
  * Per-vector calculation of the Euclidean distance (L2 norm) of a vector array on a GPU.
  *
  * Params:
- *     x = A pointer to an array of vectors. Must have size of `dim * count` or less but be multiple to `dim`.
- *     y = A pointer to the resulting array of L2 norm values. Must contain `count` elements.
- *     dim = Vectors dimention.
- *     count = Number of vectors in the `x` array and resulting values in the `y` array.
+ *     x = An array of vectors which is represented in a matrix form for convenience. Each column is a single vector.
+ *         Thus, each raw is a single dimention.
+ *     y = A resulting array of L2 norm values. Its length must equals to number of the columns in the input matrix.
  */
-private extern(C++) void cuda_L2(const(float)* x, float* y, const uint dim, const size_t count) nothrow @nogc;
 void cudaL2(const Matrix x, float[] y) nothrow @nogc
 in
 {
