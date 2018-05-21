@@ -503,7 +503,8 @@ struct Network
 		
 		hiddenLayers.each!(x => x.freeMem());
 		
-		free(hiddenLayers);
+		if (hiddenLayers.length)
+			free(hiddenLayers);
 	}
 	
 	/**
