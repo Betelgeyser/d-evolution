@@ -60,8 +60,8 @@ struct LayerParams
 	uint  inputs;  /// Number of layer input connections.
 	uint  neurons; /// Number of neurons.
 
-	float min = -1; /// Minimal generated weight.
-	float max =  1; /// Maximal generated weight.
+	float min = -1; /// Minimum generated weight.
+	float max =  1; /// Maximum generated weight.
 	
 	invariant
 	{
@@ -181,13 +181,13 @@ struct Layer
 	 *
 	 * Calculates a result of feeding an input matrix to the layer.
 	 *
-	 * Currently uses tanh() as an activation function.
+	 * Currently uses `tanh()` as an activation function.
 	 *
 	 * Params:
 	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
 	 *     outputs = Output matrix of size m x n, where n is the number of neurons.
 	 *     cublasHandle = Cublas handle.
-	 *     activate = If set to true activation function will be applied to the result.
+	 *     activate = If set to `true` activation function will be applied to the result.
 	 */
 	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle, in bool activate = true) const nothrow @nogc
 	in
@@ -248,7 +248,7 @@ struct Layer
 	 *
 	 * Currently only BLX-α crossover is implemented and this is a default algorithm.
 	 *
-	 * From more details look $(LINK std.math.kernels.cudaBLXa).
+	 * From more details look $(LINK2 ../math/kernels.html#cudaBLXa,math.kernels.cudaBLXa).
 	 *
 	 * Params:
 	 *     x = The first parent.
