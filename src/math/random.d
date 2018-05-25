@@ -22,6 +22,25 @@ import cuda.curand;
 // DNN modules
 import common;
 
+
+version (unittest)
+{
+	RandomPool randomPool;
+	private CurandGenerator curandGenerator;
+	
+	static this()
+	{
+		curandGenerator = CurandGenerator(curandRngType_t.PSEUDO_DEFAULT);
+		randomPool      = RandomPool(curandGenerator);
+	}
+	
+	static ~this()
+	{
+		randomPool.freeMem();
+		curandGenerator.destroy;
+	}
+}
+
 /**
  * Pool of random bits.
  *

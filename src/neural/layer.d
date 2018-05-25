@@ -33,24 +33,15 @@ version (unittest)
 	import std.algorithm : equal;
 	import std.math      : approxEqual;
 	
-	private
-	{
-		CurandGenerator curandGenerator;
-		RandomPool      randomPool;
-		cublasHandle_t  cublasHandle;
-	}
+	private cublasHandle_t  cublasHandle;
 	
 	static this()
 	{
-		curandGenerator = CurandGenerator(curandRngType_t.PSEUDO_DEFAULT);
-		randomPool      = RandomPool(curandGenerator);
 		cublasCreate(cublasHandle);
 	}
 	
 	static ~this()
 	{
-		curandGenerator.destroy;
-		randomPool.freeMem();
 		cublasDestroy(cublasHandle);
 	}
 }
