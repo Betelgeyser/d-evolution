@@ -40,6 +40,30 @@ void free(T)(ref T[] array) nothrow @nogc
 	array.destroy();
 }
 
+bool between(string boundaries = "[]")(in float x, in float a, in float b)
+in
+{
+	assert (a <= b, "common.between!\"" ~ boundaries ~ "\"(x, a, b): invalid boundary interval");
+}
+body
+{
+	static if (boundaries[0] == '[')
+		enum opLeft = ">=";
+	else static if (boundaries[0] == '(')
+		enum opLeft = ">";
+	else
+		static assert (0, "common.between!\"" ~ boundaries ~ "\"(x, a, b): invalid boundary");
+	
+	static if (boundaries[1] == ']')
+		enum opRight = "<=";
+	else static if (boundaries[1] == ')')
+		enum opRight = "<";
+	else
+		static assert (0, "common.between!\"" ~ boundaries ~ "\"(x, a, b): invalid boundary");
+	
+	return mixin("x" ~ opLeft ~ "a") && mixin("x" ~ opRight ~ "b");
+}
+
 version (unittest)
 {
 	public import std.stdio  : write, writeln;
