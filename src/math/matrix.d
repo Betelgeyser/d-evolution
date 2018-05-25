@@ -190,16 +190,16 @@ struct Matrix
 		immutable from =  2;
 		immutable to   =  5;
 		
-		auto m = Matrix(size, size);
-		scope(exit) m.freeMem();
+		auto matrix = Matrix(size, size);
+		scope(exit) matrix.freeMem();
 		
-		auto copy = m.colSlice(from, to);
+		auto copy = matrix.colSlice(from, to);
 		
 		assert (copy.cols == to - from);
-		assert (copy.rows == m.rows);
+		assert (copy.rows == matrix.rows);
 		
 		foreach (i, c; copy)
-			assert (c == m[i + from * m.rows]);
+			assert (c == matrix[from * matrix.rows + i]);
 	}
 }
 
