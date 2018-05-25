@@ -275,8 +275,8 @@ private extern(C++) void cuda_L2(const(float)* x, float* y, const uint dim, cons
  * Per-vector calculation of the Euclidean distance (L2 norm) of a vector array on a GPU.
  *
  * Params:
- *     x = An array of vectors which is represented in a matrix form for convenience. Each column is a single vector.
- *         Thus, each raw is a single dimention.
+ *     x = An array of vectors which is represented in a matrix form for convenience. Each column is a vector.
+ *         Thus, each row is a dimention.
  *     y = A resulting array of L2 norm values. Its length must equals to number of the columns in the input matrix.
  */
 void cudaL2(const Matrix x, float[] y) nothrow @nogc
