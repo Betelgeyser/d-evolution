@@ -48,7 +48,7 @@ struct Individual
 	
 	unittest
 	{
-		mixin(writetest!opEquals);
+		mixin(writeTest!opEquals);
 		
 		Individual i1;
 		Individual i2;
@@ -79,7 +79,7 @@ struct Individual
 	
 	unittest
 	{
-		mixin(writetest!opCmp);
+		mixin(writeTest!opCmp);
 		
 		Individual i1;
 		Individual i2;
@@ -120,12 +120,12 @@ struct Population
 	///
 	unittest
 	{
-		mixin(writetest!__ctor);
 		
 		// Initialize cuRAND generator.
 		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
 		generator.setPseudoRandomGeneratorSeed(0);
 		scope(exit) generator.destroy;
+		mixin(writeTest!__ctor);
 		
 		// Initialize network params
 		NetworkParams params;
@@ -198,7 +198,8 @@ struct Population
 	
 	unittest
 	{
-		mixin(notTested!evaluate);
+		// Have no idea what to test here. Network activation and MASE themselves must be already tested at this point.
+		mixin(notTested!fitness);
 	}
 	
 	/**
@@ -214,12 +215,12 @@ struct Population
 	///
 	unittest
 	{
-		mixin(writetest!sort);
 		
 		// Initialize cuRAND generator.
 		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
 		generator.setPseudoRandomGeneratorSeed(0);
 		scope(exit) generator.destroy;
+		mixin(writeTest!order);
 		
 		// Initialize network params
 		NetworkParams params;
