@@ -167,7 +167,7 @@ struct Network
 	///
 	unittest
 	{
-		mixin(writetest!__ctor);
+		mixin(writeTest!__ctor);
 		
 		NetworkParams params = { layers : 4, inputs : 2, neurons : 3, outputs : 1 };
 		
@@ -251,7 +251,7 @@ struct Network
 	///
 	unittest
 	{
-		mixin(writetest!opCall);
+		mixin(writeTest!opCall);
 		
 		immutable NetworkParams params = { inputs : 2, outputs : 1, neurons : 3, layers : 5 };
 		
@@ -338,7 +338,7 @@ struct Network
 	///
 	unittest
 	{
-		mixin(writetest!crossover);
+		mixin(writeTest!crossover);
 		
 		import std.algorithm : max, min;
 		import std.math      : abs;
