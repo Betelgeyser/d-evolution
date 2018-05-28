@@ -204,21 +204,21 @@ struct Population
 	 *     outputs = Output matrix of a size m x k, where k is the number of output variables and m is the number of results.
 	 *     cublasHandle = Cublas handle.
 	 */
-	void evaluate(in Matrix inputs, in Matrix outputs, cublasHandle_t cublasHandle) nothrow @nogc
+	void fitness(in Matrix inputs, in Matrix outputs, cublasHandle_t cublasHandle) nothrow @nogc
 	{
-		auto outputs_t = Matrix(outputs.cols, outputs.rows);
-		auto approx    = Matrix(outputs.rows, outputs.cols);
-		auto approx_t  = Matrix(outputs.cols, outputs.rows);
+		auto outputsT = Matrix(outputs.cols, outputs.rows); // MASE operates on transposed matrices
+		auto approx   = Matrix(outputs.rows, outputs.cols); // Network's output is an approximated result
+		auto approxT  = Matrix(outputs.cols, outputs.rows); // MASE operates on transposed matrices
 		
-		transpose(outputs, outputs_t, cublasHandle);
+		transpose(outputs, outputsT, cublasHandle);
 		
-		foreach (i; individual)
+		foreach (ref i; _individuals)
 		{
 			i(inputs, approx, cublasHandle);
 			
-			transpose(approx, approx_t, cublasHandle);
+			transpose(approx, approxT, cublasHandle);
 			
-			i.fitness = MASE(outputs_t, approx_t, cublasHandle);
+			i.fitness = MASE(outputsT, approxT, cublasHandle);
 		}
 	}
 	
