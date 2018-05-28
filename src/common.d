@@ -34,7 +34,7 @@ T[] nogcMalloc(T)(ulong items) nothrow @nogc
  *
  * Bug-prone, use it carefully...
  */
-void free(T)(ref T[] array) nothrow @nogc
+void nogcFree(T)(ref T[] array) nothrow @nogc
 {
 	free(array.ptr);
 	array.destroy();
