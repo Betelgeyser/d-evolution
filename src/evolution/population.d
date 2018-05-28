@@ -16,7 +16,8 @@
 module evolution.population;
 
 // D modules
-import std.algorithm : sort;
+import std.algorithm : each, sort;
+import std.math      : lround;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
@@ -27,6 +28,13 @@ import cuda.curand;
 import common;
 import math;
 import neural.network;
+
+
+version (unittest)
+{
+	import std.algorithm : all, isSorted;
+	import std.math      : isFinite;
+}
 
 /**
  * A single individual of a population paired with its fitness value.
@@ -235,38 +243,28 @@ struct Population
 	 */
 	void order() nothrow @nogc
 	{
-		individual.sort!"a < b"();
+		_individuals.sort!"a < b"();
 	}
 	
 	///
 	unittest
 	{
-		
-		// Initialize cuRAND generator.
-		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
-		generator.setPseudoRandomGeneratorSeed(0);
-		scope(exit) generator.destroy;
 		mixin(writeTest!order);
 		
-		// Initialize network params
-		NetworkParams params;
-		params.inputs  = 2;
-		params.outputs = 1;
-		params.neurons = 3;
-		params.layers  = 2;
+		NetworkParams params = { inputs : 5, outputs : 2, neurons : 4, layers : 5 };
+		immutable size = 100;
 		
-		immutable size = 10;
-		
-		auto p = Population(params, size, generator);
+		auto population = Population(params, size, randomPool);
+		scope(exit) population.freeMem();
 		cudaDeviceSynchronize();
 		
 		// Fill fitness values with random data
-		for (ulong i = 0; i < size; ++i)
-			p.individual[i].fitness = p.individual[i].inputLayer.weights[0];	
+		foreach (ref i; population._individuals)
+			i.fitness = i.layers[0].weights[0];
 		
-		p.sort();
-		for (ulong i = 0; i < size - 1; ++i)
-			assert (p.individual[i].fitness <= p.individual[i + 1].fitness);
+		population.order();
+		
+		assert (population._individuals.isSorted!"a.fitness < b.fitness");
 	}
 }
 
