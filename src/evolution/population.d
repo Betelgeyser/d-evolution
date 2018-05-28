@@ -104,6 +104,9 @@ struct Individual
 	}
 }
 
+/**
+ * Rank selection only
+ */
 struct Population
 {
 	private
@@ -202,9 +205,7 @@ struct Population
 	}
 	
 	/**
-	 * Evaluate the population.
-	 *
-	 * Evaluates a result of feeding inpit matrix to the network.
+	 * Calculates fitness of each individual in the population.
 	 *
 	 * Params:
 	 *     inputs = Input matrix of a size m x n, where n is the number of input variables + 1 for bias and m is the number
