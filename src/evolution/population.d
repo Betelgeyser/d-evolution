@@ -20,8 +20,8 @@ import std.algorithm : sort;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
-import cuda.curand;
 import cuda.cublas;
+import cuda.curand;
 
 // DNN modules
 import common;
@@ -41,7 +41,7 @@ struct Individual
 	/**
 	 * Tests if two individuals have same fitness value.
 	 */
-	bool opEquals()(auto ref scope const Individual i) const pure nothrow @safe @nogc
+	bool opEquals()(auto ref in Individual i) const @nogc nothrow pure @safe
 	{
 		return this.fitness == i.fitness;
 	}
@@ -65,7 +65,7 @@ struct Individual
 	/**
 	 * Compares fitness values of two individuals.
 	 */
-	int opCmp(in ref Individual i) const pure nothrow @safe @nogc
+	int opCmp()(auto ref in Individual i) const @nogc nothrow pure @safe
 	{
 		if (this.opEquals(i))
 			return 0;
