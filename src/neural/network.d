@@ -266,31 +266,18 @@ struct Network
 		auto network = Network(params, randomPool);
 		scope(exit) network.freeMem();
 		
-		inputs[0 .. $] = [ 1.0,        2.0,        3.0,        4.0,
-		                   5.0,        6.0,        7.0,        8.0,
-		                   biasWeight, biasWeight, biasWeight, biasWeight ]; // column for bias
+		inputs[0 .. $ - params.neurons].each!"a = i + 1";
+		inputs[$ - params.neurons .. $].each!(x => x = biasWeight); // column for bias
 		
-		//                                               bias
-		network.inputLayer.weights[0 .. $] = [ 0.1, 0.2, 0.3,   // <- 1st neuron
-		                                       0.4, 0.5, 0.6,   // <- 2nd neuron
-		                                       0.7, 0.8, 0.9 ]; // <- 3rd neuron
-		
-		//                                                            bias
-		network.hiddenLayers[0].weights[0 .. $] = [ -0.1, -0.2, -0.3, -0.4,   // <- 1st neuron
-		                                            -0.5, -0.6, -0.7, -0.8,   // <- 2nd neuron
-		                                            -0.9, -1.0, -1.1, -1.2 ]; // <- 3rd neuron
-		
-		//                                                         bias
-		network.hiddenLayers[1].weights[0 .. $] = [ 0.1, 0.2, 0.3, 0.4,   // <- 1st neuron
-		                                            0.5, 0.6, 0.7, 0.8,   // <- 2nd neuron
-		                                            0.9, 1.0, 1.1, 1.2 ]; // <- 3rd neuron
-		
-		//                                                            bias
-		network.hiddenLayers[2].weights[0 .. $] = [ -0.1, -0.2, -0.3, -0.4,   // <- 1st neuron
-		                                            -0.5, -0.6, -0.7, -0.8,   // <- 2nd neuron
-		                                            -0.9, -1.0, -1.1, -1.2 ]; // <- 3rd neuron
-		
-		network.outputLayer.weights[0 .. $] = [ 0, 1, 2, 3 ]; // the only neuron
+		// Reinitializing network with deterministic values for testing 
+		with (network)
+		{
+			_layers[0]._weights.each!"a =  0.1 * (i + 1)";
+			_layers[1]._weights.each!"a = -0.1 * (i + 1)";
+			_layers[2]._weights.each!"a =  0.1 * (i + 1)";
+			_layers[3]._weights.each!"a = -0.1 * (i + 1)";
+			_layers[4]._weights.each!"a = i";
+		}
 		
 		network(inputs, outputs, cublasHandle);
 		cudaDeviceSynchronize();
