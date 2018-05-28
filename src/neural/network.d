@@ -31,6 +31,10 @@ import common;
 import math;
 import neural.layer;
 
+
+immutable uint  biasLength = 1;   /// Number of bias weights per neuron.
+immutable float biasWeight = 1.0; /// Weight of every bias connection.
+
 version (unittest)
 {
 	import std.algorithm : equal;
@@ -48,12 +52,6 @@ version (unittest)
 		cublasDestroy(cublasHandle);
 	}
 }
-
-
-immutable uint  biasLength = 1;   /// Number of bias weights per neuron.
-immutable float biasWeight = 1.0; /// Weight of every bias connection.
-
-enum LayerType { Input, Hidden, Output }; /// Layer types.
 
 /**
  * Random network generation parameters.
@@ -79,22 +77,21 @@ struct NetworkParams
 		assert (isFinite(max));
 	}
 	
-	/**
-	 * Extract layer parameters from network parameters depending on a layer role in a net.
-	 *
-	 * Params:
-	 *     type = Layer role in a network.
-	 */
-	@property LayerParams layerParams(in LayerType type) const @nogc nothrow pure @safe
+	@property LayerParams inputParams() const @nogc nothrow pure @safe
 	{
-		LayerParams result;
-		
-		result.min = min;
-		result.max = max;
-		
-		result.inputs  = (type == LayerType.Input  ? inputs  : neurons);
-		result.neurons = (type == LayerType.Output ? outputs : neurons);
-		
+		LayerParams result = { min : this.min, max : this.max, inputs : this.inputs, neurons : this.neurons };
+		return result;
+	}
+	
+	@property LayerParams hiddenParams() const @nogc nothrow pure @safe
+	{
+		LayerParams result = { min : this.min, max : this.max, inputs : this.neurons, neurons : this.neurons };
+		return result;
+	}
+	
+	@property LayerParams outputParams() const @nogc nothrow pure @safe
+	{
+		LayerParams result = { min : this.min, max : this.max, inputs : this.neurons, neurons : this.outputs };
 		return result;
 	}
 }

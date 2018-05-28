@@ -50,8 +50,6 @@ version (unittest)
 immutable uint  biasLength = 1;   /// Number of bias weights per neuron.
 immutable float biasWeight = 1.0; /// Weight of every bias connection.
 
-enum LayerType { Input, Hidden, Output }; /// Layer types.
-
 /**
  * Random layer generation parameters.
  */
