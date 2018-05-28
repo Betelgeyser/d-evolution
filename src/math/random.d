@@ -62,7 +62,8 @@ struct RandomPool
 	
 	invariant
 	{
-		assert (_index <= _values.length);
+		if (_values.length && _index)           // TODO: Dirty hack. As invariant is called right after `freeMem()`,
+			assert (*_index <= _values.length); // this line will cause crash.
 	}
 	
 	@property size_t length() const pure nothrow @safe @nogc
@@ -88,13 +89,14 @@ struct RandomPool
 	}
 	body
 	{
+		scope(failure) freeMem();
+		
 		_generator = generator;
 		
 		_index  = cast(typeof(_index))malloc(_index.sizeof);
 		*_index = 0;
 		
 		cudaMallocManaged(_values, size);
-		scope(failure) freeMem();
 		
 		_generator.generate(_values.ptr, _values.length);
 		cudaDeviceSynchronize();
@@ -110,7 +112,14 @@ struct RandomPool
 	 */
 	void freeMem() nothrow @nogc
 	{
-		cudaFree(_values);
+		if (_index)
+		{
+			free(_index);
+			_index = null;
+		}
+		
+		if (_values.length)
+			cudaFree(_values);
 	}
 	
 	/**
