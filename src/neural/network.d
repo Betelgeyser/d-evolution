@@ -294,7 +294,7 @@ struct Network
 	 *
 	 * Currently only BLX-α crossover is implemented and this is a default algorithm.
 	 *
-	 * From more details look $(LINK std.math.kernels.cudaBLXa).
+	 * From more details look $(LINK2 ../math/kernels.html#cudaBLXa,math.kernels.cudaBLXa).
 	 *
 	 * Params:
 	 *     x = The first parent.
