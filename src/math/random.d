@@ -171,8 +171,6 @@ struct RandomPool
 ///
 unittest
 {
-	
-	import std.math : approxEqual;
 	mixin(writeTest!RandomPool);
 	
 	immutable size = 1_000;
@@ -187,15 +185,9 @@ unittest
 	scope(exit) pool.freeMem();
 	
 	// There is a chance of getting two equal numbers in a row, but chance is low
-	assert ( !approxEqual(
-		pool(1)[0],
-		pool(1)[0]
-	));
+	assert (pool(1)[0] != pool(1)[0]);
 	
 	// Ensure pool regenerates its values
-	assert ( !approxEqual(
-		pool(size)[0],
-		pool(size)[0]
-	));
+	assert (pool(size)[0] != pool(size)[0]);
 }
 
