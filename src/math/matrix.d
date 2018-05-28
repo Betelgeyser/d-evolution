@@ -106,6 +106,11 @@ struct Matrix
 	 *     values = Array of values.
 	 */
 	this(in uint rows, in uint cols) nothrow @nogc
+	in
+	{
+		assert (rows >= 1);
+		assert (cols >= 1);
+	}
 	out
 	{
 		// Many std.algorithm's higher order functions on ranges will pop elements from `values` decreasing its lenght.
