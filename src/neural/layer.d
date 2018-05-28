@@ -79,7 +79,10 @@ struct LayerParams
  */
 struct Layer
 {
-	Matrix weights; /// Connections' weights.
+	// TODO: Not sure about setting _weigths visibility to package, it should be private. But then it will be difficult
+	// to set it to controlled values in other neural submodules. Perhaps there should be a constructor taking
+	// initialized array.
+	package Matrix _weights; /// Connections' weights.
 	
 	invariant
 	{
@@ -93,7 +96,7 @@ struct Layer
 	 */
 	@property uint connectionsLength() const pure nothrow @safe @nogc
 	{
-		return weights.rows;
+		return _weights.rows;
 	}
 	
 	/**
@@ -101,7 +104,7 @@ struct Layer
 	 */
 	@property uint neuronsLength() const pure nothrow @safe @nogc
 	{
-		return weights.cols;
+		return _weights.cols;
 	}
 	
 	/**
@@ -109,7 +112,12 @@ struct Layer
 	 */
 	@property ulong length() const pure nothrow @safe @nogc
 	{
-		return weights.length;
+		return _weights.length;
+	}
+	
+	@property const(float[]) weights() const @nogc nothrow pure @safe
+	{
+		return _weights.values;
 	}
 	
 	/**
@@ -128,11 +136,12 @@ struct Layer
 	{
 		scope(failure) freeMem();
 		
-		weights = Matrix(params.inputs + biasLength, params.neurons);
+		_weights = Matrix(params.inputs + biasLength, params.neurons);
 		
 		auto tmpPtr = cudaScale(pool(length), params.min, params.max)[0 .. $];
 		cudaDeviceSynchronize();
-		weights.values[0 .. $] = tmpPtr[0 .. $];
+		
+		_weights.values[0 .. $] = tmpPtr[0 .. $];
 	}
 	
 	///
@@ -172,7 +181,7 @@ struct Layer
 	 */
 	void freeMem() nothrow @nogc
 	{
-		weights.freeMem();
+		_weights.freeMem();
 	}
 	
 	/**
@@ -197,7 +206,7 @@ struct Layer
 	}
 	body
 	{
-		gemm(inputs, weights, outputs, cublasHandle);
+		gemm(inputs, _weights, outputs, cublasHandle);
 		
 		if (activate)
 			cudaTanh(outputs);
@@ -272,7 +281,7 @@ struct Layer
 	}
 	body
 	{
-		cudaBLXa(x.weights, y.weights, weights, a, b, alpha, pool(length));
+		cudaBLXa(x.weights, y.weights, _weights, a, b, alpha, pool(length));
 	}
 	
 	///
