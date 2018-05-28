@@ -83,8 +83,9 @@ struct Layer
 	
 	invariant
 	{
-		assert (&weights, "The weights matrix is incorrect.");
-		assert (weights.rows >= 1 + biasLength); // connectionsLength()
+		assert (&_weights, "The weights matrix is incorrect.");
+		assert (_weights.rows >= 1 + biasLength,
+			"The weights matrix must have at least `biasLength + 1` rows. 1 comes for a neuron.");
 	}
 	
 	/**
