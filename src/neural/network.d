@@ -71,6 +71,7 @@ struct NetworkParams
 		assert (inputs  >= 1);
 		assert (outputs >= 1);
 		assert (neurons >= 1);
+		assert (layers  >= 2); // There must be at least input and output layers
 		
 		assert (max >= min);
 		assert (isFinite(min));
@@ -101,24 +102,34 @@ struct NetworkParams
  */
 struct Network
 {
-	Layer   inputLayer;   /// Input layer.
-	Layer[] hiddenLayers; /// Hidden layers. It is possible to have no hidden layers at all.
-	Layer   outputLayer;  /// Output layer.
-	
-	invariant
-	{
-		assert (
-			hiddenLayers.all!(x => x.neuronsLength == inputLayer.neuronsLength),
-			"Every hidden layer must have the same number of neurons as the input layer."
-		);
-	}
+	private Layer[] _layers; /// Hidden layers. It is possible to have no hidden layers at all.
 	
 	/**
-	 * Number of hidden layers (input and output does not count).
+	 * Number of layers.
 	 */
 	@property ulong depth() const pure nothrow @safe @nogc
 	{
-		return hiddenLayers.length;
+		return _layers.length;
+	}
+	
+	@property const(Layer) inputLayer() const @nogc nothrow pure @safe
+	{
+		return _layers[0];
+	}
+	
+	@property const(Layer[]) hiddenLayers() const @nogc nothrow pure @safe
+	{
+		return _layers[1 .. $-1];
+	}
+	
+	@property const(Layer) outputLayer() const @nogc nothrow pure @safe
+	{
+		return _layers[$ - 1];
+	}
+	
+	@property const(Layer[]) layers() const @nogc nothrow pure @safe
+	{
+		return _layers;
 	}
 	
 	/**
@@ -145,21 +156,12 @@ struct Network
 	{
 		scope(failure) freeMem();
 		
-		inputLayer = Layer(
-			params.layerParams(LayerType.Input),
-			pool
-		);
-		outputLayer = Layer(
-			params.layerParams(LayerType.Output),
-			pool
-		);
+		_layers = nogcMalloc!Layer(params.layers);
 		
-		hiddenLayers = nogcMalloc!Layer(params.layers);
-		foreach (ref l; hiddenLayers)
-			l = Layer(
-				params.layerParams(LayerType.Hidden),
-				pool
-			);
+		_layers[0]     = Layer(params.inputParams,  pool);
+		_layers[$ - 1] = Layer(params.outputParams, pool);
+		
+		_layers[1 .. $-1].each!((ref x) => x = Layer(params.hiddenParams, pool));
 	}
 	
 	///
@@ -167,7 +169,7 @@ struct Network
 	{
 		mixin(writetest!__ctor);
 		
-		NetworkParams params = { layers : 2, inputs : 2, neurons : 3, outputs : 1 };
+		NetworkParams params = { layers : 4, inputs : 2, neurons : 3, outputs : 1 };
 		
 		Network network = Network(params, randomPool);
 		scope(exit) network.freeMem();
@@ -177,37 +179,26 @@ struct Network
 			assert (depth           == params.layers);
 			assert (neuronsPerLayer == params.neurons);
 			
-			with (inputLayer)
-			{
-				assert (connectionsLength == params.inputs + biasLength);
-				assert (neuronsLength     == params.neurons);
-				
-				assert (weights.values.all!(x => isFinite(x)));
-				assert (weights.values.all!(x => x >= params.min && x <= params.max));
-			}
+			assert (inputLayer.connectionsLength == params.inputs + biasLength);
+			assert (inputLayer.neuronsLength     == params.neurons);
 			
-			with (outputLayer)
-			{
-				assert (connectionsLength == params.neurons + biasLength);
-				assert (neuronsLength     == params.outputs);
+			assert (outputLayer.connectionsLength == params.neurons + biasLength);
+			assert (outputLayer.neuronsLength     == params.outputs);
 				
-				assert (weights.values.all!(x => isFinite(x)));
-				assert (weights.values.all!(x => x >= params.min && x <= params.max));
-			}
-			
 			assert (hiddenLayers.all!(x => x.connectionsLength == params.neurons + biasLength));
-			assert (hiddenLayers.all!(x => x.neuronsLength == params.neurons));
+			assert (hiddenLayers.all!(x => x.neuronsLength     == params.neurons));
 			
+			// Not that network should test layers, but need to check whether network creates all layers or not
 			assert (
-				hiddenLayers.all!(
-					l => l.weights.values.all!(
-						x => isFinite(x)
-			)));
+				_layers.all!(
+					l => l.weights.all!(
+						w => isFinite(w)))
+			);
 			assert (
-				hiddenLayers.all!(
-					l => l.weights.values.all!(
-						x => x >= params.min && x <= params.max
-			)));
+				_layers.all!(
+					l => l.weights.all!(
+						w => w.between(params.min, params.max)))
+			);
 		}
 	}
 	
@@ -221,13 +212,10 @@ struct Network
 	 */
 	void freeMem() nothrow @nogc
 	{
-		inputLayer.freeMem();
-		outputLayer.freeMem();
+		_layers.each!(x => x.freeMem());
 		
-		hiddenLayers.each!(x => x.freeMem());
-		
-		if (hiddenLayers.length)
-			free(hiddenLayers);
+		if (_layers.length)
+			nogcFree(_layers);
 	}
 	
 	/**
@@ -251,13 +239,13 @@ struct Network
 		cudaFill(prev.colSlice(prev.cols - 1, prev.cols), biasWeight);
 		cudaFill(next.colSlice(next.cols - 1, next.cols), biasWeight);
 		
-		inputLayer(inputs, prev.colSlice(0, prev.cols - 1), cublasHandle);
+		inputLayer()(inputs, prev.colSlice(0, prev.cols - 1), cublasHandle);
 		foreach (l; hiddenLayers)
 		{
 			l(prev, next.colSlice(0, next.cols - 1), cublasHandle);
 			swap(prev, next);
 		}
-		outputLayer(prev, outputs, cublasHandle, false);
+		outputLayer()(prev, outputs, cublasHandle, false);
 	}
 	
 	///
@@ -265,7 +253,7 @@ struct Network
 	{
 		mixin(writetest!opCall);
 		
-		immutable NetworkParams params = { inputs : 2, outputs : 1, neurons : 3, layers : 3 };
+		immutable NetworkParams params = { inputs : 2, outputs : 1, neurons : 3, layers : 5 };
 		
 		immutable measures = 4;
 		
@@ -342,11 +330,9 @@ struct Network
 	}
 	body
 	{
-		inputLayer.crossover (x.inputLayer,  y.inputLayer,  a, b, alpha, pool);
-		outputLayer.crossover(x.outputLayer, y.outputLayer, a, b, alpha, pool);
-		
-		foreach (i, ref off; hiddenLayers)
-			off.crossover(x.hiddenLayers[i], y.hiddenLayers[i], a, b, alpha, pool);
+		_layers.each!(
+			(i, ref l) => l.crossover(x._layers[i], y._layers[i], a, b, alpha, pool)
+		);
 	}
 	
 	///
@@ -382,52 +368,22 @@ struct Network
 		
 		with (offspring)
 		{
-			with (inputLayer)
-			{
-				assert (weights.values.all!(x => isFinite(x)));
-				
-				foreach (i, w; weights)
-				{
-					float _min = min(parent1.inputLayer.weights[i], parent2.inputLayer.weights[i], params.min)
-						- alpha * abs(parent1.inputLayer.weights[i] - parent2.inputLayer.weights[i]);
-					
-					float _max = max(parent1.inputLayer.weights[i], parent2.inputLayer.weights[i], params.max)
-						+ alpha * abs(parent1.inputLayer.weights[i] - parent2.inputLayer.weights[i]);
-					
-					assert (w >= _min && w <= _max);
-				}
-			}
-			
-			with (outputLayer)
-			{
-				assert (weights.values.all!(x => isFinite(x)));
-								
-				foreach (i, w; weights)
-				{
-					float _min = min(parent1.outputLayer.weights[i], parent2.outputLayer.weights[i], params.min)
-						- alpha * abs(parent1.outputLayer.weights[i] - parent2.outputLayer.weights[i]);
-					
-					float _max = max(parent1.outputLayer.weights[i], parent2.outputLayer.weights[i], params.max)
-						+ alpha * abs(parent1.outputLayer.weights[i] - parent2.outputLayer.weights[i]);
-					
-					assert (w >= _min && w <= _max);
-				}
-			}
-			
 			assert (
-				hiddenLayers.all!(
-					l => l.weights.values.all!(
-						x => isFinite(x)
-			)));
+				_layers.all!(
+					l => l.weights.all!(
+						x => isFinite(x)))
+			);
 			
-			foreach (i, layer; hiddenLayers)
-				foreach (j, w; layer.weights)
+			foreach (i, l; _layers)
+				foreach (j, w; l.weights)
 				{
-					float _min = min(parent1.hiddenLayers[i].weights[j], parent2.hiddenLayers[i].weights[j], params.min)
-						- alpha * abs(parent1.hiddenLayers[i].weights[j] - parent2.hiddenLayers[i].weights[j]);
+					float diff = abs(parent1._layers[i].weights[j] - parent2._layers[i].weights[j]);
 					
-					float _max = max(parent1.hiddenLayers[i].weights[j], parent2.hiddenLayers[i].weights[j], params.max)
-						+ alpha * abs(parent1.hiddenLayers[i].weights[j] - parent2.hiddenLayers[i].weights[j]);
+					float _min = min(parent1._layers[i].weights[j], parent2._layers[i].weights[j], params.min);
+					float _max = max(parent1._layers[i].weights[j], parent2._layers[i].weights[j], params.max);
+					
+					_min -= alpha * diff;
+					_max += alpha * diff;
 					
 					assert (w >= _min && w <= _max);
 				}
