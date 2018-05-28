@@ -159,15 +159,8 @@ struct Layer
 			assert (connectionsLength == params.inputs + biasLength);
 			assert (neuronsLength     == params.neurons);
 			
-			assert (
-				weights.values.all!(
-					x => isFinite(x)
-			));
-			
-			assert (
-				weights.values.all!(
-					x => x >= params.min && x <= params.max
-			));
+			assert (weights.all!(x => isFinite(x)));
+			assert (weights.all!(x => x >= params.min && x <= params.max));
 		}
 	}
 	
@@ -228,12 +221,9 @@ struct Layer
 		auto outputs = Matrix(4, 2);
 		scope(exit) outputs.freeMem();
 		
-		/*   Neurons
-		 *   V    V
-		 * 0.00 0.06 * <- weights
-		 * 0.02 0.08 * <- weights
-		 * 0.04 0.10 * <- biases */
-		layer.weights.each!"a = i / 50f";
+		//                        weight weight bias
+		layer._weights[0 .. $] = [ 0.00,  0.02,  0.04,   // 1st neuron
+		                           0.06,  0.08,  0.10 ]; // 2nd neuron
 		
 		inputs.each!"a = i";
 		
@@ -308,20 +298,22 @@ struct Layer
 		offspring.crossover(parent1, parent2, params.min, params.max, alpha, randomPool);
 		cudaDeviceSynchronize();
 		
-		assert (
-			offspring.weights.values.all!(
-				x => isFinite(x)
-		));
-		
-		foreach (i, off; offspring.weights)
+		with (offspring)
 		{
-			float _min = min(parent1.weights[i], parent2.weights[i], params.min)
-				- alpha * abs(parent1.weights[i] - parent2.weights[i]);
+			assert (weights.all!(x => isFinite(x)));
 			
-			float _max = max(parent1.weights[i], parent2.weights[i], params.max)
-				+ alpha * abs(parent1.weights[i] - parent2.weights[i]);
-			
-			assert (off >= _min && off <= _max);
+			foreach (i, w; weights)
+			{
+				float diff = abs(parent1.weights[i] - parent2.weights[i]);
+				
+				float _min = min(parent1.weights[i], parent2.weights[i], params.min);
+				float _max = max(parent1.weights[i], parent2.weights[i], params.max);
+				
+				_min -= alpha * diff;
+				_max += alpha * diff;
+				
+				assert (w >= _min && w <= _max);
+			}
 		}
 	}
 }
