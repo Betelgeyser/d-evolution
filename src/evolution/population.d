@@ -98,56 +98,80 @@ struct Individual
 
 struct Population
 {
-	Individual[] individual;
-	
-	Matrix inputs;
-	Matrix outputs;
-	
-	@property size() const pure nothrow @safe @nogc
+	private
 	{
-		return individual.length;
+		Individual[] _individuals;
+		Network[]    _offsprings;
 	}
 	
-	this(in NetworkParams params, in ulong size, curandGenerator_t generator) nothrow @nogc
+	float selectivePressure = 0.20; /// Determines what fraction of the population will be renewed every generation.
+	
+	invariant
+	{
+		assert (selectivePressure > 0 && selectivePressure <= 1); 
+	}
+
+	@property const(Individual[]) individuals() const @nogc nothrow pure @safe
+	{
+		return _individuals;
+	}
+	
+	/**
+	 * this
+	 */
+	this(in NetworkParams params, in ulong size, RandomPool pool) nothrow @nogc
+	in
+	{
+		assert (&params, "Incorrect network parameters");
+		assert (size >= 0);
+	}
+	out
+	{
+		assert (_individuals.length);
+		assert (_offsprings.length, "Population must produce at least one offspring each generation.");
+	}
+	body
 	{
 		scope(failure) freeMem();
 		
-		individual = nogcMalloc!Individual(size);
-		foreach (ref i; individual)
-			i = Network(params, generator);
+		_individuals = nogcMalloc!Individual(size);
+		_offsprings  = nogcMalloc!Network(lround(size * selectivePressure));
+		
+		_individuals.each!((ref x) => x = Network(params, pool));
+		_offsprings.each!((ref x) => x = Network(params, pool)); // There is no need to initialize offsprings
+		                                                         // in the first generation, but without that freeMem will fail.
 	}
 	
 	///
 	unittest
 	{
-		
-		// Initialize cuRAND generator.
-		auto generator = curandGenerator(curandRngType_t.PSEUDO_DEFAULT);
-		generator.setPseudoRandomGeneratorSeed(0);
-		scope(exit) generator.destroy;
 		mixin(writeTest!__ctor);
 		
-		// Initialize network params
-		NetworkParams params;
-		params.inputs  = 2;
-		params.outputs = 1;
-		params.neurons = 3;
-		params.layers  = 2;
-		
+		NetworkParams params = { inputs : 4, outputs : 2, neurons : 3, layers : 4 };
 		immutable size = 10;
 		
-		auto p = Population(params, size, generator);
-		scope(exit) p.freeMem();
+		auto population = Population(params, size, randomPool);
+		scope(exit) population.freeMem();
 		
-		assert (p.size == size);
-		
-		// Check memory
-		assert (p.individual[0].depth          == params.layers);
-		assert (p.individual[p.size - 1].depth == params.layers);
-		assert (
-			p.individual[p.size - 1].hiddenLayers[params.layers - 1].weights.length
-			== (params.neurons + 1) * params.neurons
-		);
+		with (population)
+		{
+			assert (_individuals.length == size);
+			assert (_offsprings.length  == lround(size * selectivePressure));
+			
+			// Not that population should test networks, but need to check whether population creates all networks or not
+			assert (
+				individuals.all!(
+					i => i.individual.layers.all!(
+						l => l.weights.all!(
+							w => isFinite(w))))
+			);
+			assert (
+				individuals.all!(
+					i => i.individual.layers.all!(
+						l => l.weights.all!(
+							w => w.between(params.min, params.max))))
+			);
+		}
 	}
 	
 	/**
@@ -160,11 +184,13 @@ struct Population
 	 */
 	void freeMem() nothrow @nogc
 	{
-		foreach (ref i; individual)
-			i.freeMem();
+		_individuals.each!(x => x.freeMem);
+		_offsprings.each!(x => x.freeMem);
 		
-		if (size > 0)
-			free(individual);
+		if (_individuals.length)
+			nogcFree(_individuals);
+		if (_offsprings.length)
+			nogcFree(_offsprings);
 	}
 	
 	/**
