@@ -94,7 +94,7 @@ struct Layer
 	/**
 	 * Number of connections per neuron (including bias).
 	 */
-	@property uint connectionsLength() const pure nothrow @safe @nogc
+	@property uint connectionsLength() const @nogc nothrow pure @safe
 	{
 		return _weights.rows;
 	}
@@ -102,7 +102,7 @@ struct Layer
 	/**
 	 * Number of neurons in the layer.
 	 */
-	@property uint neuronsLength() const pure nothrow @safe @nogc
+	@property uint neuronsLength() const @nogc nothrow pure @safe
 	{
 		return _weights.cols;
 	}
@@ -110,7 +110,7 @@ struct Layer
 	/**
 	 * Total number of weights.
 	 */
-	@property ulong length() const pure nothrow @safe @nogc
+	@property ulong length() const @nogc nothrow pure @safe
 	{
 		return _weights.length;
 	}
@@ -138,7 +138,7 @@ struct Layer
 		
 		_weights = Matrix(params.inputs + biasLength, params.neurons);
 		
-		auto tmpPtr = cudaScale(pool(length), params.min, params.max)[0 .. $];
+		auto tmpPtr = cudaScale(pool(length), params.min, params.max);
 		cudaDeviceSynchronize();
 		
 		_weights.values[0 .. $] = tmpPtr[0 .. $];
@@ -197,7 +197,7 @@ struct Layer
 	 *     cublasHandle = Cublas handle.
 	 *     activate = If set to `true` activation function will be applied to the result.
 	 */
-	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle, in bool activate = true) const nothrow @nogc
+	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle, in bool activate = true) const @nogc nothrow
 	in
 	{
 		assert (inputs.cols   == connectionsLength);
