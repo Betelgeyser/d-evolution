@@ -29,17 +29,17 @@ import math;
 import neural.network;
 
 /**
- * A single individual ot a population stored with its fitness value.
+ * A single individual of a population paired with its fitness value.
  */
 struct Individual
 {
 	alias individual this;
 	
 	Network individual; /// Individual.
-	float fitness;      /// Value of individual's fitness. 
+	float   fitness;    /// Value of individual's fitness.
 	
 	/**
-	 * Tests if two individuals have same fitness value. 
+	 * Tests if two individuals have same fitness value.
 	 */
 	bool opEquals()(auto ref scope const Individual i) const pure nothrow @safe @nogc
 	{
