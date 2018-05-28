@@ -15,6 +15,9 @@
  */
 module math.random;
 
+// C modules
+import core.stdc.stdlib;
+
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.curand;
@@ -52,8 +55,8 @@ struct RandomPool
 {
 	private
 	{
-		uint[] _values; /// Cached random bits.
-		size_t _index;  /// Index of the values that will be returned next.
+		uint[]  _values; /// Cached random bits.
+		size_t* _index;  /// Index of the values that will be returned next.
 		CurandGenerator _generator; /// Curand generator.
 	}
 	
@@ -86,6 +89,9 @@ struct RandomPool
 	body
 	{
 		_generator = generator;
+		
+		_index  = cast(typeof(_index))malloc(_index.sizeof);
+		*_index = 0;
 		
 		cudaMallocManaged(_values, size);
 		scope(failure) freeMem();
@@ -128,7 +134,7 @@ struct RandomPool
 		if (count > _available)
 			regenerate();
 		
-		return _values[_index .. _index += count];
+		return _values[*_index .. *_index += count];
 	}
 	
 	private
@@ -138,7 +144,7 @@ struct RandomPool
 		 */
 		@property size_t _available() const pure nothrow @safe @nogc
 		{
-			return length - _index;
+			return length - *_index;
 		}
 		
 		/**
@@ -146,8 +152,8 @@ struct RandomPool
 		 */
 		void regenerate() nothrow @nogc
 		{
-			_index = 0;
 			_generator.generate(_values.ptr, _values.length);
+			*_index = 0;
 			cudaDeviceSynchronize();
 		}
 	}
