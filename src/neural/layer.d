@@ -139,7 +139,7 @@ struct Layer
 	///
 	unittest
 	{
-		mixin(writetest!__ctor);
+		mixin(writeTest!__ctor);
 		
 		immutable LayerParams params = { inputs : 20, neurons : 30 };
 		
@@ -207,7 +207,7 @@ struct Layer
 	///
 	unittest
 	{
-		mixin(writetest!opCall);
+		mixin(writeTest!opCall);
 		
 		immutable LayerParams params = { inputs : 2, neurons : 2 };
 		
@@ -279,7 +279,7 @@ struct Layer
 	///
 	unittest
 	{
-		mixin(writetest!crossover);
+		mixin(writeTest!crossover);
 		
 		import std.algorithm : max, min;
 		import std.math      : abs;

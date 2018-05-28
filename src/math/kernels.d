@@ -46,7 +46,7 @@ void cudaTanh(float[] x) nothrow @nogc
 ///
 unittest
 {
-	mixin(writetest!cudaTanh);
+	mixin(writeTest!cudaTanh);
 	
 	immutable length = 5;
 	
@@ -98,7 +98,7 @@ body
 ///
 unittest
 {
-	mixin(writetest!cudaScale);
+	mixin(writeTest!cudaScale);
 	
 	immutable length = 3;
 	
@@ -194,7 +194,7 @@ body
 ///
 unittest
 {
-	mixin(writetest!cudaBLXa);
+	mixin(writeTest!cudaBLXa);
 	
 	immutable length = 3;
 	immutable alpha  = 0.5;
@@ -254,7 +254,7 @@ void cudaFill(float[] x, in float val) nothrow @nogc
 ///
 unittest
 {
-	mixin(writetest!cudaFill);
+	mixin(writeTest!cudaFill);
 	
 	immutable length = 5;
 	
@@ -292,7 +292,7 @@ body
 ///
 unittest
 {
-	mixin(writetest!cudaL2);
+	mixin(writeTest!cudaL2);
 	
 	immutable dim    = 4;
 	immutable length = 2;

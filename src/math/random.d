@@ -156,9 +156,9 @@ struct RandomPool
 ///
 unittest
 {
-	mixin(writetest!RandomPool);
 	
 	import std.math : approxEqual;
+	mixin(writeTest!RandomPool);
 	
 	immutable size = 1_000;
 	

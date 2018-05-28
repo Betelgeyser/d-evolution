@@ -133,7 +133,7 @@ struct Matrix
 	///
 	unittest
 	{
-		mixin(writetest!__ctor);
+		mixin(writeTest!__ctor);
 		
 		immutable rows = 2;
 		immutable cols = 3;
@@ -184,7 +184,7 @@ struct Matrix
 	///
 	unittest
 	{
-		mixin(writetest!colSlice);
+		mixin(writeTest!colSlice);
 		
 		immutable size = 10;
 		immutable from =  2;
@@ -241,7 +241,7 @@ body
 ///
 unittest
 {
-	mixin(writetest!gemm);
+	mixin(writeTest!gemm);
 	
 	immutable n = 7;
 	immutable k = 3;
@@ -310,7 +310,7 @@ body
 ///
 unittest
 {
-	mixin(writetest!geam);
+	mixin(writeTest!geam);
 	
 	immutable size = 10;
 	
@@ -369,7 +369,7 @@ body
 ///
 unittest
 {
-	mixin(writetest!transpose);
+	mixin(writeTest!transpose);
 	
 	immutable m = 5;
 	immutable n = 3;

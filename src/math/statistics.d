@@ -98,7 +98,7 @@ body
 ///
 unittest
 {
-	mixin(writetest!AE);
+	mixin(writeTest!AE);
 	
 	immutable cols = 3;
 	immutable rows = 4;
@@ -153,7 +153,7 @@ body
 ///
 unittest
 {
-	mixin(writetest!MAE);
+	mixin(writeTest!MAE);
 	
 	immutable rows = 3;
 	immutable cols = 4;
@@ -197,7 +197,7 @@ float MAENaive(in Matrix data, cublasHandle_t cublasHandle) nothrow @nogc
 ///
 unittest
 {
-	mixin(writetest!MAENaive);
+	mixin(writeTest!MAENaive);
 	
 	auto data = Matrix(2, 3);
 	scope(exit) data.freeMem();
@@ -236,7 +236,7 @@ body
 ///
 unittest
 {
-	mixin(writetest!MASE);
+	mixin(writeTest!MASE);
 	
 	immutable cols = 3;
 	immutable rows = 4;
