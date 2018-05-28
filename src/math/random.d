@@ -98,7 +98,7 @@ struct RandomPool
 		
 		cudaMallocManaged(_values, size);
 		
-		_generator.generate(_values.ptr, _values.length);
+		_generator.generate(_values.ptr, length);
 		cudaDeviceSynchronize();
 	}
 	
@@ -161,8 +161,8 @@ struct RandomPool
 		 */
 		void regenerate() nothrow @nogc
 		{
-			_generator.generate(_values.ptr, _values.length);
 			*_index = 0;
+			_generator.generate(_values.ptr, length);
 			cudaDeviceSynchronize();
 		}
 	}
