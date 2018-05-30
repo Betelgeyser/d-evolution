@@ -128,7 +128,12 @@ struct Matrix
 	}
 	
 	/// ditto
-	this(in uint rows, in uint cols, inout(float)[] values) inout nothrow @safe @nogc
+	this(in uint rows, in uint cols, inout(float)[] values) inout @nogc nothrow @safe
+	in
+	{
+		assert (values.length == cols * rows);
+	}
+	body
 	{
 		_rows = rows;
 		_cols = cols;
