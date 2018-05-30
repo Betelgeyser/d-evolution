@@ -111,8 +111,9 @@ struct Population
 {
 	private
 	{
-		Individual[] _individuals;
-		Network[]    _offsprings;
+		Individual[]  _individuals;
+		Network[]     _offsprings;
+		NetworkParams _networkParams;
 	}
 	
 	float selectivePressure = 0.20; /// Determines what fraction of the population will be renewed every generation.
@@ -144,6 +145,8 @@ struct Population
 	body
 	{
 		scope(failure) freeMem();
+		
+		_networkParams = params;
 		
 		_individuals = nogcMalloc!Individual(size);
 		_offsprings  = nogcMalloc!Network(lround(size * selectivePressure));
@@ -266,6 +269,63 @@ struct Population
 		population.order();
 		
 		assert (population._individuals.isSorted!"a.fitness < b.fitness");
+	}
+	
+	/**
+	 * Crossover population and create new generation of offsprings.
+	 *
+	 * Currently only the rank based selection is implemented.
+	 *
+	 * The rank based selection is similar to the roulette-wheel selection in a sense, but instead of chosing an individual
+	 * proportionate to its fitness value in the RBS individuals are selected proportionate to theirs rank values.
+	 *
+	 * It is considered that RBS performes better global optimization while requires more time to converge.
+	 *
+	 * TODO: currently individual CAN breed with ITSELF! Despite chances are low, this is a bad practice,
+	 * should be fixed later. That probably implies rewriting RandomPool fully on CUDA C++ 
+	 */
+	void breed(RandomPool pool)
+	{
+		this.order();
+		
+		immutable float ranksSum = AS(1, _individuals.length, _individuals.length);
+		
+		uint[] xParents;
+		cudaMallocManaged(xParents, _offsprings.length);
+		scope(exit) cudaFree(xParents);
+		
+		float[] randomScores = cudaScale(pool(_offsprings.length), 0, ranksSum);
+		cudaRBS(xParents, randomScores);
+		
+		uint[] yParents;
+		cudaMallocManaged(yParents, _offsprings.length);
+		scope(exit) cudaFree(yParents);
+		
+		randomScores = cudaScale(pool(_offsprings.length), 0, ranksSum);
+		cudaRBS(yParents, randomScores);
+		
+		foreach (i; 0 .. _offsprings.length)
+			_offsprings[i].crossover(
+				_individuals[xParents[i]],
+				_individuals[yParents[i]],
+				_networkParams.min, _networkParams.max,
+				0.5,
+				pool
+			);
+	}
+	
+	///
+	unittest
+	{
+		mixin(notTested!breed);
+		
+		NetworkParams params = { inputs : 5, outputs : 1, neurons : 3, layers : 5, min : -1.0e3, max : 1.0e3 };
+		immutable size = 10;
+		
+		auto population = Population(params, size, randomPool);
+		scope(exit) population.freeMem();
+		
+		population.breed(randomPool);
 	}
 }
 

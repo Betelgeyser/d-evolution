@@ -238,6 +238,39 @@ unittest
 	assert (equal!approxEqual(offspring, result));
 }
 
+private extern(C++) void cuda_RBS(uint* ranks, const float* scores, const size_t count);
+void cudaRBS(uint[] ranks, in float[] scores)
+in
+{
+	assert (ranks.length == scores.length);
+}
+body
+{
+	cuda_RBS(ranks.ptr, scores.ptr, ranks.length);
+}
+
+///
+unittest
+{
+	mixin(writeTest!cudaRBS);
+	
+	uint[] ranks;
+	cudaMallocManaged(ranks, 5);
+	scope(exit) cudaFree(ranks);
+	
+	float[] scores;
+	cudaMallocManaged(scores, 5);
+	scope(exit) cudaFree(scores);
+	
+	scores[0 .. $] = [0.0, 0.1, 3.0, 4.5, 47.123];
+	
+	cudaRBS(ranks, scores);
+	cudaDeviceSynchronize();
+	
+	immutable uint[] result = [0, 0, 1, 2, 9];
+	assert (equal(ranks, result));
+}
+
 private extern(C++) void cuda_fill(float* x, const float val, const size_t n) nothrow @nogc;
 /**
  * Fill the array $(D_PARAM x) on a GPU with the value $(D_PARAM val).

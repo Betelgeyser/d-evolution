@@ -179,7 +179,49 @@ void cuda_BLX_a(
 }
 
 /**
- * Fill the array $(D_PARAM x) on a GPU with the value $(D_PARAM val).
+ * Solve a quadratic equation.
+ * 
+ * Params:
+ *     x1, x2 = Roots of the equation.
+ *     a = x^2 coefficient.
+ *     b = x coefficiant.
+ *     c = Free coefficient. 
+ */
+__device__
+void quadratic(float &x1, float &x2, const float a, const float b, const float c)
+{
+	const float D = powf(b, 2) - 4.0f * a * c;
+	
+	x1 = (-b - sqrtf(D)) / 2.0f / a;
+	x2 = (-b + sqrtf(D)) / 2.0f / a;
+}
+
+__global__
+void kernel_RBS(unsigned int *ranks, const float *scores, const size_t count)
+{
+	for (size_t i = 0; i < count; ++i)
+	{
+		float x1, x2; // Equation roots
+		
+		quadratic(x1, x2, 0.5f, 0.5f, -scores[i]);
+		
+		float max_root = fmaxf(x1, x2);
+		
+		// ceilf(x - 1.0) is actually not equivalent to floorf(x) at integer values.
+		// ceilf(2.0 - 1.0) = ceilf(1.0) = 1.0
+		// floorf(2.0) = 2.0
+		ranks[i] = (unsigned int)ceilf(max_root - 1.0f);
+	}
+}
+
+__host__
+void cuda_RBS(unsigned int *ranks, const float *scores, const size_t count)
+{
+	kernel_RBS<<<1, 1>>>(ranks, scores, count);
+}
+
+/**
+ * Fill the array x on a GPU with the value val.
  *
  * Params:
  *     x = A pointer to an array to fill.
