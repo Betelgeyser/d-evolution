@@ -64,6 +64,20 @@ body
 	return mixin("x" ~ opLeft ~ "a") && mixin("x" ~ opRight ~ "b");
 }
 
+/**
+ * Returns: Arithmetic series
+ *     <math><msub><mi>a</mi><mi>1</mi></msub><mo>+</mo><mi>...</mi><mo>+</mo><msub><mi>a</mi><mi>n</mi></msub></math>.
+ *
+ * Params:
+ *     a1 = The first term of the sequence.
+ *     an = The nth term.
+ *     n = Number of terms in the sequence.
+ */
+float AS(in float a1, in float an, in float n) @nogc nothrow pure @safe
+{
+	return (a1 + an) * n / 2.0f;
+}
+
 version (unittest)
 {
 	public import std.stdio : write, writeln;
