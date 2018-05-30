@@ -306,11 +306,14 @@ struct Layer
 			{
 				float diff = abs(parent1.weights[i] - parent2.weights[i]);
 				
-				float _min = min(parent1.weights[i], parent2.weights[i], params.min);
-				float _max = max(parent1.weights[i], parent2.weights[i], params.max);
+				float _min = min(parent1.weights[i], parent2.weights[i]);
+				float _max = max(parent1.weights[i], parent2.weights[i]);
 				
 				_min -= alpha * diff;
 				_max += alpha * diff;
+				
+				_min = max(_min, params.min);
+				_max = min(_max, params.max);
 				
 				assert (w >= _min && w <= _max);
 			}

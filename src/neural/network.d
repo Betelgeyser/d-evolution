@@ -366,11 +366,14 @@ struct Network
 				{
 					float diff = abs(parent1._layers[i].weights[j] - parent2._layers[i].weights[j]);
 					
-					float _min = min(parent1._layers[i].weights[j], parent2._layers[i].weights[j], params.min);
-					float _max = max(parent1._layers[i].weights[j], parent2._layers[i].weights[j], params.max);
+					float _min = min(parent1._layers[i].weights[j], parent2._layers[i].weights[j]);
+					float _max = max(parent1._layers[i].weights[j], parent2._layers[i].weights[j]);
 					
 					_min -= alpha * diff;
 					_max += alpha * diff;
+					
+					_min = max(_min, params.min);
+					_max = min(_max, params.max);
 					
 					assert (w >= _min && w <= _max);
 				}
