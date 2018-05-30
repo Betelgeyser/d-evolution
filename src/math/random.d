@@ -47,9 +47,14 @@ version (unittest)
 /**
  * Pool of random bits.
  *
+ * NOT THREAD SAFE!!!
+ *
  * As cuRAND achieves maximun performance generating big amounts of data, this structure will generate a pool of uniform
  * random bits. If all numbers in the pool has been used or there is not enought values in the pool to return,
- * then a new pool is generated. 
+ * then a new pool is generated.
+ *
+ * TODO: Thread safety. Pool returns a reference to a memory. If another thread requests new values and pool regenerates,
+ * then previously returned reference will be pointing to wrong, newly generated values.
  */
 struct RandomPool
 {

@@ -40,7 +40,10 @@ void nogcFree(T)(ref T[] array) nothrow @nogc
 	array.destroy();
 }
 
-bool between(string boundaries = "[]")(in float x, in float a, in float b)
+/**
+ * Returns: true if <math><mi>a</mi><mo>&le;</mo><mi>x</mi><mo>&le;</mo><mi>b</mi></math>.
+ */
+bool between(string boundaries = "[]")(in float x, in float a, in float b) @nogc nothrow pure @safe
 in
 {
 	assert (a <= b, "common.between!\"" ~ boundaries ~ "\"(x, a, b): invalid boundary interval");

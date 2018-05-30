@@ -153,7 +153,8 @@ struct Population
 		
 		_individuals.each!((ref x) => x = Network(params, pool));
 		_offsprings.each!((ref x) => x = Network(params, pool)); // There is no need to initialize offsprings
-		                                                         // in the first generation, but without that freeMem will fail.
+		                                                         // in the first generation, but we need to allocate memory,
+		                                                         // without that freeMem will fail.
 	}
 	
 	///
