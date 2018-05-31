@@ -112,20 +112,35 @@ struct Population
 	private
 	{
 		Individual[]  _individuals;
-		Network[]     _offsprings;
+		
+		Individual[] _currentGeneration;
+		Individual[] _newGeneration;
+		
 		NetworkParams _networkParams;
+		
+		ulong _size;
+		ulong _generation;
 	}
-	
-	float selectivePressure = 0.20; /// Determines what fraction of the population will be renewed every generation.
 	
 	invariant
 	{
-		assert (selectivePressure > 0 && selectivePressure <= 1); 
+		if (_individuals.length)
+		{
+			assert (_currentGeneration.length == _size);
+			assert (_newGeneration.length     == _size);
+			
+			assert (_individuals.length == _currentGeneration.length + _newGeneration.length);
+		}
 	}
-
-	@property const(Individual[]) individuals() const @nogc nothrow pure @safe
+	
+	@property ulong size() const @nogc nothrow pure @safe
 	{
-		return _individuals;
+		return _size;
+	}
+	
+	@property ulong generation() const @nogc nothrow pure @safe
+	{
+		return _generation;
 	}
 	
 	/**
@@ -135,26 +150,24 @@ struct Population
 	in
 	{
 		assert (&params, "Incorrect network parameters");
-		assert (size >= 0);
-	}
-	out
-	{
-		assert (_individuals.length);
-		assert (_offsprings.length, "Population must produce at least one offspring each generation.");
+		assert (size > 0);
 	}
 	body
 	{
 		scope(failure) freeMem();
 		
+		_size = size;
 		_networkParams = params;
 		
-		_individuals = nogcMalloc!Individual(size);
-		_offsprings  = nogcMalloc!Network(lround(size * selectivePressure));
+		_individuals = nogcMalloc!Individual(size * 2);
 		
-		_individuals.each!((ref x) => x = Network(params, pool));
-		_offsprings.each!((ref x) => x = Network(params, pool)); // There is no need to initialize offsprings
-		                                                         // in the first generation, but we need to allocate memory,
-		                                                         // without that freeMem will fail.
+		_currentGeneration = _individuals[0 .. size];
+		_newGeneration     = _individuals[size .. $];
+		
+		_currentGeneration.each!((ref x) => x = Network(params, pool));
+		_newGeneration.each!((ref x) => x = Network(params, pool)); // There is no need to initialize offsprings
+		                                                            // in the first generation, but we need to allocate memory,
+		                                                            // without that freeMem will fail.
 	}
 	
 	///
@@ -163,25 +176,24 @@ struct Population
 		mixin(writeTest!__ctor);
 		
 		NetworkParams params = { inputs : 4, outputs : 2, neurons : 3, layers : 4 };
-		immutable size = 10;
+		immutable size = 100;
 		
 		auto population = Population(params, size, randomPool);
 		scope(exit) population.freeMem();
 		
+		assert (population.size == size);
+		
 		with (population)
 		{
-			assert (_individuals.length == size);
-			assert (_offsprings.length  == lround(size * selectivePressure));
-			
 			// Not that population should test networks, but need to check whether population creates all networks or not
 			assert (
-				individuals.all!(
+				_currentGeneration.all!(
 					i => i.individual.layers.all!(
 						l => l.weights.all!(
 							w => isFinite(w))))
 			);
 			assert (
-				individuals.all!(
+				_currentGeneration.all!(
 					i => i.individual.layers.all!(
 						l => l.weights.all!(
 							w => w.between(params.min, params.max))))
@@ -200,12 +212,9 @@ struct Population
 	void freeMem() nothrow @nogc
 	{
 		_individuals.each!(x => x.freeMem);
-		_offsprings.each!(x => x.freeMem);
 		
 		if (_individuals.length)
 			nogcFree(_individuals);
-		if (_offsprings.length)
-			nogcFree(_offsprings);
 	}
 	
 	/**
@@ -225,7 +234,7 @@ struct Population
 		
 		transpose(outputs, outputsT, cublasHandle);
 		
-		foreach (ref i; _individuals)
+		foreach (ref i; _currentGeneration)
 		{
 			i(inputs, approx, cublasHandle);
 			
@@ -285,48 +294,54 @@ struct Population
 	 * TODO: currently individual CAN breed with ITSELF! Despite chances are low, this is a bad practice,
 	 * should be fixed later. That probably implies rewriting RandomPool fully on CUDA C++ 
 	 */
-	void breed(RandomPool pool)
+	void evolve(RandomPool pool)
 	{
 		this.order();
 		
-		immutable float ranksSum = AS(1, _individuals.length, _individuals.length);
+		immutable float ranksSum = AS(1, size, size);
 		
 		uint[] xParents;
-		cudaMallocManaged(xParents, _offsprings.length);
+		cudaMallocManaged(xParents, size);
 		scope(exit) cudaFree(xParents);
 		
-		float[] randomScores = cudaScale(pool(_offsprings.length), 0, ranksSum);
+		float[] randomScores = cudaScale(pool(size), 0, ranksSum);
 		cudaRBS(xParents, randomScores);
 		
 		uint[] yParents;
-		cudaMallocManaged(yParents, _offsprings.length);
+		cudaMallocManaged(yParents, size);
 		scope(exit) cudaFree(yParents);
 		
-		randomScores = cudaScale(pool(_offsprings.length), 0, ranksSum);
+		randomScores = cudaScale(pool(size), 0, ranksSum);
 		cudaRBS(yParents, randomScores);
 		
-		foreach (i; 0 .. _offsprings.length)
-			_offsprings[i].crossover(
-				_individuals[xParents[i]],
-				_individuals[yParents[i]],
+		foreach (i; 0 .. size)
+			_newGeneration[i].crossover(
+				_currentGeneration[xParents[i]],
+				_currentGeneration[yParents[i]],
 				_networkParams.min, _networkParams.max,
 				0.5,
 				pool
 			);
+		
+		auto tmp = _newGeneration[0 .. $];
+		_newGeneration = _currentGeneration[0 .. $];
+		_currentGeneration = tmp[0 .. $];
+		
+		++_generation;
 	}
 	
 	///
 	unittest
 	{
-		mixin(notTested!breed);
+		mixin(notTested!evolve);
 		
 		NetworkParams params = { inputs : 5, outputs : 1, neurons : 3, layers : 5, min : -1.0e3, max : 1.0e3 };
-		immutable size = 10;
+		immutable size = 100;
 		
 		auto population = Population(params, size, randomPool);
 		scope(exit) population.freeMem();
 		
-		population.breed(randomPool);
+		population.evolve(randomPool);
 	}
 }
 
