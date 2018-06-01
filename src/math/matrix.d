@@ -74,7 +74,7 @@ struct Matrix
 	/**
 	 * Number of rows.
 	 */
-	@property uint rows() const pure nothrow @safe @nogc
+	@property uint rows() const @nogc nothrow pure @safe
 	{
 		return _rows;
 	}
@@ -82,7 +82,7 @@ struct Matrix
 	/**
 	 * Returns: The number of columns.
 	 */
-	@property uint cols() const pure nothrow @safe @nogc
+	@property uint cols() const @nogc nothrow pure @safe
 	{
 		return _cols;
 	}
@@ -92,7 +92,7 @@ struct Matrix
 	 *
 	 * Returns: The number of elements.
 	 */
-	@property size_t length() const pure nothrow @safe @nogc
+	@property size_t length() const @nogc nothrow pure @safe
 	{
 		return values.length;
 	}
@@ -116,7 +116,7 @@ struct Matrix
 	 *     cols = Number of columns.
 	 *     values = Array of values.
 	 */
-	this(in uint rows, in uint cols) nothrow @nogc
+	this(in uint rows, in uint cols) @nogc nothrow
 	in
 	{
 		assert (rows >= 1);
