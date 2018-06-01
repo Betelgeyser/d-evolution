@@ -53,6 +53,7 @@ struct Matrix
 {
 	alias values this;
 	
+	// Pointer should not be reassignable.
 	float[] values; /// A pointer to an allocated memory.
 	
 	private
@@ -76,7 +77,7 @@ struct Matrix
 	}
 	
 	/**
-	 * Number of cols.
+	 * Returns: The number of columns.
 	 */
 	@property uint cols() const pure nothrow @safe @nogc
 	{
@@ -86,8 +87,7 @@ struct Matrix
 	/**
 	 * The length of the matrix.
 	 *
-	 * Returns:
-	 *     Number of elements.
+	 * Returns: The number of elements.
 	 */
 	@property size_t length() const pure nothrow @safe @nogc
 	{
