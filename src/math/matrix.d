@@ -159,17 +159,17 @@ struct Matrix
 		immutable rows = 2;
 		immutable cols = 3;
 		
-		auto m = Matrix(rows, cols);
-		scope(exit) m.freeMem();
+		auto matrix = Matrix(rows, cols);
+		scope(exit) matrix.freeMem();
 		
 		cudaDeviceSynchronize();
 		
-		assert (m.rows == rows);
-		assert (m.cols == cols);
+		assert (matrix.rows == rows);
+		assert (matrix.cols == cols);
 		
 		// Check memory accessebility
-		assert (m[0] == m[0]);
-		assert (m[m.length - 1] == m[m.length - 1]);
+		assert (matrix[0]     == matrix[0]);
+		assert (matrix[$ - 1] == matrix[$ - 1]);
 	}
 	
 	/**
