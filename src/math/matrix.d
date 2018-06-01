@@ -15,6 +15,9 @@
  */
 module math.matrix;
 
+// Standard D modules
+import std.range : ElementType;
+
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.cublas;
@@ -92,6 +95,14 @@ struct Matrix
 	@property size_t length() const pure nothrow @safe @nogc
 	{
 		return values.length;
+	}
+	
+	/**
+	 * Returns: The size of the matrix in bytes.
+	 */
+	@property size_t size() const @nogc nothrow pure @safe
+	{
+		return length * ElementType!(typeof(values)).sizeof;
 	}
 	
 	/**
