@@ -92,7 +92,7 @@ struct Layer
 	}
 	
 	/**
-	 * Number of connections per neuron (including bias).
+	 * Returns: The number of connections per neuron (including bias).
 	 */
 	@property uint connectionsLength() const @nogc nothrow pure @safe
 	{
@@ -100,7 +100,7 @@ struct Layer
 	}
 	
 	/**
-	 * Number of neurons in the layer.
+	 * Returns: The number of neurons in the layer.
 	 */
 	@property uint neuronsLength() const @nogc nothrow pure @safe
 	{
@@ -108,13 +108,16 @@ struct Layer
 	}
 	
 	/**
-	 * Total number of weights.
+	 * Returns: Total number of weights.
 	 */
 	@property ulong length() const @nogc nothrow pure @safe
 	{
 		return _weights.length;
 	}
 	
+	/**
+	 * Returns: The weights array of the layer.
+	 */
 	@property const(float[]) weights() const @nogc nothrow pure @safe
 	{
 		return _weights.values;
