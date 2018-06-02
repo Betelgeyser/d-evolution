@@ -121,6 +121,14 @@ struct Layer
 	}
 	
 	/**
+	 * Returns: The size of the memory in bytes.
+	 */
+	@property size_t size() const @nogc nothrow pure @safe
+	{
+		return _weights.size;
+	}
+	
+	/**
 	 * Consctroctor with random initialization.
 	 *
 	 * Params:
