@@ -105,35 +105,47 @@ struct Network
 	private Layer[] _layers; /// Hidden layers. It is possible to have no hidden layers at all.
 	
 	/**
-	 * Number of layers.
+	 * Returns: The total number of layers, including input and output layers.
 	 */
 	@property ulong depth() const pure nothrow @safe @nogc
 	{
 		return _layers.length;
 	}
 	
+	/**
+	 * Returns: The input (the first) layer.
+	 */
 	@property const(Layer) inputLayer() const @nogc nothrow pure @safe
 	{
 		return _layers[0];
 	}
 	
+	/**
+	 * Returns: All hidden layers of the network.
+	 */
 	@property const(Layer[]) hiddenLayers() const @nogc nothrow pure @safe
 	{
 		return _layers[1 .. $-1];
 	}
 	
+	/**
+	 * Returns: The output (the last) layer.
+	 */
 	@property const(Layer) outputLayer() const @nogc nothrow pure @safe
 	{
 		return _layers[$ - 1];
 	}
 	
+	/**
+	 * Returns: All network's layers.
+	 */
 	@property const(Layer[]) layers() const @nogc nothrow pure @safe
 	{
 		return _layers;
 	}
 	
 	/**
-	 * Get number of neurons per hidden layer.
+	 * Returns: The number of neurons per a hidden layer.
 	 */
 	@property uint neuronsPerLayer() const pure nothrow @safe @nogc
 	{
