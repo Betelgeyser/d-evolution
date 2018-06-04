@@ -141,7 +141,20 @@ struct Network
 	}
 	
 	/**
-	 * Constructor for random neural network.
+	 * Returns: Size of the network in bytes.
+	 */
+	@property size_t size() const @nogc nothrow pure @safe
+	{
+		size_t sum = 0;
+		
+		foreach (l; layers)
+			sum += l.size;
+		
+		return sum;
+	}
+	
+	/**
+	 * Constructor for a random neural network.
 	 *
 	 * Params:
 	 *     params = Network parameters.
