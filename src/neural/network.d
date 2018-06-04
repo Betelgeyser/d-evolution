@@ -147,7 +147,7 @@ struct Network
 	/**
 	 * Returns: The number of neurons per a hidden layer.
 	 */
-	@property uint neuronsPerLayer() const pure nothrow @safe @nogc
+	@property uint neuronsPerLayer() const @nogc nothrow pure @safe
 	{
 		return inputLayer.neuronsLength;
 	}
@@ -235,7 +235,7 @@ struct Network
 	 * causes spontaneous destructors calls. Apparently structs are not intended
 	 * to be used with dynamic memory, probably it should be implemented as a class.
 	 */
-	void freeMem() nothrow @nogc
+	void freeMem() @nogc nothrow
 	{
 		_layers.each!(x => x.freeMem());
 		
@@ -253,7 +253,7 @@ struct Network
 	 *     outputs = Output matrix of size m x n, where n is the number of output neurons.
 	 *     cublasHandle = Cublas handle.
 	 */
-	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const nothrow @nogc
+	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const @nogc nothrow
 	{
 		auto prev = Matrix(inputs.rows, neuronsPerLayer + biasLength);
 		scope(exit) prev.freeMem();
