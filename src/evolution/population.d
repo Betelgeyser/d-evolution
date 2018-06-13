@@ -120,6 +120,8 @@ struct Population
 		
 		ulong _size;       /// Size of the population.
 		ulong _generation; /// Current generation number.
+		
+		bool _isOrdered; /// Shows if individuals are already ordered.
 	}
 	
 	invariant
@@ -163,16 +165,22 @@ struct Population
 	/**
 	 * Returns: Fitness of the best individual in the current generation.
 	 */
-	@property const(Individual) best() const @nogc nothrow pure @safe
+	@property const(Individual) best() @nogc nothrow pure @safe
 	{
+		if (!_isOrdered)
+			this._order();
+		
 		return _currentGeneration[$ - 1];
 	}
 	
 	/**
 	 * Returns: Fitness of the best individual in the current generation.
 	 */
-	@property float worst() const @nogc nothrow pure @safe
+	@property float worst() @nogc nothrow pure @safe
 	{
+		if (!_isOrdered)
+			this._order();
+		
 		return _currentGeneration[0].fitness;
 	}
 	
@@ -288,6 +296,8 @@ struct Population
 			
 			i.fitness = MASE(outputsT, approxT, cublasHandle);
 		}
+		
+		_isOrdered = false;
 	}
 	
 	unittest
@@ -302,15 +312,19 @@ struct Population
 	 * As currently only MASE fitness function is supported and the lower it gets - the better it is, therefor the better
 	 * an individual - the higher index it has. This desicion is made to ease implementation of the rank based selection.
 	 */
-	void order() nothrow @nogc
+	private void _order() @nogc nothrow pure @safe
 	{
-		_currentGeneration.sort!"a > b"();
+		if (!_isOrdered)
+		{
+			_currentGeneration.sort!"a > b"();
+			_isOrdered = true;
+		}
 	}
 	
 	///
 	unittest
 	{
-		mixin(writeTest!order);
+		mixin(writeTest!_order);
 		
 		NetworkParams params = { inputs : 5, outputs : 2, neurons : 4, layers : 5 };
 		immutable size = 100;
@@ -323,9 +337,12 @@ struct Population
 		foreach (ref i; population._currentGeneration)
 			i.fitness = i.layers[0].weights[0];
 		
-		population.order();
+		assert (!population._isOrdered);
+		
+		population._order();
 		
 		assert (population._currentGeneration.isSorted!"a.fitness > b.fitness");
+		assert (population._isOrdered);
 	}
 	
 	/**
@@ -343,7 +360,7 @@ struct Population
 	 */
 	void evolve(RandomPool pool)
 	{
-		this.order();
+		this._order();
 		
 		immutable float ranksSum = AS(1, popSize, popSize);
 		
