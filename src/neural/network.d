@@ -269,6 +269,12 @@ struct Network
 			"Inputs must have %d columns, got %d".format(inputLength - biasLength, inputs.cols)
 		);
 		
+		auto inputsE = Matrix(inputs.rows, inputs.cols + biasLength);
+		scope(exit) inputsE.freeMem();
+		
+		inputsE.colSlice(0, inputs.cols).values[0 .. $] = inputs.values[0 .. $];
+		cudaFill(inputsE.colSlice(inputsE.cols - biasLength, inputsE.cols), biasWeight);
+		
 		auto prev = Matrix(inputs.rows, neuronsPerLayer + biasLength);
 		scope(exit) prev.freeMem();
 		
@@ -305,8 +311,7 @@ struct Network
 		auto network = Network(params, randomPool);
 		scope(exit) network.freeMem();
 		
-		inputs[0 .. $ - params.neurons].each!"a = i + 1";
-		inputs[$ - params.neurons .. $].each!(x => x = biasWeight); // column for bias
+		inputs[0 .. $].each!"a = i + 1";
 		
 		// Reinitializing network with deterministic values for testing 
 		with (network)
