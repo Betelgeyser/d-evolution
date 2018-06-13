@@ -227,7 +227,7 @@ struct Population
 		auto population = Population(params, size, randomPool);
 		scope(exit) population.freeMem();
 		
-		assert (population.size == size);
+		assert (population.popSize == size);
 		
 		with (population)
 		{
@@ -344,23 +344,23 @@ struct Population
 	{
 		this.order();
 		
-		immutable float ranksSum = AS(1, size, size);
+		immutable float ranksSum = AS(1, popSize, popSize);
 		
 		uint[] xParents;
-		cudaMallocManaged(xParents, size);
+		cudaMallocManaged(xParents, popSize);
 		scope(exit) cudaFree(xParents);
 		
-		float[] randomScores = cudaScale(pool(size), 0, ranksSum);
+		float[] randomScores = pool(popSize).cudaScale(0, ranksSum);
 		cudaRBS(xParents, randomScores);
 		
 		uint[] yParents;
-		cudaMallocManaged(yParents, size);
+		cudaMallocManaged(yParents, popSize);
 		scope(exit) cudaFree(yParents);
 		
-		randomScores = cudaScale(pool(size), 0, ranksSum);
+		randomScores = pool(popSize).cudaScale(0, ranksSum);
 		cudaRBS(yParents, randomScores);
 		
-		foreach (i; 0 .. size)
+		foreach (i; 0 .. popSize)
 			_newGeneration[i].crossover(
 				_currentGeneration[xParents[i]],
 				_currentGeneration[yParents[i]],
