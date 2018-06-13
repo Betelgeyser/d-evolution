@@ -72,6 +72,44 @@ unittest
 	assert (equal!approxEqual(data, result));
 }
 
+private extern (C++) void cuda_ReLU(float* x, const size_t n) @nogc nothrow;
+/**
+ * Calculate rectifier of each element of an array $(D_PARAM x) on a GPU in place.
+ *
+ * <math><mrow>
+ *     <mi mathvariant="italic">ReLU</mi><mo>(</mo><mi>x</mi><mo>)</mo>
+ *     <mo>=</mo>
+ *     <mi mathvariant="italic">max</mi><mfenced open="(" close=")" separator=","><mn>0</mn><mi>x</mi></mfenced>
+ * </mrow></math>
+ *
+ * Params:
+ *     x = An array to calculate.
+ */
+void cudaReLU(float[] x) nothrow @nogc
+{
+	cuda_ReLU(x.ptr, x.length);
+}
+
+///
+unittest
+{
+	mixin(writeTest!cudaReLU);
+	
+	immutable length = 3;
+	
+	float[] data;
+	cudaMallocManaged(data, length);
+	scope(exit) cudaFree(data);
+	
+	data[0 .. $] = [-1, 0, 1];
+	
+	cudaReLU(data);
+	cudaDeviceSynchronize();
+	
+	immutable float[] result = [0, 0, 1];
+	assert (equal!approxEqual(data, result));
+}
+
 private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, const size_t count) nothrow @nogc;
 /**
  * Transform uniformly distrubuted random bits into uniformly distributed random floating point numbers in range 

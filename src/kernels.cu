@@ -53,6 +53,35 @@ void cuda_tanh(float *x, const size_t count)
 }
 
 /**
+ * Calculate rectifier of each element of an array x on a GPU in place.
+ *
+ * <math><mrow>
+ *     <mi mathvariant="italic">ReLU</mi><mo>(</mo><mi>x</mi><mo>)</mo>
+ *     <mo>=</mo>
+ *     <mi mathvariant="italic">max</mi><mfenced open="(" close=")" separator=","><mn>0</mn><mi>x</mi></mfenced>
+ * </mrow></math>
+ *
+ * Params:
+ *     x = A pointer to an array to calculate.
+ *     count = Size of the array.
+ */
+__global__
+void kernel_ReLU(float *x, const size_t count)
+{
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	if (i < count)
+		x[i] = fmaxf(0, x[i]);
+}
+
+/// ditto
+__host__
+void cuda_ReLU(float *x, const size_t count)
+{
+	kernel_ReLU<<<(count + 1023) / 1023, 1024>>>(x, count);
+}
+
+/**
  * Returns a floating point value scaled from unsigned integer number x to a given segment [a; b],
  * meaning 0 will return a and MAX(unsigned int) will return b.
  * 
