@@ -171,12 +171,7 @@ struct Network
 	 */
 	@property size_t size() const @nogc nothrow pure @safe
 	{
-		size_t sum = 0;
-		
-		foreach (l; layers)
-			sum += l.size;
-		
-		return sum;
+		return inputLayer.size + outputLayer.size + (hiddenLayers.length ? hiddenLayers.length * hiddenLayers[0].size : 0);
 	}
 	
 	/**
