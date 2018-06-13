@@ -133,7 +133,21 @@ struct Population
 		}
 	}
 	
-	@property ulong size() const @nogc nothrow pure @safe
+	/**
+	 * Returns: The required size of the population in bytes.
+	 *
+	 * The required size means that total amount of memory is counted including additional memory to store offspring and
+	 * other implementation details.
+	 */
+	@property size_t size() const @nogc nothrow pure @safe
+	{
+		return _individuals.length * _individuals[0].size;
+	}
+	
+	/**
+	 * Returns: The number of the individuals in the current generation.
+	 */
+	@property ulong popSize() const @nogc nothrow pure @safe
 	{
 		return _size;
 	}
