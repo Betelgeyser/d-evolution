@@ -159,6 +159,22 @@ struct Network
 	}
 	
 	/**
+	 * Returns: How many input values the network takes.
+	 */
+	@property uint inputLength() const @nogc nothrow pure @safe
+	{
+		return inputLayer.connectionsLength();
+	}
+	
+	/**
+	 * Returns: How many output values the network returns.
+	 */
+	@property uint outputLength() const @nogc nothrow pure @safe
+	{
+		return outputLayer.neuronsLength();
+	}
+	
+	/**
 	 * Returns: The number of neurons per a hidden layer.
 	 */
 	@property uint neuronsPerLayer() const @nogc nothrow pure @safe
