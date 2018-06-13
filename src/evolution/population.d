@@ -283,8 +283,13 @@ struct Population
 	void fitness(in Matrix inputs, in Matrix outputs, cublasHandle_t cublasHandle) nothrow @nogc
 	{
 		auto outputsT = Matrix(outputs.cols, outputs.rows); // MASE operates on transposed matrices
-		auto approx   = Matrix(outputs.rows, outputs.cols); // Network's output is an approximated result
-		auto approxT  = Matrix(outputs.cols, outputs.rows); // MASE operates on transposed matrices
+		scope(exit) outputsT.freeMem();
+		
+		auto approx = Matrix(outputs.rows, outputs.cols); // Network's output is an approximated result
+		scope(exit) approx.freeMem();
+		
+		auto approxT = Matrix(outputs.cols, outputs.rows); // MASE operates on transposed matrices
+		scope(exit) approxT.freeMem();
 		
 		transpose(outputs, outputsT, cublasHandle);
 		
