@@ -121,7 +121,7 @@ struct Network
 	/**
 	 * Returns: The total number of layers, including input and output layers.
 	 */
-	@property ulong depth() const pure nothrow @safe @nogc
+	@property ulong depth() const @nogc nothrow pure @safe
 	{
 		return _layers.length;
 	}
@@ -275,13 +275,13 @@ struct Network
 		auto next = Matrix(inputs.rows, neuronsPerLayer + biasLength);
 		scope(exit) next.freeMem();
 		
-		cudaFill(prev.colSlice(prev.cols - 1, prev.cols), biasWeight);
-		cudaFill(next.colSlice(next.cols - 1, next.cols), biasWeight);
+		cudaFill(prev.colSlice(prev.cols - biasLength, prev.cols), biasWeight);
+		cudaFill(next.colSlice(next.cols - biasLength, next.cols), biasWeight);
 		
-		inputLayer()(inputs, prev.colSlice(0, prev.cols - 1), cublasHandle);
+		inputLayer()(inputsE, prev.colSlice(0, prev.cols - biasLength), cublasHandle);
 		foreach (l; hiddenLayers)
 		{
-			l(prev, next.colSlice(0, next.cols - 1), cublasHandle);
+			l(prev, next.colSlice(0, next.cols - biasLength), cublasHandle);
 			swap(prev, next);
 		}
 		outputLayer()(prev, outputs, cublasHandle, false);
