@@ -153,7 +153,7 @@ struct Population
 	in
 	{
 		assert (&params, "Incorrect network parameters");
-		assert (size > 0);
+		assert (size > 1);
 	}
 	body
 	{
