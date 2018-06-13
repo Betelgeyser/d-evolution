@@ -147,19 +147,6 @@ struct Matrix
 		cudaMallocManaged(values, _rows * _cols);
 	}
 	
-	/// ditto
-	this(in uint rows, in uint cols, inout(float)[] values) inout @nogc nothrow @safe
-	in
-	{
-		assert (values.length == cols * rows);
-	}
-	body
-	{
-		_rows = rows;
-		_cols = cols;
-		this.values = values;
-	}
-	
 	///
 	unittest
 	{
@@ -238,6 +225,30 @@ struct Matrix
 		assert (D.rows == 2 && D.cols == 3);
 		assert (equal!approxEqual(D.values, [1, 1, 2, 2, 3, 3])); // Remember, cuBLAS is column-major
 	}
+	
+	/**
+	 * Wraps an array into a matrix.
+	 *
+	 * Or, could be used to create a new matrix from a part of another one.
+	 *
+	 * Params:
+	 *     rows = Number of rows.
+	 *     cols = Number of columns.
+	 *     values = Array of values.
+	 */
+	private this(in uint rows, in uint cols, inout(float)[] values) inout @nogc nothrow pure @safe
+	in
+	{
+		assert (values.length == cols * rows);
+	}
+	body
+	{
+		_rows = rows;
+		_cols = cols;
+		this.values = values;
+	}
+	
+	/**
 	 * Free memory.
 	 *
 	 * For the reason how D works with structs memory freeing moved from destructor to
