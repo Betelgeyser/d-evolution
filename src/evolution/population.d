@@ -116,10 +116,10 @@ struct Population
 		Individual[] _currentGeneration; /// Individuals of the current generation.
 		Individual[] _newGeneration;     /// Memory reserved for offsprings which are the next generation.
 		
-		NetworkParams _networkParams;
+		NetworkParams _networkParams; /// Stored network parameters.
 		
-		ulong _size;
-		ulong _generation;
+		ulong _size;       /// Size of the population.
+		ulong _generation; /// Current generation number.
 	}
 	
 	invariant
