@@ -395,9 +395,7 @@ struct Population
 				pool
 			);
 		
-		auto tmp = _newGeneration[0 .. $];
-		_newGeneration = _currentGeneration[0 .. $];
-		_currentGeneration = tmp[0 .. $];
+		swap(_currentGeneration, _newGeneration);
 		
 		++_generation;
 	}
