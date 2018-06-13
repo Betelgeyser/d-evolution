@@ -212,7 +212,7 @@ unittest
 /**
  * Calculate a Mean Absolute Scalde Error between $(D_PARAM measured) and $(D_PARAM approximated) arrays of vectors on GPU.
  *
- * Though $(D_PARAM data) is of the type `Matrix` this is a technical convinience. It is interpreted as an array of vectors
+ * Though data is of the type `Matrix` this is a technical convinience. It is interpreted as an array of vectors
  * where a single column is a single vector.
  *
  * Calls cudaDeviceSyncronize() internally.
