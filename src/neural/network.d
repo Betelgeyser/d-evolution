@@ -116,7 +116,7 @@ struct NetworkParams
  */
 struct Network
 {
-	private Layer[] _layers; /// Hidden layers. It is possible to have no hidden layers at all.
+	private Layer[] _layers; /// Layers of the network.
 	
 	/**
 	 * Returns: The total number of layers, including input and output layers.
@@ -175,7 +175,7 @@ struct Network
 	}
 	
 	/**
-	 * Constructor for a random neural network.
+	 * Constructs a random neural network acording to the given parameters.
 	 *
 	 * Params:
 	 *     params = Network parameters.
@@ -255,7 +255,7 @@ struct Network
 	/**
 	 * Activate the network.
 	 *
-	 * Claculates the result of feeding an inpit matrix to the network.
+	 * Claculates the result of feeding an input matrix to the network.
 	 *
 	 * Params:
 	 *     inputs = Input matrix of size m x k, where k is the number of neuron connections (incl. bias).
