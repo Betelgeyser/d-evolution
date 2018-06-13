@@ -111,10 +111,10 @@ struct Population
 {
 	private
 	{
-		Individual[]  _individuals;
+		Individual[] _individuals; /// All individuals of the population, including reserved;
 		
-		Individual[] _currentGeneration;
-		Individual[] _newGeneration;
+		Individual[] _currentGeneration; /// Individuals of the current generation.
+		Individual[] _newGeneration;     /// Memory reserved for offsprings which are the next generation.
 		
 		NetworkParams _networkParams;
 		
@@ -138,6 +138,9 @@ struct Population
 		return _size;
 	}
 	
+	/**
+	 * Returns: The number of the current generation, where 0 means initial generation.
+	 */
 	@property ulong generation() const @nogc nothrow pure @safe
 	{
 		return _generation;
