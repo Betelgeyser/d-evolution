@@ -161,7 +161,29 @@ struct Population
 	}
 	
 	/**
+	 * Returns: Fitness of the best individual in the current generation.
 	 */
+	@property const(Individual) best() const @nogc nothrow pure @safe
+	{
+		return _currentGeneration[$ - 1];
+	}
+	
+	/**
+	 * Returns: Fitness of the best individual in the current generation.
+	 */
+	@property float worst() const @nogc nothrow pure @safe
+	{
+		return _currentGeneration[0].fitness;
+	}
+	
+	/**
+	 * Returns: Mean fitness of the current generation.
+	 */
+	@property float mean() const @nogc nothrow pure @safe
+	{
+		return _currentGeneration.map!"a.fitness".mean;
+	}
+	
 	/**
 	 * Random population constructor.
 	 *
