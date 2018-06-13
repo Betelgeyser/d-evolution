@@ -50,13 +50,23 @@ version (unittest)
  * It wraps pointer to allocated memory of values with some additional properties of a matrix, such as rows and columns
  * numbers. All linear algebra method are implemented on GPU.
  *
- * As it implements cuBLAS matrix, it is column-major ordered.
+ * As it implements cuBLAS matrix, it is column-major ordered. This means, that a matrix
+ *
+ * <math xmlns = "http://www.w3.org/1998/Math/MathML">
+ *     <mrow><mo>[</mo><mtable>
+ *         <mtr><mtd><mn>1</mn></mtd><mtd><mn>2</mn></mtd></mtr>
+ *         <mtr><mtd><mn>1</mn></mtd><mtd><mn>2</mn></mtd></mtr>
+ *         <mtr><mtd><mn>1</mn></mtd><mtd><mn>2</mn></mtd></mtr>
+ *     </mtable><mo>]</mo></mrow>
+ * </math>
+ *
+ * will be stored as [1, 1, 1, 2, 2, 2] in memory.
  */
 struct Matrix
 {
 	alias values this;
 	
-	// Pointer should not be reassignable.
+	// TODO: Pointer should not be reassignable.
 	float[] values; /// A pointer to an allocated memory.
 	
 	private
@@ -72,7 +82,7 @@ struct Matrix
 	}
 	
 	/**
-	 * Number of rows.
+	 * Returns: The number of rows.
 	 */
 	@property uint rows() const @nogc nothrow pure @safe
 	{
@@ -88,8 +98,6 @@ struct Matrix
 	}
 	
 	/**
-	 * The length of the matrix.
-	 *
 	 * Returns: The number of elements.
 	 */
 	@property size_t length() const @nogc nothrow pure @safe
@@ -108,13 +116,11 @@ struct Matrix
 	/**
 	 * Create a matrix and allocate memory for it.
 	 *
-	 * Default values are not initialized. If a cuRAND generator is passed,
-	 * values are randomly generated on GPU.
+	 * Default values are not initialized.
 	 *
 	 * Params:
 	 *     rows = Number of rows.
 	 *     cols = Number of columns.
-	 *     values = Array of values.
 	 */
 	this(in uint rows, in uint cols) @nogc nothrow
 	in
