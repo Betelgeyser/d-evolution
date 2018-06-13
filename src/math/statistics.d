@@ -17,6 +17,7 @@ module math.statistics;
 
 // Standard D modules
 import std.algorithm : mean;
+import std.parallelism;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
@@ -147,7 +148,9 @@ body
 	AE(A, B, error, cublasHandle);
 	cudaDeviceSynchronize();
 	
-	return error.values.mean;
+	// TODO: less accurate than std.algorith.mean but much faster.
+	// Though, multithreaded mean shoud be used.
+	return taskPool.reduce!"a + b"(error.values) / error.values.length;
 }
 
 ///
