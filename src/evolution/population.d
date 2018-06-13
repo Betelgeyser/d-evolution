@@ -29,6 +29,7 @@ import common;
 import math;
 import neural.network;
 
+public import neural.network : NetworkParams;
 
 version (unittest)
 {
