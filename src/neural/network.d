@@ -302,7 +302,7 @@ struct Network
 		
 		immutable measures = 4;
 		
-		auto inputs = Matrix(measures, params.neurons);
+		auto inputs = Matrix(measures, params.inputs);
 		scope(exit) inputs.freeMem();
 		
 		auto outputs = Matrix(measures, params.outputs);
