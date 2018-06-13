@@ -16,7 +16,7 @@
 module evolution.population;
 
 // D modules
-import std.algorithm : each, sort;
+import std.algorithm : each, map, mean, sort, swap;
 import std.math      : lround;
 
 // CUDA modules
@@ -281,7 +281,7 @@ struct Population
 	 *     outputs = Output matrix of a size m x k, where k is the number of output variables and m is the number of results.
 	 *     cublasHandle = Cublas handle.
 	 */
-	void fitness(in Matrix inputs, in Matrix outputs, cublasHandle_t cublasHandle) nothrow @nogc
+	void fitness(in Matrix inputs, in Matrix outputs, cublasHandle_t cublasHandle)
 	{
 		auto outputsT = Matrix(outputs.cols, outputs.rows); // MASE operates on transposed matrices
 		scope(exit) outputsT.freeMem();
