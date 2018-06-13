@@ -30,7 +30,9 @@ const float uint_max_fp = 4294967295.0f; /// Maximum value of unsigned integer r
 __global__
 void kernel_tanh(float *x, const size_t count)
 {
-	for (size_t i = 0; i < count; ++i)
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	if (i < count)
 		x[i] = tanhf(x[i]);
 }
 
@@ -38,7 +40,7 @@ void kernel_tanh(float *x, const size_t count)
 __host__
 void cuda_tanh(float *x, const size_t count)
 {
-	kernel_tanh<<<1, 1>>>(x, count);
+	kernel_tanh<<<(count + 1023) / 1023, 1024>>>(x, count);
 }
 
 /**
@@ -82,8 +84,10 @@ void kernel_scale(void *ptr, const float a, const float b, const size_t count)
 {
 	unsigned int *uPtr = (unsigned int*)ptr;
 	float        *fPtr = (float*)ptr;
+
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	
-	for (size_t i = 0; i < count; ++i)
+	if (i < count)
 		fPtr[i] = scale(uPtr[i], a, b);
 }
 
@@ -91,7 +95,7 @@ void kernel_scale(void *ptr, const float a, const float b, const size_t count)
 __host__
 void cuda_scale(void *ptr, const float a, const float b, const size_t count)
 {
-	kernel_scale<<<1, 1>>>(ptr, a, b, count);
+	kernel_scale<<<(count + 1023) / 1023, 1024>>>(ptr, a, b, count);
 }
 
 /**
@@ -149,7 +153,9 @@ void kernel_BLX_a(
 	const size_t count
 )
 {
-	for (size_t i = 0; i < count; ++i)
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	if (i < count)
 	{
 		float _a = fminf(x[i], y[i]) - alpha * fabsf(x[i] - y[i]);
 		float _b = fmaxf(x[i], y[i]) + alpha * fabsf(x[i] - y[i]);
@@ -175,7 +181,7 @@ void cuda_BLX_a(
 	const size_t count
 )
 {
-	kernel_BLX_a<<<1, 1>>>(x, y, offspring, a, b, alpha, u, count);
+	kernel_BLX_a<<<(count + 1023) / 1023, 1024>>>(x, y, offspring, a, b, alpha, u, count);
 }
 
 /**
@@ -199,7 +205,9 @@ void quadratic(float &x1, float &x2, const float a, const float b, const float c
 __global__
 void kernel_RBS(unsigned int *ranks, const float *scores, const size_t count)
 {
-	for (size_t i = 0; i < count; ++i)
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	if (i < count)
 	{
 		float x1, x2; // Equation roots
 		
@@ -217,7 +225,7 @@ void kernel_RBS(unsigned int *ranks, const float *scores, const size_t count)
 __host__
 void cuda_RBS(unsigned int *ranks, const float *scores, const size_t count)
 {
-	kernel_RBS<<<1, 1>>>(ranks, scores, count);
+	kernel_RBS<<<(count + 1023) / 1023, 1024>>>(ranks, scores, count);
 }
 
 /**
@@ -231,7 +239,9 @@ void cuda_RBS(unsigned int *ranks, const float *scores, const size_t count)
 __global__
 void kernel_fill(float *x, const float val, const size_t count)
 {
-	for (size_t i = 0; i < count; ++i)
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	if (i < count)
 		x[i] = val;
 }
 
@@ -239,7 +249,7 @@ void kernel_fill(float *x, const float val, const size_t count)
 __host__
 void cuda_fill(float *x, const float val, const size_t count)
 {
-	kernel_fill<<<1, 1>>>(x, val, count);
+	kernel_fill<<<(count + 1023) / 1023, 1024>>>(x, val, count);
 }
 
 /**
@@ -254,7 +264,9 @@ void cuda_fill(float *x, const float val, const size_t count)
 __global__
 void kernel_L2(const float *x, float *y, const unsigned int dim, const size_t count)
 {
-	for (size_t i = 0; i < count; ++i)
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	if (i < count)
 		y[i] = normf(dim, x + dim * i);
 }
 
@@ -262,6 +274,6 @@ void kernel_L2(const float *x, float *y, const unsigned int dim, const size_t co
 __host__
 void cuda_L2(const float *x, float *y, const unsigned int dim, const size_t count)
 {
-	kernel_L2<<<1, 1>>>(x, y, dim, count);
+	kernel_L2<<<(count + 1023) / 1023, 1024>>>(x, y, dim, count);
 }
 
