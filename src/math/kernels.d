@@ -35,6 +35,15 @@ private extern (C++) void cuda_tanh(float* x, const size_t n) nothrow @nogc;
 /**
  * Calculate hyperbolic tangent of each element of an array $(D_PARAM x) on a GPU in place.
  *
+ * <math><mrow>
+ *     <mi mathvariant="italic">tanh</mi><mo>(</mo><mi>x</mi><mo>)</mo>
+ *     <mo>=</mo>
+ *     <mfrac>
+ *         <mrow><msup><mi>e</mi><mrow><mn>2</mn><mi>x</mi></mrow></msup><mo>-</mo><mn>1</mn></mrow>
+ *         <mrow><msup><mi>e</mi><mrow><mn>2</mn><mi>x</mi></mrow></msup><mo>+</mo><mn>1</mn></mrow>
+ *     </mfrac>
+ * </mrow></math>
+ *
  * Params:
  *     x = An array to calculate.
  */
@@ -66,7 +75,7 @@ unittest
 private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, const size_t count) nothrow @nogc;
 /**
  * Transform uniformly distrubuted random bits into uniformly distributed random floating point numbers in range 
- * [$(D_PARAM a); $(D_PARAM b)], where $(D_PARAM a) &le $(D_PARAM b). 0 will translate to $(D_PARAM a) and uint.max -
+ * [$(D_PARAM a); $(D_PARAM b)], where $(D_PARAM a) &le; $(D_PARAM b). 0 will translate to $(D_PARAM a) and uint.max -
  * to $(D_PARAM b).
  *
  * The main goal of this function is to minimize rounding errors when scaling any other radnomly generated floating point
@@ -143,14 +152,14 @@ private extern (C++) void cuda_BLX_a(
  *             <msub><mi>X</mi><mi>i</mi></msub><msub><mi>Y</mi><mi>i</mi></msub>
  *         </mfenced>
  *         <mo>-</mo>
- *         <mi>α</mi><mo></mo><msub><mi>d</mi><mi>i</mi></msub>
+ *         <mi>α</mi><msub><mi>d</mi><mi>i</mi></msub>
  *     </mrow>
  *     <mrow>
  *         <mtext>max</mtext><mfenced open="(" close=")" separators=", ">
  *             <msub><mi>X</mi><mi>i</mi></msub><msub><mi>Y</mi><mi>i</mi></msub>
  *         </mfenced>
  *         <mo>+</mo>
- *         <mi>α</mi><mo></mo><msub><mi>d</mi><mi>i</mi></msub>
+ *         <mi>α</mi><msub><mi>d</mi><mi>i</mi></msub>
  *     </mrow>
  * </mfenced></mrow></math>
  * , where
@@ -238,8 +247,25 @@ unittest
 	assert (equal!approxEqual(offspring, result));
 }
 
-private extern(C++) void cuda_RBS(uint* ranks, const float* scores, const size_t count);
-void cudaRBS(uint[] ranks, in float[] scores)
+private extern(C++) void cuda_RBS(uint* ranks, const float* scores, const size_t count) @nogc nothrow;
+/**
+ * Rank based parent selection.
+ *
+ * Rank based selection is similar to roulette-wheel selection in which parents are selected with a probability
+ * proportionate to their fitness values. Instead, in the rank based selection probabilities are proportionate
+ * to the individual averall rank.
+ *
+ * This approach lets individuals with lower fitness to breed more often thus preserving genetic diversity and slowing down
+ * convergence. This is especially notable with few individuals having fitness values much higher than the average
+ * population. If parents are selected by the roulette-wheel selection, those best individuals will quicly take over all
+ * population and solution will converge to fast to a local optimum. In the case of the rank based selection even the hugest
+ * gap in fitness values will not speed up convergence and the global optimum will be searched better.
+ *
+ * Params:
+ *     ranks = Ranks selected based on scores.
+ *     scores = Array of scores.
+ */
+void cudaRBS(uint[] ranks, in float[] scores) @nogc nothrow
 in
 {
 	assert (ranks.length == scores.length);

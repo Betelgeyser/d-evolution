@@ -23,6 +23,15 @@ const float uint_max_fp = 4294967295.0f; /// Maximum value of unsigned integer r
 /**
  * Calculate hyperbolic tangent of each element of an array x on a GPU in place.
  *
+ * <math><mrow>
+ *     <mi mathvariant="italic">tanh</mi><mo>(</mo><mi>x</mi><mo>)</mo>
+ *     <mo>=</mo>
+ *     <mfrac>
+ *         <mrow><msup><mi>e</mi><mrow><mn>2</mn><mi>x</mi></mrow></msup><mo>-</mo><mn>1</mn></mrow>
+ *         <mrow><msup><mi>e</mi><mrow><mn>2</mn><mi>x</mi></mrow></msup><mo>+</mo><mn>1</mn></mrow>
+ *     </mfrac>
+ * </mrow></math>
+ *
  * Params:
  *     x = A pointer to an array to calculate.
  *     count = Size of the array.
@@ -109,14 +118,14 @@ void cuda_scale(void *ptr, const float a, const float b, const size_t count)
  *             <msub><mi>X</mi><mi>i</mi></msub><msub><mi>Y</mi><mi>i</mi></msub>
  *         </mfenced>
  *         <mo>-</mo>
- *         <mi>α</mi><mo></mo><msub><mi>d</mi><mi>i</mi></msub>
+ *         <mi>α</mi><msub><mi>d</mi><mi>i</mi></msub>
  *     </mrow>
  *     <mrow>
  *         <mtext>max</mtext><mfenced open="(" close=")" separators=", ">
  *             <msub><mi>X</mi><mi>i</mi></msub><msub><mi>Y</mi><mi>i</mi></msub>
  *         </mfenced>
  *         <mo>+</mo>
- *         <mi>α</mi><mo></mo><msub><mi>d</mi><mi>i</mi></msub>
+ *         <mi>α</mi><msub><mi>d</mi><mi>i</mi></msub>
  *     </mrow>
  * </mfenced></mrow></math>
  * , where
@@ -202,6 +211,23 @@ void quadratic(float &x1, float &x2, const float a, const float b, const float c
 	x2 = (-b + sqrtf(D)) / 2.0f / a;
 }
 
+/**
+ * Rank based parent selection.
+ *
+ * Rank based selection is similar to roulette-wheel selection in which parents are selected with a probability
+ * proportionate to their fitness values. Instead, in the rank based selection probabilities are proportionate
+ * to the individual averall rank.
+ *
+ * This approach lets individuals with lower fitness to breed more often thus preserving genetic diversity and slowing down
+ * convergence. This is especially notable with few individuals having fitness values much higher than the average
+ * population. If parents are selected by the roulette-wheel selection, those best individuals will quicly take over all
+ * population and solution will converge to fast to a local optimum. In the case of the rank based selection even the hugest
+ * gap in fitness values will not speed up convergence and the global optimum will be searched better.
+ *
+ * Params:
+ *     ranks = Ranks selected based on scores.
+ *     scores = Array of scores.
+ */
 __global__
 void kernel_RBS(unsigned int *ranks, const float *scores, const size_t count)
 {
