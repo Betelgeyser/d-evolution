@@ -161,9 +161,16 @@ struct Population
 	}
 	
 	/**
-	 * this
 	 */
-	this(in NetworkParams params, in ulong size, RandomPool pool) nothrow @nogc
+	/**
+	 * Random population constructor.
+	 *
+	 * Params:
+	 *     params = Networks of the population are generated using this parameters.
+	 *     size = Number of individuals in a single generation.
+	 *     pool = Pool of random values.
+	 */
+	this(in NetworkParams params, in ulong size, RandomPool pool)
 	in
 	{
 		assert (&params, "Incorrect network parameters");
