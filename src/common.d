@@ -17,6 +17,8 @@ module common;
 
 // Standard D modules
 import core.stdc.stdlib : malloc, free;
+import std.math         : pow;
+import std.string       : format;
 
 
 /**
@@ -79,6 +81,30 @@ body
 float AS(in float a1, in float an, in float n) @nogc nothrow pure @safe
 {
 	return (a1 + an) * n / 2.0f;
+}
+
+string humanReadable(in float value) @safe
+{
+	immutable string spec = "%.1f";
+	
+	if (value < 1024.0)
+		return (spec ~ " B").format(value);
+	if (value < pow(1024.0, 2))
+		return (spec ~ " KiB").format(value / 1024.0);
+	if (value < pow(1024.0, 3))
+		return (spec ~ " MiB").format(value / pow(1024.0, 2));
+	if (value < pow(1024.0, 4))
+		return (spec ~ " GiB").format(value / pow(1024.0, 3));
+	if (value < pow(1024.0, 5))
+		return (spec ~ " TiB").format(value / pow(1024.0, 4));
+	if (value < pow(1024.0, 6))
+		return (spec ~ " PiB").format(value / pow(1024.0, 5));
+	if (value < pow(1024.0, 7))
+		return (spec ~ " EiB").format(value / pow(1024.0, 6));
+	if (value < pow(1024.0, 8))
+		return (spec ~ " ZiB").format(value / pow(1024.0, 7));
+	
+	return (spec ~ " YiB").format(value / pow(1024.0, 8));
 }
 
 version (unittest)
