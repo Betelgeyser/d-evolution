@@ -16,10 +16,12 @@
 module math.matrix;
 
 // Standard D modules
-import std.range : ElementType;
 import std.algorithm : count;
 import std.conv      : to;
 import std.csv       : csvReader;
+import std.exception : enforce;
+import std.range     : ElementType;
+import std.string    : format;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
@@ -80,8 +82,8 @@ struct Matrix
 	
 	invariant
 	{
-		assert (_rows >= 1);
-		assert (_cols >= 1);
+		assert (_rows >= 1, "Matrix must have at least 1 row, got %d".format(_rows));
+		assert (_cols >= 1, "Matrix must have at least 1 column, got %d".format(_cols));
 	}
 	
 	/**
@@ -125,12 +127,7 @@ struct Matrix
 	 *     rows = Number of rows.
 	 *     cols = Number of columns.
 	 */
-	this(in uint rows, in uint cols) @nogc nothrow
-	in
-	{
-		assert (rows >= 1);
-		assert (cols >= 1);
-	}
+	this(in uint rows, in uint cols)
 	out
 	{
 		// Many std.algorithm's higher order functions on ranges will pop elements from `values` decreasing its lenght.
@@ -140,6 +137,9 @@ struct Matrix
 	body
 	{
 		scope(failure) freeMem();
+		
+		enforce(rows >= 1, "Matrix must have at least 1 row, got %d".format(rows));
+		enforce(cols >= 1, "Matrix must have at least 1 column, got %d".format(cols));
 		
 		_rows = rows;
 		_cols = cols;

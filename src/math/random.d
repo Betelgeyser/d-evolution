@@ -18,6 +18,10 @@ module math.random;
 // C modules
 import core.stdc.stdlib;
 
+// Standard D modules
+import std.exception : enforce;
+import std.string    : format;
+
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.curand;
@@ -138,13 +142,13 @@ struct RandomPool
 	 * Returns:
 	 *     a slice of random numbers that has not been used.
 	 */
-	uint[] opCall(in size_t count) nothrow @nogc
-	in
+	uint[] opCall(in size_t count)
 	{
-		assert (count >= 1 && count <= length);
-	}
-	body
-	{
+		enforce(
+			count <= length,
+			"RandomPool has %d values, but %d requested.".format(length, count)
+		);
+		
 		if (count > _available)
 			regenerate();
 		

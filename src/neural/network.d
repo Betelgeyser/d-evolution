@@ -19,7 +19,9 @@ module neural.network;
 
 // Standard D modules
 import std.algorithm : all, each, swap;
+import std.exception : enforce;
 import std.math      : isFinite;
+import std.string    : format;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
@@ -184,7 +186,7 @@ struct Network
 	 *     params = Network parameters.
 	 *     pool = Pseudorandom number generator.
 	 */
-	this(in NetworkParams params, RandomPool pool) nothrow @nogc
+	this(in NetworkParams params, RandomPool pool)
 	in
 	{
 		assert (&params, "Neural network parameters are incorrect.");
@@ -265,8 +267,13 @@ struct Network
 	 *     outputs = Output matrix of size m x n, where n is the number of output neurons.
 	 *     cublasHandle = Cublas handle.
 	 */
-	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const @nogc nothrow
+	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const
 	{
+		enforce(
+			inputs.cols == inputLength - biasLength,
+			"Inputs must have %d columns, got %d".format(inputLength - biasLength, inputs.cols)
+		);
+		
 		auto prev = Matrix(inputs.rows, neuronsPerLayer + biasLength);
 		scope(exit) prev.freeMem();
 		
@@ -342,7 +349,7 @@ struct Network
 	 *     pool = Pool of random bits. It is supposed to improve performance of a crossover as the cuRAND acheives maximum
 	 *         efficiency generating large quantities of numbers.
 	 */
-	void crossover(in Network x, in Network y, in float a, in float b, in float alpha, RandomPool pool) nothrow @nogc
+	void crossover(in Network x, in Network y, in float a, in float b, in float alpha, RandomPool pool)
 	in
 	{
 		assert (this.depth == x.depth);

@@ -75,7 +75,7 @@ version (unittest)
  *     error = The resulting array of errors. 
  *     cublasHandle = cuBLAS handle.
  */
-void AE(in Matrix A, in Matrix B, Matrix error, cublasHandle_t cublasHandle) nothrow @nogc
+void AE(in Matrix A, in Matrix B, Matrix error, cublasHandle_t cublasHandle)
 in
 {
 	assert (A.cols == B.cols);
@@ -133,7 +133,7 @@ unittest
  * See_also:
  *     $(LINK https://en.wikipedia.org/wiki/Mean_absolute_error)
  */
-float MAE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle) nothrow @nogc
+float MAE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle)
 in
 {
 	assert (A.cols == B.cols);
@@ -186,7 +186,7 @@ unittest
  *     data = An array of input vectors.
  *     cublasHandle = cuBLAS handle.
  */
-float MAENaive(in Matrix data, cublasHandle_t cublasHandle) nothrow @nogc
+float MAENaive(in Matrix data, cublasHandle_t cublasHandle)
 {
 	auto measured = data.colSlice(0, data.cols - 1);
 	auto naive    = data.colSlice(1, data.cols);
@@ -222,7 +222,7 @@ unittest
  *     approximated = An array of vectors of approximated/estimated data.
  *     cublasHandle = cuBLAS handle.
  */
-float MASE(in Matrix measured, in Matrix approximated, cublasHandle_t cublasHandle) nothrow @nogc
+float MASE(in Matrix measured, in Matrix approximated, cublasHandle_t cublasHandle)
 in
 {
 	assert (measured.rows == approximated.rows);

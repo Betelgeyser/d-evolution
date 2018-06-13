@@ -138,7 +138,7 @@ struct Layer
 	 *     params = Layer parameters.
 	 *     pool = Pseudorandom number generator.
 	 */
-	this(in LayerParams params, RandomPool pool) nothrow @nogc
+	this(in LayerParams params, RandomPool pool)
 	in
 	{
 		assert (&params, "Incorrect layer parameters.");
@@ -268,7 +268,7 @@ struct Layer
 	 *     pool = Pool of random bits. It is supposed to improve performance of a crossover as the cuRAND acheives maximum
 	 *         efficiency generating large quantities of numbers.
 	 */
-	void crossover(in Layer x, in Layer y, in float a, in float b, in float alpha, RandomPool pool) nothrow @nogc
+	void crossover(in Layer x, in Layer y, in float a, in float b, in float alpha, RandomPool pool)
 	in
 	{
 		assert (this.length == y.length);
