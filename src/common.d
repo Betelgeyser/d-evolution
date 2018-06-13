@@ -107,6 +107,28 @@ string humanReadable(in float value) @safe
 	return (spec ~ " YiB").format(value / pow(1024.0, 8));
 }
 
+enum ANSIColor
+{
+	reset        = "0",
+	white        = "1",
+	red          = "31",
+	green        = "32",
+	yellow       = "33",
+	brightRed    = "1;31",
+	brightGreen  = "1;32",
+	brightYellow = "1;33"
+}
+
+string ANSIEncode(in ANSIColor color) nothrow pure @safe
+{
+	return "\x1b[" ~ color ~ "m";
+}
+
+string ansiFormat(in string str, in ANSIColor color) nothrow pure @safe
+{
+	return color.ANSIEncode ~ str ~ ANSIColor.reset.ANSIEncode;
+}
+
 version (unittest)
 {
 	public import std.stdio : write, writeln;
