@@ -297,13 +297,14 @@ struct Population
 	}
 	
 	/**
-	 * Order population by fitness values ascending.
+	 * Order population by fitness values descending.
 	 *
-	 * As currently only MASE fitness function is supported, the first individuals with lower fitness values are better ones.
+	 * As currently only MASE fitness function is supported and the lower it gets - the better it is, therefor the better
+	 * an individual - the higher index it has. This desicion is made to ease implementation of the rank based selection.
 	 */
 	void order() nothrow @nogc
 	{
-		_individuals.sort!"a < b"();
+		_currentGeneration.sort!"a > b"();
 	}
 	
 	///
@@ -319,12 +320,12 @@ struct Population
 		cudaDeviceSynchronize();
 		
 		// Fill fitness values with random data
-		foreach (ref i; population._individuals)
+		foreach (ref i; population._currentGeneration)
 			i.fitness = i.layers[0].weights[0];
 		
 		population.order();
 		
-		assert (population._individuals.isSorted!"a.fitness < b.fitness");
+		assert (population._currentGeneration.isSorted!"a.fitness > b.fitness");
 	}
 	
 	/**
