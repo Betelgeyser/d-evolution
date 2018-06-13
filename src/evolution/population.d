@@ -378,6 +378,8 @@ struct Population
 		randomScores = pool(popSize).cudaScale(0, ranksSum);
 		cudaRBS(yParents, randomScores);
 		
+		cudaDeviceSynchronize();
+		
 		foreach (i; 0 .. popSize)
 			_newGeneration[i].crossover(
 				_currentGeneration[xParents[i]],
