@@ -17,6 +17,9 @@ module math.matrix;
 
 // Standard D modules
 import std.range : ElementType;
+import std.algorithm : count;
+import std.conv      : to;
+import std.csv       : csvReader;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
@@ -179,6 +182,62 @@ struct Matrix
 	}
 	
 	/**
+	 * Create a matrix and allocate memory for it from csv data.
+	 *
+	 * Params:
+	 *     csv = Coma separated values.
+	 */
+	this(in string csv)
+	{
+		scope(failure) freeMem();
+		
+		_rows = csv.count("\n").to!uint;
+		_cols = csv.count(",").to!uint / _rows + 1;
+		
+		cudaMallocManaged(values, _rows * _cols);
+		
+		size_t i = 0;
+		size_t j = 0;
+		
+		foreach (record; csv.csvReader!float)
+		{
+			foreach (value; record)
+				values[j++ * _rows + i] = value;
+		
+			j = 0;
+			++i;
+		}
+	}
+	
+	///
+	unittest
+	{
+		mixin(writeTest!__ctor);
+		
+		auto A = Matrix("1.2\n");
+		scope(exit) A.freeMem();
+		
+		assert (A.rows == 1 && A.cols == 1);
+		assert (approxEqual(A.values[0], 1.2));
+		
+		auto B = Matrix("1.2,3.4,5.6\n");
+		scope(exit) B.freeMem();
+		
+		assert (B.rows == 1 && B.cols == 3);
+		assert (equal!approxEqual(B.values, [1.2, 3.4, 5.6]));
+		
+		auto C = Matrix("1.2\n3.4\n5.6\n");
+		scope(exit) C.freeMem();
+		
+		assert (C.rows == 3 && C.cols == 1);
+		assert (equal!approxEqual(C.values, [1.2, 3.4, 5.6]));
+		
+		auto D = Matrix("1,2,3\n1,2,3\n");
+		scope(exit) D.freeMem();
+		
+		assert (D.rows == 2 && D.cols == 3);
+		assert (equal!approxEqual(D.values, [1, 1, 2, 2, 3, 3])); // Remember, cuBLAS is column-major
+	}
 	 * Free memory.
 	 *
 	 * For the reason how D works with structs memory freeing moved from destructor to
