@@ -36,7 +36,7 @@ private extern (C++) void cuda_tanh(float* x, const size_t n) nothrow @nogc;
  * Calculate hyperbolic tangent of each element of an array $(D_PARAM x) on a GPU in place.
  *
  * <math><mrow>
- *     <mi mathvariant="italic">tanh</mi><mo>(</mo><mi>x</mi><mo>)</mo>
+ *     <mi mathvariant="italic">tanh</mi><mfenced><mi>x</mi></mfenced>
  *     <mo>=</mo>
  *     <mfrac>
  *         <mrow><msup><mi>e</mi><mrow><mn>2</mn><mi>x</mi></mrow></msup><mo>-</mo><mn>1</mn></mrow>
@@ -45,7 +45,7 @@ private extern (C++) void cuda_tanh(float* x, const size_t n) nothrow @nogc;
  * </mrow></math>
  *
  * Params:
- *     x = An array to calculate.
+ *     x = Array to calculate.
  */
 void cudaTanh(float[] x) nothrow @nogc
 {
@@ -74,16 +74,24 @@ unittest
 
 private extern (C++) void cuda_ReLU(float* x, const size_t n) @nogc nothrow;
 /**
- * Calculate rectifier of each element of an array $(D_PARAM x) on a GPU in place.
+ * Calculate rectified linear unit of each element of an array $(D_PARAM x) on a GPU in place.
  *
  * <math><mrow>
- *     <mi mathvariant="italic">ReLU</mi><mo>(</mo><mi>x</mi><mo>)</mo>
+ *     <mi mathvariant="italic">ReLU</mi><mfenced><mi>x</mi></mfenced>
  *     <mo>=</mo>
- *     <mi mathvariant="italic">max</mi><mfenced open="(" close=")" separator=","><mn>0</mn><mi>x</mi></mfenced>
+ *     <mo>{</mo>
+ *         <mtable>
+ *             <mtr>
+ *                 <mtd><mn>0</mn><mi>x</mi></mtd><mtd><mtext>for&nbsp;</mtext><mi>x</mi><mo>&lt;</mo><mn>0</mn></mtd>
+ *             </mtr>
+ *             <mtr>
+ *                 <mtd><mi>x</mi></mtd><mtd><mtext>for&nbsp;</mtext><mi>x</mi><mo>&ge;</mo><mn>0</mn></mtd>
+ *             </mtr>
+ *         </mtr>
  * </mrow></math>
  *
  * Params:
- *     x = An array to calculate.
+ *     x = Array to calculate.
  */
 void cudaReLU(float[] x) nothrow @nogc
 {
@@ -197,7 +205,7 @@ unittest
 private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, const size_t count) nothrow @nogc;
 /**
  * Transform uniformly distrubuted random bits into uniformly distributed random floating point numbers in range 
- * [$(D_PARAM a); $(D_PARAM b)], where $(D_PARAM a) &le; $(D_PARAM b). 0 will translate to $(D_PARAM a) and uint.max -
+ * [$(D_PARAM a); $(D_PARAM b)], where $(D_PARAM a) &le; $(D_PARAM b). 0 will translate to $(D_PARAM a) and uint.max
  * to $(D_PARAM b).
  *
  * The main goal of this function is to minimize rounding errors when scaling any other radnomly generated floating point

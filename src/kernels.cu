@@ -24,7 +24,7 @@ const float uint_max_fp = 4294967295.0f; /// Maximum value of unsigned integer r
  * Calculate hyperbolic tangent of each element of an array x on a GPU in place.
  *
  * <math><mrow>
- *     <mi mathvariant="italic">tanh</mi><mo>(</mo><mi>x</mi><mo>)</mo>
+ *     <mi mathvariant="italic">tanh</mi><mfenced><mi>x</mi></mfenced>
  *     <mo>=</mo>
  *     <mfrac>
  *         <mrow><msup><mi>e</mi><mrow><mn>2</mn><mi>x</mi></mrow></msup><mo>-</mo><mn>1</mn></mrow>
@@ -56,9 +56,17 @@ void cuda_tanh(float *x, const size_t count)
  * Calculate rectifier of each element of an array x on a GPU in place.
  *
  * <math><mrow>
- *     <mi mathvariant="italic">ReLU</mi><mo>(</mo><mi>x</mi><mo>)</mo>
+ *     <mi mathvariant="italic">ReLU</mi><mfenced><mi>x</mi></mfenced>
  *     <mo>=</mo>
- *     <mi mathvariant="italic">max</mi><mfenced open="(" close=")" separator=","><mn>0</mn><mi>x</mi></mfenced>
+ *     <mo>{</mo>
+ *         <mtable>
+ *             <mtr>
+ *                 <mtd><mn>0</mn><mi>x</mi></mtd><mtd><mtext>for&nbsp;</mtext><mi>x</mi><mo>&lt;</mo><mn>0</mn></mtd>
+ *             </mtr>
+ *             <mtr>
+ *                 <mtd><mi>x</mi></mtd><mtd><mtext>for&nbsp;</mtext><mi>x</mi><mo>&ge;</mo><mn>0</mn></mtd>
+ *             </mtr>
+ *         </mtr>
  * </mrow></math>
  *
  * Params:
