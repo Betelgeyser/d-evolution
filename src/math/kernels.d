@@ -110,6 +110,90 @@ unittest
 	assert (equal!approxEqual(data, result));
 }
 
+private extern (C++) void cuda_LeakyReLU(float* x, const size_t n) @nogc nothrow;
+/**
+ * Calculate leaky rectified linear unit of each element of an array $(D_PARAM x) on a GPU in place.
+ *
+ * <math><mrow>
+ *     <mi mathvariant="italic">Leaky ReLU</mi><mfenced><mi>x</mi></mfenced>
+ *     <mo>=</mo>
+ *     <mo>{</mo>
+ *         <mtable>
+ *             <mtr>
+ *                 <mtd><mn>0.01</mn><mi>x</mi></mtd><mtd><mtext>for&nbsp;</mtext><mi>x</mi><mo>&lt;</mo><mn>0</mn></mtd>
+ *             </mtr>
+ *             <mtr>
+ *                 <mtd><mi>x</mi></mtd><mtd><mtext>for&nbsp;</mtext><mi>x</mi><mo>&ge;</mo><mn>0</mn></mtd>
+ *             </mtr>
+ *         </mtr>
+ * </mrow></math>
+ *
+ * Params:
+ *     x = Array to calculate.
+ */
+void cudaLeakyReLU(float[] x) nothrow @nogc
+{
+	cuda_LeakyReLU(x.ptr, x.length);
+}
+
+///
+unittest
+{
+	mixin(writeTest!cudaLeakyReLU);
+	
+	immutable length = 3;
+	
+	float[] data;
+	cudaMallocManaged(data, length);
+	scope(exit) cudaFree(data);
+	
+	data[0 .. $] = [-1, 0, 1];
+	
+	cudaLeakyReLU(data);
+	cudaDeviceSynchronize();
+	
+	immutable float[] result = [-0.01, 0, 1];
+	assert (equal!approxEqual(data, result));
+}
+
+private extern (C++) void cuda_softPlus(float* x, const size_t n) @nogc nothrow;
+/**
+ * Calculate softplus function of each element of an array $(D_PARAM x) on a GPU in place.
+ *
+ * <math><mrow>
+ *     <mi mathvariant="italic">SoftPlus</mi><mo>(</mo><mi>x</mi><mo>)</mo>
+ *     <mo>=</mo>
+ *     <mi mathvariant="italic">ln</mi><mo>(</mo><mn>1</mn><mo>-</mo><msup><mi>e</mi><mi>x</mi></msup><mo>)</mo>
+ * </mrow></math>
+ *
+ * Params:
+ *     x = Array to calculate.
+ */
+void cudaSoftPlus(float[] x) nothrow @nogc
+{
+	cuda_softPlus(x.ptr, x.length);
+}
+
+///
+unittest
+{
+	mixin(writeTest!cudaSoftPlus);
+	
+	immutable length = 7;
+	
+	float[] data;
+	cudaMallocManaged(data, length);
+	scope(exit) cudaFree(data);
+	
+	data[0 .. $] = [-1000, -10, -1, 0, 1, 10, 1000];
+	
+	cudaSoftPlus(data);
+	cudaDeviceSynchronize();
+	
+	immutable float[] result = [0.000000, 0.000045, 0.313261, 0.693147, 1.313261, 10.000045, 1000.000000];
+	assert (equal!approxEqual(data, result));
+}
+
 private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, const size_t count) nothrow @nogc;
 /**
  * Transform uniformly distrubuted random bits into uniformly distributed random floating point numbers in range 
