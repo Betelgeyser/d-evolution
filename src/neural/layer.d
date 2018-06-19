@@ -188,6 +188,11 @@ struct Layer
 		_weights.freeMem();
 	}
 	
+	static void copy(in Layer src, Layer dst)
+	{
+		Matrix.copy(src._weights, dst._weights);
+	}
+	
 	/**
 	 * Activate the layer.
 	 *

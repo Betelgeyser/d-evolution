@@ -16,7 +16,7 @@
 module math.matrix;
 
 // Standard D modules
-import std.algorithm : count;
+import std.algorithm : count, each;
 import std.conv      : to;
 import std.csv       : csvReader;
 import std.exception : enforce;
@@ -259,6 +259,17 @@ struct Matrix
 	void freeMem() nothrow @nogc
 	{
 		cudaFree(values);
+	}
+	
+	static void copy(in Matrix src, Matrix dst)
+	in
+	{
+		assert (src.rows == src.rows);
+		assert (src.cols == dst.cols);
+	}
+	body
+	{
+		src.values.each!((i, x) => dst.values[i] = x);
 	}
 	
 	/**

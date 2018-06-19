@@ -268,6 +268,11 @@ struct Network
 			nogcFree(_layers);
 	}
 	
+	static void copy(in Network src, Network dst)
+	{
+		src._layers.each!((i, x) => Layer.copy(x, dst._layers[i]));
+	}
+	
 	/**
 	 * Activate the network.
 	 *
