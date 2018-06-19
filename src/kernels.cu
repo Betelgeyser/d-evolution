@@ -79,7 +79,7 @@ void kernel_ReLU(float *x, const size_t count)
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	
 	if (i < count)
-		x[i] = fmaxf(0, x[i]);
+		x[i] = fmaxf(0.0f, x[i]);
 }
 
 /// ditto

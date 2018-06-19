@@ -468,7 +468,7 @@ private extern(C++) void cuda_L2(const(float)* x, float* y, const uint dim, cons
  *         Thus, each row is a dimention.
  *     y = A resulting array of L2 norm values. Its length must equals to number of the columns in the input matrix.
  */
-void cudaL2(const Matrix x, float[] y) nothrow @nogc
+void cudaL2(in Matrix x, float[] y) nothrow @nogc
 in
 {
 	assert (x.cols == y.length);
