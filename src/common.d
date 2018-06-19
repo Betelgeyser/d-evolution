@@ -26,7 +26,7 @@ import std.string       : format;
  *
  * Bug-prone, use it carefully...
  */
-T[] nogcMalloc(T)(ulong items) nothrow @nogc
+T[] nogcMalloc(T)(in ulong items) nothrow @nogc
 {
 	return (cast(T*)malloc(items * T.sizeof))[0 .. items];
 }
