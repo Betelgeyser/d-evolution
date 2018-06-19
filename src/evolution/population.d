@@ -119,19 +119,19 @@ struct Population
 		
 		NetworkParams _networkParams; /// Stored network parameters.
 		
-		ulong _size;       /// Size of the population.
+		size_t _size;
 		ulong _generation; /// Current generation number.
 		
 		bool _isOrdered; /// Shows if individuals are already ordered.
+		
+		static immutable _elite = 10;
 	}
 	
 	invariant
 	{
 		if (_individuals.length)
 		{
-			assert (_currentGeneration.length == _size);
-			assert (_newGeneration.length     == _size);
-			
+			assert (_currentGeneration.length == _newGeneration.length);
 			assert (_individuals.length == _currentGeneration.length + _newGeneration.length);
 		}
 	}
@@ -148,14 +148,6 @@ struct Population
 	}
 	
 	/**
-	 * Returns: The number of the individuals in the current generation.
-	 */
-	@property ulong popSize() const @nogc nothrow pure @safe
-	{
-		return _size;
-	}
-	
-	/**
 	 * Returns: The number of the current generation, where 0 means initial generation.
 	 */
 	@property ulong generation() const @nogc nothrow pure @safe
@@ -166,7 +158,7 @@ struct Population
 	/**
 	 * Returns: Fitness of the best individual in the current generation.
 	 */
-	@property const(Individual) best() @nogc nothrow pure @safe
+	@property const(Individual) best() @safe
 	{
 		if (!_isOrdered)
 			this._order();
@@ -177,7 +169,7 @@ struct Population
 	/**
 	 * Returns: Fitness of the best individual in the current generation.
 	 */
-	@property float worst() @nogc nothrow pure @safe
+	@property float worst() @safe
 	{
 		if (!_isOrdered)
 			this._order();
@@ -205,16 +197,15 @@ struct Population
 	in
 	{
 		assert (&params, "Incorrect network parameters");
-		assert (size > 1);
+		assert (size >= 100);
 	}
 	body
 	{
 		scope(failure) freeMem();
 		
-		_size = size;
+		_size          = size;
 		_networkParams = params;
-		
-		_individuals = nogcMalloc!Individual(size * 2);
+		_individuals   = nogcMalloc!Individual(size * 2);
 		
 		_currentGeneration = _individuals[0 .. size];
 		_newGeneration     = _individuals[size .. $];
@@ -236,7 +227,8 @@ struct Population
 		auto population = Population(params, size, randomPool);
 		scope(exit) population.freeMem();
 		
-		assert (population.popSize == size);
+		assert (population._currentGeneration.length == size);
+		assert (population._newGeneration.length     == size);
 		
 		with (population)
 		{
@@ -318,7 +310,7 @@ struct Population
 	 * As currently only MASE fitness function is supported and the lower it gets - the better it is, therefor the better
 	 * an individual - the higher index it has. This desicion is made to ease implementation of the rank based selection.
 	 */
-	private void _order() @nogc nothrow pure @safe
+	private void _order() @safe
 	{
 		if (!_isOrdered)
 		{
@@ -368,25 +360,25 @@ struct Population
 	{
 		this._order();
 		
-		immutable float ranksSum = AS(1, popSize, popSize);
+		immutable float ranksSum = AS(1, _size, _size);
 		
 		uint[] xParents;
-		cudaMallocManaged(xParents, popSize);
+		cudaMallocManaged(xParents, _size - _elite);
 		scope(exit) cudaFree(xParents);
 		
-		float[] randomScores = pool(popSize).cudaScale(0, ranksSum);
+		float[] randomScores = pool(_size - _elite).cudaScale(0, ranksSum);
 		cudaRBS(xParents, randomScores);
 		
 		uint[] yParents;
-		cudaMallocManaged(yParents, popSize);
+		cudaMallocManaged(yParents, _size - _elite);
 		scope(exit) cudaFree(yParents);
 		
-		randomScores = pool(popSize).cudaScale(0, ranksSum);
+		randomScores = pool(_size - _elite).cudaScale(0, ranksSum);
 		cudaRBS(yParents, randomScores);
 		
 		cudaDeviceSynchronize();
 		
-		foreach (i; 0 .. popSize)
+		foreach (i; 0 .. _size - _elite)
 			_newGeneration[i].crossover(
 				_currentGeneration[xParents[i]],
 				_currentGeneration[yParents[i]],
@@ -395,6 +387,9 @@ struct Population
 				pool
 			);
 		
+		foreach (i; _size - _elite .. _size)
+			Network.copy(_currentGeneration[i], _newGeneration[i]);
+//		_newGeneration[$ - _elite .. $] = _currentGeneration[$ - _elite .. $];
 		swap(_currentGeneration, _newGeneration);
 		
 		++_generation;
