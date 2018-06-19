@@ -176,6 +176,34 @@ unittest
 }
 
 /**
+ * TODO: docs, GPU, unittest
+ */
+float MPE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle)
+in
+{
+	assert (A.cols == B.cols);
+	assert (A.rows == B.rows);
+}
+body
+{
+	auto error = Matrix(1, A.cols);
+	scope(exit) error.freeMem();
+	
+	auto C = Matrix(1, A.cols);
+	scope(exit) C.freeMem();
+	
+	AE(A, B, error, cublasHandle);
+	cudaL2(A, C);
+	cudaDeviceSynchronize();
+	
+	float result = 0;
+	foreach (i, v; error.values)
+		result += error[i] / C[i] / error.length;
+	
+	return result * 100;
+}
+
+/**
  * Calculate a Mean Absolute Error of naive forecast on GPU.
  *
  * Useful for MASE calculation.
