@@ -25,4 +25,6 @@ extern(C) package nothrow @nogc:
 	cudaError_t cudaFree(void* devPtr);
 	cudaError_t cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind);
 	cudaError_t cudaDeviceSynchronize();
+	cudaError_t cudaGetDeviceCount(int* count);
+	cudaError_t cudaSetDevice(int device);
 

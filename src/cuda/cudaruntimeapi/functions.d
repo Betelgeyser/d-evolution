@@ -66,6 +66,18 @@ void cudaDeviceSynchronize() nothrow @nogc
 	enforceCudart(cudart.cudaDeviceSynchronize());
 }
 
+int cudaGetDeviceCount() @nogc nothrow
+{
+	int result;
+	enforceCudart(cudart.cudaGetDeviceCount(&result));
+	return result;
+}
+
+void cudaSetDevice(int device)
+{
+	enforceCudart(cudart.cudaSetDevice(device));
+}
+
 /**
  * Utility wrapper to enforce error check for cuda functions.
  */
