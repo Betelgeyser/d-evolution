@@ -19,25 +19,57 @@ import cuda.common;
 import cuda.curand.types;
 static import curand = cuda.curand.exp;
 
+import core.stdc.stdlib  : malloc, free;
+import std.exception     : enforce;
+
+
 /**
  * Higer level wrapper around cuRAND generator. It provides D-style access to functions on a curandGenerator_t.
+ *
+ * TODO: NOT THREAD SAFE!!!
  */
 struct CurandGenerator
 {
-	private curandGenerator_t _generator;
-	
-	this(curandRngType_t rng_type, ulong seed = 0) nothrow @nogc
+	private
 	{
+		curandGenerator_t _generator;
+		size_t* _refCounter;
+	}
+	
+	@disable this();
+	
+	this(in curandRngType_t rng_type, in ulong seed = 0)
+	{
+		_refCounter = cast(size_t*)malloc(size_t.sizeof);
+		scope(failure) free(_refCounter);
+		
+		*_refCounter = 1;
+		
 		enforceCurand(curand.curandCreateGenerator(&_generator, rng_type));
+		scope(failure) enforceCurand(curand.curandDestroyGenerator(_generator));
+		
 		setPseudoRandomGeneratorSeed(seed);
 	}
 	
-	void destroy() nothrow @nogc
+	this(this) @nogc nothrow pure @safe
 	{
-		enforceCurand(curand.curandDestroyGenerator(_generator));
+		++*_refCounter;
 	}
 	
-	void setPseudoRandomGeneratorSeed(ulong seed) nothrow @nogc
+	~this()
+	{
+		if (_refCounter)
+		{
+			--*_refCounter;
+			if (*_refCounter == 0)
+			{
+				free(_refCounter);
+				enforceCurand(curand.curandDestroyGenerator(_generator));
+			}
+		}
+	}
+	
+	void setPseudoRandomGeneratorSeed(in ulong seed)
 	{
 		enforceCurand(curand.curandSetPseudoRandomGeneratorSeed(_generator, seed));
 	}
