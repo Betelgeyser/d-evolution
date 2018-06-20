@@ -42,19 +42,19 @@ struct CurandGenerator
 		enforceCurand(curand.curandSetPseudoRandomGeneratorSeed(_generator, seed));
 	}
 	
-	void generate(uint* outputPtr, size_t num) nothrow @nogc
+	void generate(uint* outputPtr, in size_t num)
 	{
 		enforceCurand(curand.curandGenerate(_generator, outputPtr, num));
 	}
 
-	void generateUniform(float* outputPtr, size_t num) nothrow @nogc
+	void generateUniform(float* outputPtr, in size_t num)
 	{
 		enforceCurand(curand.curandGenerateUniform(_generator, outputPtr, num));
 	}
 }
 
-package void enforceCurand(curandStatus_t error) pure nothrow @safe @nogc
+package void enforceCurand(curandStatus_t error) pure @safe
 {
-	assert (error == curandStatus_t.SUCCESS, error.toString);
+	enforce(error == curandStatus_t.SUCCESS, error.toString);
 }
 
