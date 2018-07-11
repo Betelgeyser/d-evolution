@@ -22,6 +22,8 @@ import core.stdc.stdlib : free, malloc;
 
 import common;
 
+immutable poolSize = 128 * 2^^20; /// Size of a newlly allocated block. Defaults to 128 MiB. This number is purely random,
+                                   /// probably it will need some optimization later.
 
 /**
  * Simple double-linked list.
@@ -193,4 +195,211 @@ unittest
 //	mixin(writeTest!List);
 //	
 }
+
+/**
+ * Continuous block of memory.
+ *
+ * In fact, it is just a wrapper around a pointer storing some additional information, such as avaliable size of the pointed
+ * memory and whether it has already been allocated.
+ */
+private struct Block
+{
+	private
+	{
+		UnifiedPointer _ptr; /// Pointer to the block's memory.
+		
+		size_t _size;        /// Size of the block.
+		bool   _isAllocated; /// `true` if the block has been allocated.
+	}
+	
+	/**
+	 * Returns: Pointer to the memory block.
+	 */
+	@property UnifiedPointer ptr() @nogc nothrow @safe
+	{
+		return _ptr;
+	}
+	
+	/**
+	 * Returns: Size of the block in bytes.
+	 */
+	@property size_t size() const @nogc nothrow pure @safe
+	{
+		return _size;
+	}
+	
+	/**
+	 * Returns: `true` if the block is free.
+	 */
+	@property bool isFree() const @nogc nothrow pure @safe
+	{
+		return !_isAllocated;
+	}
+	
+	@disable this();
+	
+	/**
+	 * Params:
+	 *     ptr = Root pointer of the block.
+	 *     size = Size of the block in bytes.
+	 *     isAllocated = Has block already been allocated?
+	 */
+	this(in size_t size) @nogc nothrow
+	{
+		_ptr         = cudaMallocManaged(size);
+		_size        = size;
+		_isAllocated = false;
+	}
+	
+	/// ditto
+	this(UnifiedPointer ptr, in size_t size, in bool isAllocated) @nogc nothrow pure @safe
+	{
+		_ptr         = ptr;
+		_size        = size;
+		_isAllocated = isAllocated;
+	}
+	
+	/**
+	 * Allocates memory in the block.
+	 *
+	 * Params:
+	 *     size = Allocated bytes.
+	 *
+	 * Returns:
+	 *     Pointer to the allocated memory.
+	 */
+	UnifiedPointer allocate(in size_t size) pure @safe
+	{
+		assert (isFree, "Cannot allocate in already allocated block.");
+		assert (_size >= size, "Block cannot allocate %d bytes. Only %d is available.".format(size, _size));
+		
+		_isAllocated = true;
+		_size        = size;
+		
+		return _ptr;
+	}
+}
+
+/**
+ * Memory pool.
+ */
+private struct Pool
+{
+	private
+	{
+		List!Block   _blocks; /// List of the pool's blocks.
+		const size_t _size;   /// Size of the pool.
+	}
+	
+	@disable this();
+	
+	/**
+	 * Params:
+	 *     size = Size of the pool.
+	 */
+	this(in size_t size) @nogc nothrow
+	{
+		_size = size;
+		
+		auto block = Block(size);
+		_blocks.pushFront(block);
+	}
+	
+	/**
+	 * Allocates memory in the pool.
+	 *
+	 * Params:
+	 *     size = Allocated bytes.
+	 *
+	 * Returns:
+	 *     Pointer to the allocated memory.
+	 */
+	UnifiedPointer allocate(in size_t size)
+	{
+		debug(memory) size_t i = 0;
+		foreach (ref block; _blocks)
+		{
+			debug(memory) write(__FILE__, " ", __LINE__, "\tScanning ", i, " block at ", block.ptr, ". ");
+			debug(memory) write("It is ", block.isFree ? "free" : "allocated", ", it size is ", block.size, " bytes. This block is ");
+			
+			if (block.isFree && block.size >= size)
+			{
+				debug(memory) writeln("sufficient. Allocating");
+				auto freeBlock = Block(block.ptr + size, block.size - size, false);
+				_blocks.insertAfter(freeBlock);
+				debug(memory) writeln(__FILE__, " ", __LINE__, "\tNew free block adress is ", freeBlock.ptr);
+				
+				return block.allocate(size);
+			}
+			debug(memory) writeln("insufficient");
+			debug(memory) ++i;
+		}
+		
+		return UnifiedPointer(null);
+	}
+}
+
+alias UMM = UnifiedMemoryManager;
+
+/**
+ * Cuda unified memory manager.
+ */
+struct UnifiedMemoryManager
+{
+	private
+	{
+		List!Pool _pools; /// List of avaliable pools.
+	}
+	
+	@disable this(this);
+	
+	/**
+	 * Allocate array.
+	 */
+	UnifiedArray!T allocate(T)(in size_t items)
+	{
+		auto size = items * T.sizeof;
+		
+		debug(memory) writeln(__FILE__, " ", __LINE__, "\tAllocating ", size, " bytes");
+		
+		return UnifiedArray!T(_firstFit(size), items);
+	}
+	
+	private
+	{
+		/**
+		 * Allocating using the firts fit stratagy.
+		 */
+		auto _firstFit(in size_t size)
+		{
+			debug(memory) size_t i = 0;
+			foreach (ref pool; _pools)
+			{
+				debug(memory) writeln(__FILE__, " ", __LINE__, "\tSearching a sufficient block in the ", i, " pool");
+				
+				auto ptr = pool.allocate(size);
+				if (ptr !is null)
+					return ptr;
+				
+				debug(memory) ++i;
+			}
+			
+			debug(memory) writeln(__FILE__, " ", __LINE__, "\tNo sufficient pool was found. Creating a new one");
+			
+			_addPool(poolSize);
+			
+			return _pools.head.allocate(size);
+		}
+		
+		/**
+		 * Create a new pool and add it to the list.
+		 */
+		void _addPool(in size_t size) @nogc nothrow
+		{
+			auto pool = Pool(poolSize);
+			_pools.pushFront(pool);
+		}
+	}
+}
+
 
