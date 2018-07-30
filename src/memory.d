@@ -34,6 +34,11 @@ immutable poolSize = 128 * 2^^20; /// Size of a newlly allocated block. Defaults
  */
 struct List(T)
 {
+	this(this) @nogc nothrow pure @safe
+	{
+		_current = _tail; // For proper functionality we need to reset the _current pointer on copy
+	}
+	
 	private
 	{
 		/**
@@ -44,27 +49,22 @@ struct List(T)
 		 */
 		struct Node(T)
 		{
+			alias _payload this;
+			
+			@disable this();
+			@disable this(this);
+			
 			private
 			{
 				T       _payload;     /// The data itself.
 				Node!T* _prev = null; /// Pointer to the previous node.
 				Node!T* _next = null; /// Pointer to the nex node.
 			}
-			
-			alias _payload this;
-			
-			@disable this();
-			@disable this(this);
 		}
 		
 		Node!T* _tail    = null; /// Pointer to the first element of the list.
 		Node!T* _head    = null; /// Pointer to the last element of the list.
 		Node!T* _current = null; /// Pointer to the currently iterated element of the list.
-	}
-	
-	this(this) @nogc nothrow pure @safe
-	{
-		_current = _tail; // For proper functionality we need to reset the _current pointer
 	}
 	
 	/**
@@ -253,38 +253,6 @@ unittest
  */
 private struct Block
 {
-	private
-	{
-		UnifiedPointer _ptr; /// Pointer to the block's memory.
-		
-		size_t _size;        /// Size of the block.
-		bool   _isAllocated; /// `true` if the block has been allocated.
-	}
-	
-	/**
-	 * Returns: Pointer to the memory block.
-	 */
-	@property UnifiedPointer ptr() @nogc nothrow @safe
-	{
-		return _ptr;
-	}
-	
-	/**
-	 * Returns: Size of the block in bytes.
-	 */
-	@property size_t size() const @nogc nothrow pure @safe
-	{
-		return _size;
-	}
-	
-	/**
-	 * Returns: `true` if the block is free.
-	 */
-	@property bool isFree() const @nogc nothrow pure @safe
-	{
-		return !_isAllocated;
-	}
-	
 	@disable this();
 	
 	/**
@@ -306,6 +274,38 @@ private struct Block
 		_ptr         = ptr;
 		_size        = size;
 		_isAllocated = isAllocated;
+	}
+	
+	private
+	{
+		UnifiedPointer _ptr; /// Pointer to the block's memory.
+		
+		size_t _size;        /// Size of the block.
+		bool   _isAllocated; /// `true` if the block has been allocated.
+	}
+	
+	/**
+	 * Returns: Pointer to the memory block.
+	 */
+	@property UnifiedPointer ptr() @nogc nothrow pure @safe
+	{
+		return _ptr;
+	}
+	
+	/**
+	 * Returns: Size of the block in bytes.
+	 */
+	@property size_t size() const @nogc nothrow pure @safe
+	{
+		return _size;
+	}
+	
+	/**
+	 * Returns: `true` if the block is free.
+	 */
+	@property bool isFree() const @nogc nothrow pure @safe
+	{
+		return !_isAllocated;
 	}
 	
 	/**
@@ -345,14 +345,6 @@ private struct Block
  */
 private struct Pool
 {
-	private
-	{
-		List!Block   _blocks; /// List of the pool's blocks.
-		const size_t _size;   /// Size of the pool.
-	}
-	
-	@disable this();
-	
 	/**
 	 * Params:
 	 *     size = Size of the pool.
@@ -363,6 +355,12 @@ private struct Pool
 		
 		auto block = Block(size);
 		_blocks.pushFront(block);
+	}
+	
+	private
+	{
+		List!Block   _blocks; /// List of the pool's blocks.
+		const size_t _size;   /// Size of the pool.
 	}
 	
 	/**
@@ -441,12 +439,12 @@ alias UMM = UnifiedMemoryManager;
  */
 struct UnifiedMemoryManager
 {
+	@disable this(this);
+	
 	private
 	{
 		List!Pool _pools; /// List of avaliable pools.
 	}
-	
-	@disable this(this);
 	
 	/**
 	 * Allocate array.
