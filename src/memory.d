@@ -27,6 +27,10 @@ immutable poolSize = 128 * 2^^20; /// Size of a newlly allocated block. Defaults
 
 /**
  * Simple double-linked list.
+ *
+ * It is tuned to the specific task of memory menegement. E.g. it lacks any search and relies more on iteration through it.
+ *
+ * TODO: Not thread safe!
  */
 struct List(T)
 {
@@ -34,6 +38,9 @@ struct List(T)
 	{
 		/**
 		 * Structure that wraps list element with poitners to its neighbors.
+		 *
+		 * TODO: Probably nulldable will be better here, but I didn't manage to make it work. Nevertheless, tail(), head(),
+		 * etc. are not lvalues, so might be no difference.
 		 */
 		struct Node(T)
 		{
