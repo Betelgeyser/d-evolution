@@ -19,11 +19,24 @@ module memory;
 
 // Standard D modules
 import core.stdc.stdlib : free, malloc;
+import std.exception    : assumeWontThrow;
+import std.string       : format;
 
 import common;
 
 immutable poolSize = 128 * 2^^20; /// Size of a newlly allocated block. Defaults to 128 MiB. This number is purely random,
                                    /// probably it will need some optimization later.
+debug(memory)
+{
+	/**
+	 * Dirty way to supress some errors in debug builds that apperantly should not happen, like failing to compile
+	 * $(D_KEYWORD nothrow) function inspite it should be ignored with $(D_KEYWORD debug)(memory).
+	 */
+	void writeLog(T...)(T args, string file = __FILE__, int line = __LINE__) @nogc nothrow pure @safe
+	{
+		debug(memory) assumeWontThrow(writeln(file, " ", line, "\t", args));
+	}
+}
 
 /**
  * Simple double-linked list.
@@ -220,7 +233,7 @@ struct List(T)
 	 *
 	 * That way, opApply ensures coherence between fetched and `_current` elements when foreach loop is used.
 	 */
-	int opApply(int delegate(ref T) dg)
+	auto opApply(scope int delegate(ref T) @nogc nothrow dg) @nogc nothrow
 	{
 		int result = 0;
 		
@@ -317,10 +330,15 @@ private struct Block
 	 * Returns:
 	 *     Pointer to the allocated memory.
 	 */
-	UnifiedPointer allocate(in size_t size) pure @safe
+	UnifiedPointer allocate(in size_t size) @nogc nothrow pure @safe
 	{
-		assert (isFree, "Cannot allocate in already allocated block.");
-		assert (_size >= size, "Block cannot allocate %d bytes. Only %d is available.".format(size, _size));
+		debug(memory) assert (isFree, "Cannot allocate in already allocated block.");
+		debug(memory) assert (
+			_size >= size,
+			assumeWontThrow(
+				"%s %d\tBlock cannot allocate %d bytes. Only %d is available."
+				.format(__FILE__, __LINE__, size, _size)
+		));
 		
 		_isAllocated = true;
 		_size        = size;
@@ -336,7 +354,7 @@ private struct Block
 	void free() @nogc nothrow pure @safe
 	{
 		_isAllocated = false;
-		debug(memory) assumeWontThrow(writeln(__FILE__, " ", __LINE__, "\t", _ptr, " is freed"));
+		debug(memory) writeLog(_ptr, " is freed");
 	}
 }
 
@@ -372,44 +390,46 @@ private struct Pool
 	 * Returns:
 	 *     Pointer to the allocated memory.
 	 */
-	UnifiedPointer allocate(in size_t size)
+	UnifiedPointer allocate(in size_t size) @nogc nothrow
 	{
 		debug(memory) size_t i = 0;
 		foreach (ref block; _blocks)
 		{
-			debug(memory) write(__FILE__, " ", __LINE__, "\tScanning ", i, " block at ", block.ptr, ". ");
-			debug(memory) write("It is ", block.isFree ? "free" : "allocated", ", its size is ", block.size, " bytes. This block is ");
-			
+			debug(memory) writeLog(
+				"Scanning ", i, " block at ", block.ptr, ". ",
+				"It is ", block.isFree ? "free" : "allocated", ", its size is ", block.size, " bytes"
+			);
 			if (block.isFree && block.size >= size)
 			{
-				debug(memory) writeln("sufficient. Allocating");
+				debug(memory) writeLog("This block is sufficient. Allocating");
+				
 				auto freeBlock = Block(block.ptr + size, block.size - size, false);
 				_blocks.insertAfter(freeBlock);
-				debug(memory) writeln(__FILE__, " ", __LINE__, "\tNew free block adress is ", freeBlock.ptr);
+				
+				debug(memory) writeLog("New free block adress is ", freeBlock.ptr);
 				
 				return block.allocate(size);
 			}
-			debug(memory) writeln("insufficient");
 			debug(memory) ++i;
 		}
 		
 		return UnifiedPointer(null);
 	}
 	
-	bool free(UnifiedPointer ptr)
+	bool free(UnifiedPointer ptr) @nogc nothrow
 	{
 		debug(memory) size_t i = 0;
 		foreach (ref block; _blocks)
 		{
-			debug(memory) writeln(__FILE__, " ", __LINE__, "\tSearching in the ", i, " block");
+			debug(memory) writeLog("Searching in the ", i, " block");
 			if (block.ptr == ptr)
 			{
-				debug(memory) writeln(__FILE__, " ", __LINE__, "\tPtr ", ptr, " is found");
+				debug(memory) writeLog("Ptr ", ptr, " is found");
 				block.free();
 				
 				if (_blocks.prev !is null && _blocks.prev.isFree)
 				{
-					debug(memory) writeln(__FILE__, " ", __LINE__, "\tPrevious block ", _blocks.prev.ptr, " is free. Merging");
+					debug(memory) writeLog("Previous block ", _blocks.prev.ptr, " is free. Merging");
 					
 					block = Block(_blocks.prev.ptr, _blocks.prev.size + block.size, false);
 					_blocks.removeBefore();
@@ -417,7 +437,7 @@ private struct Pool
 				
 				if (_blocks.next !is null && _blocks.next.isFree)
 				{
-					debug(memory) writeln(__FILE__, " ", __LINE__, "\tNext block ", _blocks.next.ptr, " is free. Merging");
+					debug(memory) writeLog("Next block ", _blocks.next.ptr, " is free. Merging");
 					
 					block = Block(block.ptr, block.size + _blocks.next.size, false);
 					_blocks.removeAfter();
@@ -449,11 +469,11 @@ struct UnifiedMemoryManager
 	/**
 	 * Allocate array.
 	 */
-	UnifiedArray!T allocate(T)(in size_t items)
+	UnifiedArray!T allocate(T)(in size_t items) @nogc nothrow
 	{
 		auto size = items * T.sizeof;
 		
-		debug(memory) writeln(__FILE__, " ", __LINE__, "\tAllocating ", size, " bytes");
+		debug(memory) writeLog("Allocating ", size, " bytes");
 		
 		return UnifiedArray!T(_firstFit(size), items);
 	}
@@ -461,19 +481,19 @@ struct UnifiedMemoryManager
 	/**
 	 * Free an allocated array.
 	 */
-	void free(T)(UnifiedArray!T array)
+	void free(T)(UnifiedArray!T array) @nogc nothrow
 	{
-		debug(memory) writeln(__FILE__, " ", __LINE__, "\tFreeing ptr ", array.ptr);
+		debug(memory) writeLog("Freeing ptr ", array.ptr);
 		debug(memory) size_t i = 0;
 		foreach (ref pool; _pools)
 		{
-			debug(memory) writeln(__FILE__, " ", __LINE__, "\tSearching in the ", i, " pool");
+			debug(memory) writeLog("Searching in the ", i, " pool");
 			
 			if (pool.free(array.ptr))
 				return;
 			debug(memory) ++i;
 		}
-		assert (false, "%s %d\tUnable to free %s, memory violation".format(__FILE__, __LINE__, array.ptr));
+		debug(memory) assert (false, "%s %d\tUnable to free %s, memory violation".format(__FILE__, __LINE__, array.ptr));
 	}
 	
 	private
@@ -481,12 +501,12 @@ struct UnifiedMemoryManager
 		/**
 		 * Allocating using the firts fit stratagy.
 		 */
-		auto _firstFit(in size_t size)
+		auto _firstFit(in size_t size) @nogc nothrow
 		{
 			debug(memory) size_t i = 0;
 			foreach (ref pool; _pools)
 			{
-				debug(memory) writeln(__FILE__, " ", __LINE__, "\tSearching a sufficient block in the ", i, " pool");
+				debug(memory) writeLog("Searching a sufficient block in the ", i, " pool");
 				
 				auto ptr = pool.allocate(size);
 				if (ptr !is null)
@@ -495,7 +515,7 @@ struct UnifiedMemoryManager
 				debug(memory) ++i;
 			}
 			
-			debug(memory) writeln(__FILE__, " ", __LINE__, "\tNo sufficient pool was found. Creating a new one");
+			debug(memory) writeLog("No sufficient pool was found. Creating a new one");
 			
 			_addPool(poolSize);
 			
