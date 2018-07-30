@@ -63,17 +63,45 @@ struct List(T)
 	/**
 	 * Returns: The first element of the list.
 	 */
-	@property ref T tail() @nogc nothrow pure @safe
+	@property T* tail() @nogc nothrow pure @safe
 	{
-		return _tail._payload;
+		if (_tail !is null)
+			return &_tail._payload;
+		else
+			return null;
 	}
 	
 	/**
 	 * Returns: The last element of the list.
 	 */
-	@property ref T head() @nogc nothrow pure @safe
+	@property T* head() @nogc nothrow pure @safe
 	{
-		return _head._payload;
+		if (_head !is null)
+			return &_head._payload;
+		else
+			return null;
+	}
+	
+	/**
+	 * Returns: The element previous to the current one.
+	 */
+	@property T* prev() @nogc nothrow pure @safe
+	{
+		if (_current._prev !is null)
+			return &_current._prev._payload;
+		else
+			return null;
+	}
+	
+	/**
+	 * Returns: The element next to the current one.
+	 */
+	@property T* next() @nogc nothrow pure @safe
+	{
+		if (_current._next !is null)
+			return &_current._next._payload;
+		else
+			return null;
 	}
 	
 	/**
@@ -135,23 +163,37 @@ struct List(T)
 			_head = newNode;
 	}
 	
-	// Implementing the List as a range.
-	
-	/**
-	 * Returns: Current element of the list.
-	 */
-	ref T front() @nogc nothrow pure @safe
+	void removeBefore() @nogc nothrow
 	{
-		return _current._payload;
+		_remove(_current._prev);
+	}
+	
+	void removeAfter() @nogc nothrow
+	{
+		_remove(_current._next);
 	}
 	
 	/**
-	 * Move the curent pointer to the next element.
+	 * Remove an element &(D_PARAM node) from the list.
 	 */
-	void popFront() @nogc nothrow pure @safe
+	private void _remove(Node!T* node) @nogc nothrow
 	{
-		if (_current !is null)
-			_current = _current._next;
+		if (node !is null)
+		{
+			if (node == _tail)
+				_tail = node._next;
+			
+			if (node == _head)
+				_head = node._prev;
+			
+			if (node._prev !is null)
+				node._prev._next = _current._next;
+			
+			if (node._next !is null)
+				node._next._prev = _current._prev;
+			
+			free(node);
+		}
 	}
 	
 	/**
@@ -278,6 +320,17 @@ private struct Block
 		
 		return _ptr;
 	}
+	
+	/**
+	 * Free block.
+	 *
+	 * The block is not returned to the OS, it is just been marked as free so it can be allocated further.
+	 */
+	void free() @nogc nothrow pure @safe
+	{
+		_isAllocated = false;
+		debug(memory) assumeWontThrow(writeln(__FILE__, " ", __LINE__, "\t", _ptr, " is freed"));
+	}
 }
 
 /**
@@ -320,7 +373,7 @@ private struct Pool
 		foreach (ref block; _blocks)
 		{
 			debug(memory) write(__FILE__, " ", __LINE__, "\tScanning ", i, " block at ", block.ptr, ". ");
-			debug(memory) write("It is ", block.isFree ? "free" : "allocated", ", it size is ", block.size, " bytes. This block is ");
+			debug(memory) write("It is ", block.isFree ? "free" : "allocated", ", its size is ", block.size, " bytes. This block is ");
 			
 			if (block.isFree && block.size >= size)
 			{
@@ -336,6 +389,41 @@ private struct Pool
 		}
 		
 		return UnifiedPointer(null);
+	}
+	
+	bool free(UnifiedPointer ptr)
+	{
+		debug(memory) size_t i = 0;
+		foreach (ref block; _blocks)
+		{
+			debug(memory) writeln(__FILE__, " ", __LINE__, "\tSearching in the ", i, " block");
+			if (block.ptr == ptr)
+			{
+				debug(memory) writeln(__FILE__, " ", __LINE__, "\tPtr ", ptr, " is found");
+				block.free();
+				
+				if (_blocks.prev !is null && _blocks.prev.isFree)
+				{
+					debug(memory) writeln(__FILE__, " ", __LINE__, "\tPrevious block ", _blocks.prev.ptr, " is free. Merging");
+					
+					block = Block(_blocks.prev.ptr, _blocks.prev.size + block.size, false);
+					_blocks.removeBefore();
+				}
+				
+				if (_blocks.next !is null && _blocks.next.isFree)
+				{
+					debug(memory) writeln(__FILE__, " ", __LINE__, "\tNext block ", _blocks.next.ptr, " is free. Merging");
+					
+					block = Block(block.ptr, block.size + _blocks.next.size, false);
+					_blocks.removeAfter();
+				}
+				
+				return true;
+			}
+			debug(memory) ++i;
+		}
+		
+		return false;
 	}
 }
 
@@ -363,6 +451,24 @@ struct UnifiedMemoryManager
 		debug(memory) writeln(__FILE__, " ", __LINE__, "\tAllocating ", size, " bytes");
 		
 		return UnifiedArray!T(_firstFit(size), items);
+	}
+	
+	/**
+	 * Free an allocated array.
+	 */
+	void free(T)(UnifiedArray!T array)
+	{
+		debug(memory) writeln(__FILE__, " ", __LINE__, "\tFreeing ptr ", array.ptr);
+		debug(memory) size_t i = 0;
+		foreach (ref pool; _pools)
+		{
+			debug(memory) writeln(__FILE__, " ", __LINE__, "\tSearching in the ", i, " pool");
+			
+			if (pool.free(array.ptr))
+				return;
+			debug(memory) ++i;
+		}
+		assert (false, "%s %d\tUnable to free %s, memory violation".format(__FILE__, __LINE__, array.ptr));
 	}
 	
 	private
