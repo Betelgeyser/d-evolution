@@ -260,6 +260,7 @@ struct List(T)
 	{
 		int result = 0;
 		
+		_current = _tail;
 		while (!empty)
 		{
 			result = dg(_current._payload);
@@ -268,8 +269,8 @@ struct List(T)
 			
 			_current = _current._next;
 		}
-		
 		_current = _tail;
+		
 		return result;
 	}
 }
