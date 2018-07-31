@@ -25,7 +25,8 @@ import std.string       : format;
 import common;
 
 immutable poolSize = 128 * 2^^20; /// Size of a newlly allocated block. Defaults to 128 MiB. This number is purely random,
-                                   /// probably it will need some optimization later.
+                                  /// probably it will need some optimization later.
+
 debug(memory)
 {
 	/**
