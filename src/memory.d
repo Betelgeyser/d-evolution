@@ -79,6 +79,16 @@ struct List(T)
 		Node!T* _tail    = null; /// Pointer to the first element of the list.
 		Node!T* _head    = null; /// Pointer to the last element of the list.
 		Node!T* _current = null; /// Pointer to the currently iterated element of the list.
+		
+		size_t _length; /// Number of elements in the list.
+	}
+	
+	/**
+	 * Returns: Number of elements in the list.
+	 */
+	@property size_t length() const @nogc nothrow pure @safe
+	{
+		return _length;
 	}
 	
 	/**
@@ -146,6 +156,8 @@ struct List(T)
 			_current = newHead;
 		
 		_head = newHead;
+		
+		++_length;
 	}
 	
 	/**
@@ -182,6 +194,8 @@ struct List(T)
 		
 		if (_head is null)
 			_head = newNode;
+		
+		++_length;
 	}
 	
 	/**
@@ -220,6 +234,8 @@ struct List(T)
 				node._next._prev = _current._prev;
 			
 			free(node);
+			
+			--_length;
 		}
 	}
 	
