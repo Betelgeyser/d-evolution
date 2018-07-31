@@ -656,4 +656,57 @@ struct UnifiedMemoryManager
 	}
 }
 
+///
+unittest
+{
+	// This is a simplified unittest and it cannot detect every possible error, but is OK for now.
+	// Use `-debug memory` switch to enable full memory logging in case of errors.
+	
+	mixin(writeTest!UnifiedMemoryManager);
+	UMM manager;
+	
+	UnifiedArray!float[] a;
+	
+	a ~= manager.allocate!float(15728640);
+	assert (manager._pools.length == 1); // Created 1st pool
+	assert (manager._pools.head._blocks.length == 2); // 1st block in the pool is splited into two new blocks:
+	                                                  // allocated and free
+	assert (a[0].length == 15728640);
+	assert (a[0][$ - 1] == a[0][$ - 1]); // Ckeck memory accessability
+	
+	a ~= manager.allocate!float(15728640);
+	assert (manager._pools.length == 1);
+	assert (manager._pools.head._blocks.length == 3); // New block is allocated from the free one
+	assert (a[1].length == 15728640);
+	assert (a[1][$ - 1] == a[1][$ - 1]);
+	
+	a ~= manager.allocate!float(15728640);
+	assert (manager._pools.length == 2); // As there is not enough free space in the 1st pool, a new one is created
+	assert (manager._pools.tail._blocks.length == 3);
+	assert (manager._pools.head._blocks.length == 2);
+	assert (a[2].length == 15728640);
+	assert (a[2][$ - 1] == a[2][$ - 1]);
+	
+	manager.free(a[0]);
+	assert (manager._pools.length == 2); // Pools are never freed right now
+	assert (manager._pools.tail._blocks.length == 3); // Freed block is not adjacent to any other free block so it can't be merged
+	assert (manager._pools.head._blocks.length == 2);
+	
+	manager.free(a[1]);
+	assert (manager._pools.length == 2); // Pools are never freed right now
+	assert (manager._pools.tail._blocks.length == 1); // Freed block was adjacent to free blocks from the both sides, so they
+	                                                  // have been merged together
+	assert (manager._pools.head._blocks.length == 2);
+	
+	a ~= manager.allocate!float(15728640);
+	assert (manager._pools.length == 2);
+	assert (manager._pools.tail._blocks.length == 2); // As now there is enough free space in the first pool, new array is
+	                                                  // allocated there
+	assert (manager._pools.head._blocks.length == 2);
+	assert (a[3].length == 15728640);
+	assert (a[3][$ - 1] == a[2][$ - 1]);
+	
+	assert (a[0].ptr == a[3].ptr); // New array allocated in place of the 1st one, so the must point to the same area
+	                               // Note, that accessing a[0] after freeing is undefined behaviour
+}
 
