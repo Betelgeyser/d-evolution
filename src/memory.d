@@ -19,10 +19,14 @@ module memory;
 
 // Standard D modules
 import core.stdc.stdlib : free, malloc;
-import std.exception    : assumeWontThrow;
-import std.string       : format;
 
 import common;
+
+debug(memory)
+{
+	import std.exception : assumeWontThrow;
+	import std.string    : format;
+}
 
 immutable poolSize = 128 * 2^^20; /// Size of a newlly allocated block. Defaults to 128 MiB. This number is purely random,
                                   /// probably it will need some optimization later.
@@ -278,8 +282,78 @@ struct List(T)
 ///
 unittest
 {
-//	mixin(writeTest!List);
-//	
+	mixin(writeTest!List);
+	
+	struct S
+	{
+		int   i;
+		float f;
+	}
+	
+	List!S list;
+	
+	with (list)
+	{
+		pushFront( S(1, 1f) );
+		assert (_current._payload == S(1, 1f));
+		assert (_current          == _tail);
+		assert (_current          == _head);
+		assert (_current._prev    is null);
+		assert (_current._next    is null);
+		assert (_length           == 1);
+		
+		pushFront( S(3, 1f) );
+		assert (_current       == _tail);
+		assert (_tail._payload == S(1, 1f));
+		assert (_tail._next    == _head);
+		assert (_head._payload == S(3, 1f));
+		assert (_head._prev    == _tail);
+		assert (_head._next    is null);
+		assert (_length        == 2);
+		
+		insertAfter( S(2, 1f) );
+		assert (_current._payload == S(2, 1f));
+		assert (_current          != _tail);
+		assert (_current          != _head);
+		assert (_current._prev    == _tail);
+		assert (_current._next    == _head);
+		assert (_tail._next       == _current);
+		assert (_head._prev       == _current);
+		assert (_length           == 3);
+		
+		int i = 1;
+		foreach (el; list)
+		{
+			assert (el == S(i, 1f));
+			++i;
+		}
+		
+		// Try to remove this foreach and foreach by reference will suddenly fail. DMD64 D Compiler v2.079.0
+		foreach (el; list)
+			el.f = 2f;
+		foreach (el; list)
+			assert (el.f == 1f, "foreach by value changed an element in the list.");
+		
+		foreach (ref el; list)
+			el.f = 2f;
+		foreach (el; list)
+			assert (el.f == 2f, "foreach by reference failed to change an element in the list.");
+		
+		foreach (ref el; list)
+		{
+			if (el == S(2, 1f))
+			{
+				removeBefore();
+				removeAfter();
+				assert (_current._payload == S(2, 1f));
+				assert (_current          == _tail);
+				assert (_current          == _head);
+				assert (_current._prev    is null);
+				assert (_current._next    is null);
+				assert (_length           == 1);
+			}
+		}
+	}
 }
 
 /**
