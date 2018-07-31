@@ -183,11 +183,17 @@ struct List(T)
 			_head = newNode;
 	}
 	
+	/**
+	 * Remove an element before the current one.
+	 */
 	void removeBefore() @nogc nothrow
 	{
 		_remove(_current._prev);
 	}
 	
+	/**
+	 * Remove an element after the current one.
+	 */
 	void removeAfter() @nogc nothrow
 	{
 		_remove(_current._next);
@@ -217,7 +223,7 @@ struct List(T)
 	}
 	
 	/**
-	 * Returns: true if there are no more nodes avaliable in the list.
+	 * Returns: $(D_KEYWORD true) if there are no more elements avaliable in the list.
 	 */
 	bool empty() const @nogc nothrow pure @safe
 	{
