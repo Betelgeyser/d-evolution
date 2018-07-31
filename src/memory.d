@@ -357,7 +357,7 @@ unittest
 }
 
 /**
- * Continuous block of memory.
+ * Continuous block of memory. It is the minimum unit of allocation.
  *
  * In fact, it is just a wrapper around a pointer storing some additional information, such as avaliable size of the pointed
  * memory and whether it has already been allocated.
@@ -458,6 +458,13 @@ private struct Block
 
 /**
  * Memory pool.
+ *
+ * It is a sufficiently large area of memory which is allocated at once. Any further allocations are done from this region
+ * which improves performance by reducing the number of cudaMallocManaged calls.
+ *
+ * Every pool is devided into blocks which may be allocated or free. Whenever new allocation is performed, pool looks for
+ * the first free block of the sufficient size and splits this block into two parts: allocated and free (if some free space
+ * is left).
  */
 private struct Pool
 {
@@ -553,7 +560,23 @@ private struct Pool
 alias UMM = UnifiedMemoryManager;
 
 /**
- * Cuda unified memory manager.
+ * Cuda unified memory manager. The main purpose of the manager is speeding up slow cudaMallocManaged. It also provides more
+ * type-safe system for cuda pointers.
+ *
+ * The problem with cudaMalloc and cudaMallocManaged is calls to these functions are slow. Requested size
+ * does not matters, calls to these functions are slow themselvs. That doesn't generally affect performance much,
+ * but if there are a lot of calls to the cuda mallocs (which is the case with this program), performance drops drastically.
+ * As a sugesttion, the issue could be caused by switching between kernel and user modes every time the function is called.
+ * Interestingly enough, there is no such an issue with regular malloc.
+ *
+ * As a solution, UnifiedMemoryManager allocates large blocks of memory at once (which are called pools) and allocates
+ * returns small parts of these pools. This increases an amount of memory used by the application, but minimizes number
+ * of direct cudaMallocManaged calls.
+ *
+ * Allocated memory can be freed and used for further allocations, but in current implementation will never be returned to
+ * an OS.
+ *
+ * Currently it uses only first-fit allocation strategy, as one of the fastest and easiest to implement.
  */
 struct UnifiedMemoryManager
 {
@@ -578,6 +601,8 @@ struct UnifiedMemoryManager
 	
 	/**
 	 * Free an allocated array.
+	 *
+	 * NOTE: Accessing pointed area after the array has been freed is undefined behaviour.
 	 */
 	void free(T)(UnifiedArray!T array) @nogc nothrow
 	{
