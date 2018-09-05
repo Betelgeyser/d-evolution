@@ -22,17 +22,18 @@ import core.stdc.stdlib : free, malloc;
 
 import common;
 
-debug(memory)
-{
-	import std.exception : assumeWontThrow;
-	import std.string    : format;
-}
+UnifiedMemoryManager UMM;
 
-immutable poolSize = 128 * 2^^20; /// Size of a newlly allocated block. Defaults to 128 MiB. This number is purely random,
+private:
+
+immutable poolSize = 128 * 2^^20; /// Size of a newly allocated block. Defaults to 128 MiB. This number is purely random,
                                   /// probably it will need some optimization later.
 
 debug(memory)
 {
+	import std.exception : assumeWontThrow;
+	import std.string    : format;
+	
 	/**
 	 * Dirty way to supress some errors in debug builds that apperantly should not happen, like failing to compile
 	 * $(D_KEYWORD nothrow) function inspite it should be ignored with $(D_KEYWORD debug)(memory).
@@ -67,8 +68,6 @@ struct List(T)
 		 */
 		struct Node(T)
 		{
-			alias _payload this;
-			
 			@disable this();
 			@disable this(this);
 			
@@ -362,7 +361,7 @@ unittest
  * In fact, it is just a wrapper around a pointer storing some additional information, such as avaliable size of the pointed
  * memory and whether it has already been allocated.
  */
-private struct Block
+struct Block
 {
 	@disable this();
 	
@@ -465,7 +464,7 @@ private struct Block
  * the first free block of the sufficient size and splits this block into two parts: allocated and free (if some free space
  * is left).
  */
-private struct Pool
+struct Pool
 {
 	/**
 	 * Params:
@@ -481,8 +480,8 @@ private struct Pool
 	
 	private
 	{
-		List!Block   _blocks; /// List of the pool's blocks.
-		const size_t _size;   /// Size of the pool.
+		immutable size_t _size;   /// Size of the pool.
+		List!Block       _blocks; /// List of the pool's blocks.
 	}
 	
 	/**
@@ -556,8 +555,6 @@ private struct Pool
 	}
 }
 
-alias UMM = UnifiedMemoryManager;
-
 /**
  * Cuda unified memory manager. The main purpose of the manager is speeding up slow cudaMallocManaged. It also provides more
  * type-safe system for cuda pointers.
@@ -623,7 +620,7 @@ struct UnifiedMemoryManager
 		/**
 		 * Allocating using the firts fit stratagy.
 		 */
-		auto _firstFit(in size_t size) @nogc nothrow
+		void* _firstFit(in size_t size) @nogc nothrow
 		{
 			debug(memory) size_t i = 0;
 			foreach (ref pool; _pools)
@@ -662,7 +659,7 @@ unittest
 	// Use `-debug memory` switch to enable full memory logging in case of errors.
 	
 	mixin(writeTest!UnifiedMemoryManager);
-	UMM manager;
+	UnifiedMemoryManager manager;
 	
 	float[][] a;
 	
