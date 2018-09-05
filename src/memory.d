@@ -19,6 +19,9 @@ module memory;
 
 // Standard D modules
 import core.stdc.stdlib : free, malloc;
+import std.conv         : to;
+import std.exception    : enforce;
+import std.traits       : isNumeric;
 
 import common;
 
@@ -587,8 +590,14 @@ struct UnifiedMemoryManager
 	 * Allocate array.
 	 */
 	T[] allocate(T)(in size_t items)
+		if (isNumeric!T)
 	{
 		auto size = items * T.sizeof;
+		
+		enforce(
+			size <= poolSize,
+			"Allocating " ~ size.to!string ~ " bytes, but maximum pool size is " ~ poolSize.to!string ~ " bytes."
+		);
 		
 		debug(memory) writeLog("Allocating ", size, " bytes");
 		
