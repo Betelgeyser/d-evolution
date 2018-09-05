@@ -374,13 +374,13 @@ private struct Block
 	 */
 	this(in size_t size) @nogc nothrow
 	{
-		_ptr         = cudaMallocManaged(size);
+		cudaMallocManaged(_ptr, size);
 		_size        = size;
 		_isAllocated = false;
 	}
 	
 	/// ditto
-	this(UnifiedPointer ptr, in size_t size, in bool isAllocated) @nogc nothrow pure @safe
+	this(void* ptr, in size_t size, in bool isAllocated) @nogc nothrow pure @safe
 	{
 		_ptr         = ptr;
 		_size        = size;
@@ -389,8 +389,7 @@ private struct Block
 	
 	private
 	{
-		UnifiedPointer _ptr; /// Pointer to the block's memory.
-		
+		void*  _ptr;         /// Pointer to the block's memory.
 		size_t _size;        /// Size of the block.
 		bool   _isAllocated; /// `true` if the block has been allocated.
 	}
@@ -398,7 +397,7 @@ private struct Block
 	/**
 	 * Returns: Pointer to the memory block.
 	 */
-	@property UnifiedPointer ptr() @nogc nothrow pure @safe
+	@property void* ptr() @nogc nothrow pure @safe
 	{
 		return _ptr;
 	}
@@ -428,7 +427,7 @@ private struct Block
 	 * Returns:
 	 *     Pointer to the allocated memory.
 	 */
-	UnifiedPointer allocate(in size_t size) @nogc nothrow pure @safe
+	void* allocate(in size_t size) @nogc nothrow pure @safe
 	{
 		debug(memory) assert (isFree, "Cannot allocate in already allocated block.");
 		debug(memory) assert (
@@ -495,7 +494,7 @@ private struct Pool
 	 * Returns:
 	 *     Pointer to the allocated memory.
 	 */
-	UnifiedPointer allocate(in size_t size) @nogc nothrow
+	void* allocate(in size_t size) @nogc nothrow
 	{
 		debug(memory) size_t i = 0;
 		foreach (ref block; _blocks)
@@ -518,10 +517,10 @@ private struct Pool
 			debug(memory) ++i;
 		}
 		
-		return UnifiedPointer(null);
+		return null;
 	}
 	
-	bool free(UnifiedPointer ptr) @nogc nothrow
+	bool free(void* ptr) @nogc nothrow
 	{
 		debug(memory) size_t i = 0;
 		foreach (ref block; _blocks)
@@ -590,13 +589,13 @@ struct UnifiedMemoryManager
 	/**
 	 * Allocate array.
 	 */
-	UnifiedArray!T allocate(T)(in size_t items) @nogc nothrow
+	T[] allocate(T)(in size_t items)
 	{
 		auto size = items * T.sizeof;
 		
 		debug(memory) writeLog("Allocating ", size, " bytes");
 		
-		return UnifiedArray!T(_firstFit(size), items);
+		return cast(T[])_firstFit(size)[0 .. size];
 	}
 	
 	/**
@@ -604,7 +603,7 @@ struct UnifiedMemoryManager
 	 *
 	 * NOTE: Accessing pointed area after the array has been freed is undefined behaviour.
 	 */
-	void free(T)(UnifiedArray!T array) @nogc nothrow
+	void free(T)(ref T[] array) @nogc nothrow
 	{
 		debug(memory) writeLog("Freeing ptr ", array.ptr);
 		debug(memory) size_t i = 0;
@@ -665,7 +664,7 @@ unittest
 	mixin(writeTest!UnifiedMemoryManager);
 	UMM manager;
 	
-	UnifiedArray!float[] a;
+	float[][] a;
 	
 	a ~= manager.allocate!float(15728640);
 	assert (manager._pools.length == 1); // Created 1st pool
