@@ -25,6 +25,8 @@ import std.traits       : isNumeric;
 
 import common;
 
+import cuda.cudaruntimeapi : cudaMallocManaged;
+
 UnifiedMemoryManager UMM;
 
 private:
