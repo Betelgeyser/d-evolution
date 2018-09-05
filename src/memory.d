@@ -598,7 +598,6 @@ struct UnifiedMemoryManager
 	/**
 	 * Free an allocated array.
 	 *
-	 * NOTE: Accessing pointed area after the array has been freed is undefined behaviour.
 	 */
 	void free(T)(ref T[] array) @nogc nothrow
 	{
@@ -609,7 +608,10 @@ struct UnifiedMemoryManager
 			debug(memory) writeLog("Searching in the ", i, " pool");
 			
 			if (pool.free(array.ptr))
+			{
+				array.destroy();
 				return;
+			}
 			debug(memory) ++i;
 		}
 		debug(memory) assert (false, "%s %d\tUnable to free %s, memory violation".format(__FILE__, __LINE__, array.ptr));
@@ -687,22 +689,23 @@ unittest
 	assert (manager._pools.length == 2); // Pools are never freed right now
 	assert (manager._pools.tail._blocks.length == 3); // Freed block is not adjacent to any other free block so it can't be merged
 	assert (manager._pools.head._blocks.length == 2);
+	assert (a[0].ptr    == null); // The destroyed array must not be accessable any more
+	assert (a[0].length == 0);
 	
 	manager.free(a[1]);
 	assert (manager._pools.length == 2); // Pools are never freed right now
 	assert (manager._pools.tail._blocks.length == 1); // Freed block was adjacent to free blocks from the both sides, so they
 	                                                  // have been merged together
 	assert (manager._pools.head._blocks.length == 2);
+	assert (a[1].ptr    == null);
+	assert (a[1].length == 0);
 	
-	a ~= manager.allocate!float(15728640);
+	a[0] = manager.allocate!float(15728640);
 	assert (manager._pools.length == 2);
 	assert (manager._pools.tail._blocks.length == 2); // As now there is enough free space in the first pool, new array is
 	                                                  // allocated there
 	assert (manager._pools.head._blocks.length == 2);
-	assert (a[3].length == 15728640);
-	assert (a[3][$ - 1] == a[2][$ - 1]);
-	
-	assert (a[0].ptr == a[3].ptr); // New array allocated in place of the 1st one, so the must point to the same area
-	                               // Note, that accessing a[0] after freeing is undefined behaviour
+	assert (a[0].length == 15728640);
+	assert (a[0][$ - 1] == a[0][$ - 1]); // As we allocated a[0] one more time, it must be accessable again
 }
 
