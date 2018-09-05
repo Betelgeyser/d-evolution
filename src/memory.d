@@ -80,7 +80,7 @@ struct List(T)
 			{
 				T       _payload;     /// The data itself.
 				Node!T* _prev = null; /// Pointer to the previous node.
-				Node!T* _next = null; /// Pointer to the nex node.
+				Node!T* _next = null; /// Pointer to the next node.
 			}
 		}
 		
@@ -223,7 +223,7 @@ struct List(T)
 	}
 	
 	/**
-	 * Remove an element &(D_PARAM node) from the list.
+	 * Remove an element $(D_PARAM node) from the list.
 	 */
 	private void _remove(Node!T* node) @nogc nothrow
 	{
@@ -466,7 +466,7 @@ struct Block
  * which improves performance by reducing the number of cudaMallocManaged calls.
  *
  * Every pool is devided into blocks which may be allocated or free. Whenever new allocation is performed, pool looks for
- * the first free block of the sufficient size and splits this block into two parts: allocated and free (if some free space
+ * the first free block of the sufficient size and splits this block into two parts: allocated and free (if any free space
  * is left).
  */
 struct Pool
@@ -514,7 +514,7 @@ struct Pool
 				auto freeBlock = Block(block.ptr + size, block.size - size, false);
 				_blocks.insertAfter(freeBlock);
 				
-				debug(memory) writeLog("New free block adress is ", freeBlock.ptr);
+				debug(memory) writeLog("New free block address is ", freeBlock.ptr);
 				
 				return block.allocate(size);
 			}
@@ -567,17 +567,17 @@ struct Pool
  * The problem with cudaMalloc and cudaMallocManaged is calls to these functions are slow. Requested size
  * does not matters, calls to these functions are slow themselvs. That doesn't generally affect performance much,
  * but if there are a lot of calls to the cuda mallocs (which is the case with this program), performance drops drastically.
- * As a sugesttion, the issue could be caused by switching between kernel and user modes every time the function is called.
+ * As a sugestion, the issue could be caused by switching between kernel and user modes every time the function is called.
  * Interestingly enough, there is no such an issue with regular malloc.
  *
- * As a solution, UnifiedMemoryManager allocates large blocks of memory at once (which are called pools) and allocates
- * returns small parts of these pools. This increases an amount of memory used by the application, but minimizes number
- * of direct cudaMallocManaged calls.
+ * As a solution, UnifiedMemoryManager allocates large blocks of memory at once (which are called pools) and returns small
+ * parts of these pools. This increases an amount of memory used by the application, but minimizes number of direct
+ * cudaMallocManaged calls.
  *
  * Allocated memory can be freed and used for further allocations, but in current implementation will never be returned to
- * an OS.
+ * the OS.
  *
- * Currently it uses only first-fit allocation strategy, as one of the fastest and easiest to implement.
+ * Currently it uses only the first-fit allocation strategy, as one of the fastest and easiest to implement.
  */
 struct UnifiedMemoryManager
 {
@@ -589,7 +589,7 @@ struct UnifiedMemoryManager
 	}
 	
 	/**
-	 * Allocate array.
+	 * Allocate an array.
 	 */
 	T[] allocate(T)(in size_t items)
 		if (isNumeric!T)
@@ -713,7 +713,7 @@ unittest
 	
 	a[0] = manager.allocate!float(15728640);
 	assert (manager._pools.length == 2);
-	assert (manager._pools.tail._blocks.length == 2); // As now there is enough free space in the first pool, new array is
+	assert (manager._pools.tail._blocks.length == 2); // As now there is enough free space in the 1st pool, a new array is
 	                                                  // allocated there
 	assert (manager._pools.head._blocks.length == 2);
 	assert (a[0].length == 15728640);
