@@ -51,9 +51,10 @@ void cudaFree(void* devPtr) nothrow @nogc
 	enforceCudart(cudart.cudaFree(devPtr));
 }
 
-void cudaFree(T)(T[] devPtr) nothrow @nogc
+void cudaFree(T)(ref T[] devPtr) nothrow @nogc
 {
 	enforceCudart(cudart.cudaFree(devPtr.ptr));
+	devPtr.destroy();
 }
 
 void cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind) nothrow @nogc
