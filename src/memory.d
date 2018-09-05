@@ -15,7 +15,7 @@
  *
  * This module contains memory management things.
  */
-module memory;
+module memory; // TODO: All contents of this module are non thread-safe!
 
 // Standard D modules
 import core.stdc.stdlib : free, malloc;
@@ -52,24 +52,19 @@ debug(memory)
 /**
  * Simple double-linked list.
  *
- * It is tuned to the specific task of memory menegement. E.g. it lacks any search and relies more on iteration through it.
- *
- * TODO: Not thread safe!
+ * It is tuned to the specific task of memory menegement. E. g. it lacks any search and relies more on iteration through it.
  */
 struct List(T)
 {
 	this(this) @nogc nothrow pure @safe
 	{
-		_current = _tail; // For proper functionality we need to reset the _current pointer on copy
+		_current = _tail; // We need to reset the _current pointer on copy for iterators
 	}
 	
 	private
 	{
 		/**
 		 * Structure that wraps list element with poitners to its neighbors.
-		 *
-		 * TODO: Probably nulldable will be better here, but I didn't manage to make it work. Nevertheless, tail(), head(),
-		 * etc. are not lvalues, so might be no difference.
 		 */
 		struct Node(T)
 		{
@@ -100,7 +95,7 @@ struct List(T)
 	}
 	
 	/**
-	 * Returns: The first element of the list.
+	 * Returns: Pointer to the first element of the list.
 	 */
 	@property T* tail() @nogc nothrow pure @safe
 	{
@@ -111,7 +106,7 @@ struct List(T)
 	}
 	
 	/**
-	 * Returns: The last element of the list.
+	 * Returns: Pointer to the last element of the list.
 	 */
 	@property T* head() @nogc nothrow pure @safe
 	{
@@ -122,7 +117,7 @@ struct List(T)
 	}
 	
 	/**
-	 * Returns: The element previous to the current one.
+	 * Returns: Pointer to the element previous to the current one.
 	 */
 	@property T* prev() @nogc nothrow pure @safe
 	{
@@ -133,7 +128,7 @@ struct List(T)
 	}
 	
 	/**
-	 * Returns: The element next to the current one.
+	 * Returns: Pointer to the element next to the current one.
 	 */
 	@property T* next() @nogc nothrow pure @safe
 	{
@@ -145,6 +140,9 @@ struct List(T)
 	
 	/**
 	 * Append a new element at the end of the list.
+	 *
+	 * Params:
+	 *     value = Value of a the new element.
 	 */
 	void pushFront(T value) @nogc nothrow
 	{
@@ -170,6 +168,9 @@ struct List(T)
 	
 	/**
 	 * Insert a new element into the list after the current one. The new element will be set as a current one.
+	 *
+	 * Params:
+	 *     value = Value of a the new element.
 	 */
 	void insertAfter(T value) @nogc nothrow
 	{
@@ -395,7 +396,7 @@ struct Block
 	{
 		void*  _ptr;         /// Pointer to the block's memory.
 		size_t _size;        /// Size of the block.
-		bool   _isAllocated; /// `true` if the block has been allocated.
+		bool   _isAllocated; /// $(D_KEYWORD true) if the block has been allocated.
 	}
 	
 	/**
@@ -415,7 +416,7 @@ struct Block
 	}
 	
 	/**
-	 * Returns: `true` if the block is free.
+	 * Returns: $(D_KEYWORD true) if the block is free.
 	 */
 	@property bool isFree() const @nogc nothrow pure @safe
 	{
@@ -493,10 +494,11 @@ struct Pool
 	 * Allocates memory in the pool.
 	 *
 	 * Params:
-	 *     size = Allocated bytes.
+	 *     size = Size in bytes to allocate.
 	 *
 	 * Returns:
-	 *     Pointer to the allocated memory.
+	 *     Pointer to the allocated memory. If there were no sufficient block found in the pool, then $(D_KEYWORD null)
+	 *     is returned.
 	 */
 	void* allocate(in size_t size) @nogc nothrow
 	{
@@ -524,6 +526,16 @@ struct Pool
 		return null;
 	}
 	
+	/**
+	 * Free allocated block.
+	 *
+	 * Params:
+	 *     ptr = Pointer to a block being freed.
+	 *
+	 * Returns:
+	 *     $(D_KEYWORD true) if the block were successefuly freed. If the block pointed by this pointer were not found
+	 *     in the pool and were not freed, then $(D_KEYWORD false) is returned. 
+	 */
 	bool free(void* ptr) @nogc nothrow
 	{
 		debug(memory) size_t i = 0;
@@ -561,11 +573,10 @@ struct Pool
 }
 
 /**
- * Cuda unified memory manager. The main purpose of the manager is speeding up slow cudaMallocManaged. It also provides more
- * type-safe system for cuda pointers.
+ * Cuda unified memory manager. The main purpose of the manager is speeding up slow cudaMallocManaged.
  *
- * The problem with cudaMalloc and cudaMallocManaged is calls to these functions are slow. Requested size
- * does not matters, calls to these functions are slow themselvs. That doesn't generally affect performance much,
+ * The problem with cudaMalloc and cudaMallocManaged is that calls to these functions are slow. Requested size
+ * does not matter, calls to these functions are slow themselves. That doesn't generally affect performance much,
  * but if there are a lot of calls to the cuda mallocs (which is the case with this program), performance drops drastically.
  * As a sugestion, the issue could be caused by switching between kernel and user modes every time the function is called.
  * Interestingly enough, there is no such an issue with regular malloc.
@@ -590,6 +601,13 @@ struct UnifiedMemoryManager
 	
 	/**
 	 * Allocate an array.
+	 *
+	 * Params:
+	 *     T (template) = The type of elements to allocate. Must be numerical POD.
+	 *     items = Number of items to allocate.
+	 *
+	 * Returns:
+	 *     Allocated array.
 	 */
 	T[] allocate(T)(in size_t items)
 		if (isNumeric!T)
@@ -609,6 +627,8 @@ struct UnifiedMemoryManager
 	/**
 	 * Free an allocated array.
 	 *
+	 * Params:
+	 *     array = Array to free.
 	 */
 	void free(T)(ref T[] array) @nogc nothrow
 	{
@@ -632,6 +652,15 @@ struct UnifiedMemoryManager
 	{
 		/**
 		 * Allocating using the firts fit stratagy.
+		 *
+		 * Params:
+		 *     size = Size in bytes to allocate.
+		 *
+		 * Returns:
+		 *     Pointer to the allocated memory.
+		 *
+		 * See_Also:
+		 *     $(LINK http://www.memorymanagement.org/mmref/alloc.html#first-fit)
 		 */
 		void* _firstFit(in size_t size) @nogc nothrow
 		{
@@ -656,6 +685,9 @@ struct UnifiedMemoryManager
 		
 		/**
 		 * Create a new pool and add it to the list.
+		 *
+		 * Params:
+		 *     size = Size of a new pool in bytes.
 		 */
 		void _addPool(in size_t size) @nogc nothrow
 		{
@@ -684,15 +716,15 @@ unittest
 	assert (a[0][$ - 1] == a[0][$ - 1]); // Ckeck memory accessability
 	
 	a ~= manager.allocate!float(15728640);
-	assert (manager._pools.length == 1);
+	assert (manager._pools.length == 1); // As there are enough free space in the 1st pool, no new pool is created
 	assert (manager._pools.head._blocks.length == 3); // New block is allocated from the free one
 	assert (a[1].length == 15728640);
 	assert (a[1][$ - 1] == a[1][$ - 1]);
 	
 	a ~= manager.allocate!float(15728640);
 	assert (manager._pools.length == 2); // As there is not enough free space in the 1st pool, a new one is created
-	assert (manager._pools.tail._blocks.length == 3);
-	assert (manager._pools.head._blocks.length == 2);
+	assert (manager._pools.tail._blocks.length == 3); // The 1st pool is unaffected
+	assert (manager._pools.head._blocks.length == 2); // A new block is created in the 2nd pool
 	assert (a[2].length == 15728640);
 	assert (a[2][$ - 1] == a[2][$ - 1]);
 	
