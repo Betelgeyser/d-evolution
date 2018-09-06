@@ -139,7 +139,7 @@ struct List(T)
 	}
 	
 	/**
-	 * Append a new element at the end of the list.
+	 * Append a new element at the end of the list. The current pointer is then set to a new head.
 	 *
 	 * Params:
 	 *     value = Value of a the new element.
