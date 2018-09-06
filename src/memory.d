@@ -237,10 +237,10 @@ struct List(T)
 				_head = node._prev;
 			
 			if (node._prev !is null)
-				node._prev._next = _current._next;
+				node._prev._next = node._next;
 			
 			if (node._next !is null)
-				node._next._prev = _current._prev;
+				node._next._prev = node._prev;
 			
 			free(node);
 			
