@@ -29,6 +29,7 @@ import cuda.cublas;
 
 // DNN modules
 import common;
+import memory;
 
 version (unittest)
 {
@@ -153,7 +154,7 @@ struct Matrix
 		_rows = rows;
 		_cols = cols;
 		
-		cudaMallocManaged(values, _rows * _cols);
+		values = UMM.allocate!float(_rows * _cols);
 	}
 	
 	///
@@ -190,7 +191,7 @@ struct Matrix
 		_rows = csv.count("\n").to!uint;
 		_cols = csv.count(",").to!uint / _rows + 1;
 		
-		cudaMallocManaged(values, _rows * _cols);
+		values = UMM.allocate!float(_rows * _cols);
 		
 		size_t i = 0;
 		size_t j = 0;
@@ -269,7 +270,7 @@ struct Matrix
 	 */
 	void freeMem() nothrow @nogc
 	{
-		cudaFree(values);
+		UMM.free(values);
 	}
 	
 	static void copy(in Matrix src, Matrix dst)
