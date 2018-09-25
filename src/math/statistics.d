@@ -16,8 +16,9 @@
 module math.statistics;
 
 // Standard D modules
-import std.algorithm : mean;
-import std.parallelism;
+import std.algorithm   : mean;
+import std.parallelism : taskPool;
+import std.string      : format;
 
 // CUDA modules
 import cuda.cudaruntimeapi;

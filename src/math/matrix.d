@@ -16,13 +16,11 @@
 module math.matrix;
 
 // Standard D modules
-import std.algorithm : count, each;
-import std.conv      : to;
-import std.csv       : csvReader;
-import std.range     : ElementType;
+import std.algorithm    : count;
 import std.conv         : to;
 import std.csv          : csvReader;
 import std.exception    : enforce;
+import std.range        : ElementType;
 import std.regex        : ctRegex, matchFirst;
 import std.string       : format;
 
