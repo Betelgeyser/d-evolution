@@ -20,7 +20,10 @@ import std.algorithm : count, each;
 import std.conv      : to;
 import std.csv       : csvReader;
 import std.range     : ElementType;
+import std.conv         : to;
+import std.csv          : csvReader;
 import std.exception    : enforce;
+import std.regex        : ctRegex, matchFirst;
 import std.string       : format;
 
 // CUDA modules
@@ -189,19 +192,20 @@ struct Matrix
 		scope(failure) freeMem();
 		
 		_rows = csv.count("\n").to!uint;
-		_cols = csv.count(",").to!uint / _rows + 1;
+		
+		auto firstLineCTR = ctRegex!("^.*\n");
+		string firstLine = matchFirst(csv, firstLineCTR)[0];
+		_cols = firstLine.count(",").to!uint + 1;
 		
 		values = UMM.allocate!float(_rows * _cols);
 		
 		size_t i = 0;
-		size_t j = 0;
-		
 		foreach (record; csv.csvReader!float)
 		{
+			size_t j = 0;
 			foreach (value; record)
-				values[j++ * _rows + i] = value;
-		
-			j = 0;
+				this[i, j++] = value;
+			
 			++i;
 		}
 	}
