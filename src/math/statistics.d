@@ -78,14 +78,14 @@ version (unittest)
  */
 void AE(in Matrix A, in Matrix B, Matrix error, cublasHandle_t cublasHandle)
 {
-	float alpha =  1;
-	float beta  = -1;
 	if (A.rows != B.rows || A.cols != B.cols)
 		throw new Error("Input matricies must have same size, got %dx%d and %dx%d.".format(A.rows, A.cols, B.rows, B.cols));
 	
 	if (A.cols != error.cols || error.rows != 1)
 		throw new Error("Output matrix must be 1x%d, got %dx%d".format(A.cols, error.rows, error.cols));
 	
+	immutable float alpha =  1;
+	immutable float beta  = -1;
 	
 	auto C = Matrix(A.rows, A.cols);
 	scope(exit) C.freeMem();
