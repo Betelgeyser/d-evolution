@@ -48,6 +48,8 @@ version (unittest)
 	}
 }
 
+import core.exception : RangeError;
+
 
 /**
  * Convenient struct to handle cuBLAS matricies.
@@ -73,6 +75,14 @@ struct Matrix
 	
 	// TODO: Pointer should not be reassignable.
 	float[] values; /// A pointer to an allocated memory.
+	
+	float opIndexAssign(in float value, in size_t i, in size_t j) nothrow pure @safe
+	{
+		if (i >= _rows || j >= _cols)
+			throw new RangeError("Matrix size is %dx%d, but [%d, %d] is indexed.".format(_rows, _cols, i, j));			
+		
+		return values[i + j * _rows] = value;
+	}
 	
 	private
 	{
