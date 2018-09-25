@@ -284,7 +284,7 @@ struct Matrix
 	}
 	
 	/**
-	 * Returns a column slice of a matrix from i column to `j - 1`.
+	 * Returns a column slice of a matrix from $(D_PARAM i) column to $(D_PARAM j) - 1.
 	 *
 	 * This function acts like a normal slice but a unit of slicing is a single column rather than single value. The resulting
 	 * matrix points to a part of the original matrix and does not copy it.
