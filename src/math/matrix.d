@@ -82,8 +82,7 @@ struct Matrix
 	
 	invariant
 	{
-		assert (_rows >= 1, "Matrix must have at least 1 row, got %d".format(_rows));
-		assert (_cols >= 1, "Matrix must have at least 1 column, got %d".format(_cols));
+		assert (_rows >= 1 && _cols >= 1, "Matrix size must be at least 1x1, got %dx%d".format(_rows, _cols));
 	}
 	
 	/**
@@ -236,16 +235,18 @@ struct Matrix
 	 *     cols = Number of columns.
 	 *     values = Array of values.
 	 */
-	private this(in uint rows, in uint cols, inout(float)[] values) inout @nogc nothrow pure @safe
+	private this(in uint rows, in uint cols, inout(float[]) origin) inout nothrow pure @safe
 	in
 	{
-		assert (values.length == cols * rows);
+		assert (origin.length == cols * rows, "Matrix size is %dx%d, but got %d elements.".format(rows, cols, origin.length));
+		assert (rows >= 1 && cols >= 1, "Matrix size must be at least 1x1, got %dx%d".format(rows, cols));
 	}
 	body
 	{
 		_rows = rows;
 		_cols = cols;
-		this.values = values;
+		
+		values = origin;
 	}
 	
 	/**

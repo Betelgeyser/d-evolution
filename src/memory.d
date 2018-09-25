@@ -20,6 +20,7 @@ module memory; // TODO: All contents of this module are non thread-safe!
 // Standard D modules
 import core.stdc.stdlib : free, malloc;
 import std.conv         : to;
+import std.string       : format;
 import std.traits       : isNumeric;
 
 import common;
@@ -36,7 +37,6 @@ immutable poolSize = 128 * 2^^20; /// Size of a newly allocated block. Defaults 
 debug(memory)
 {
 	import std.exception : assumeWontThrow;
-	import std.string    : format;
 	
 	/**
 	 * Dirty way to supress some errors in debug builds that apperantly should not happen, like failing to compile
@@ -616,7 +616,7 @@ struct UnifiedMemoryManager
 		if (size > poolSize)
 			throw new Error("Allocating %d bytes, but maximum pool size is %d bytes.".format(size, poolSize));
 		
-		debug(memory) writeLog("Allocating ", size, " bytes");
+		debug(memory) writeLog("Allocating %d bytes".format(size));
 		
 		return cast(T[])_firstFit(size)[0 .. size];
 	}
