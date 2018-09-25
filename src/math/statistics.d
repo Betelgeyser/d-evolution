@@ -77,17 +77,15 @@ version (unittest)
  *     cublasHandle = cuBLAS handle.
  */
 void AE(in Matrix A, in Matrix B, Matrix error, cublasHandle_t cublasHandle)
-in
-{
-	assert (A.cols == B.cols);
-	assert (A.rows == B.rows);
-	assert (A.cols == error.cols);
-	assert (error.rows == 1);
-}
-body
 {
 	float alpha =  1;
 	float beta  = -1;
+	if (A.rows != B.rows || A.cols != B.cols)
+		throw new Error("Input matricies must have same size, got %dx%d and %dx%d.".format(A.rows, A.cols, B.rows, B.cols));
+	
+	if (A.cols != error.cols || error.rows != 1)
+		throw new Error("Output matrix must be 1x%d, got %dx%d".format(A.cols, error.rows, error.cols));
+	
 	
 	auto C = Matrix(A.rows, A.cols);
 	scope(exit) C.freeMem();
@@ -135,13 +133,10 @@ unittest
  *     $(LINK https://en.wikipedia.org/wiki/Mean_absolute_error)
  */
 float MAE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle)
-in
 {
-	assert (A.cols == B.cols);
-	assert (A.rows == B.rows);
-}
-body
-{
+	if (A.rows != B.rows || A.cols != B.cols)
+		throw new Error("Input matricies must have same size, got %dx%d and %dx%d.".format(A.rows, A.cols, B.rows, B.cols));
+	
 	auto error = Matrix(1, A.cols);
 	scope(exit) error.freeMem();
 	
@@ -254,13 +249,13 @@ unittest
  *     cublasHandle = cuBLAS handle.
  */
 float MASE(in Matrix measured, in Matrix approximated, cublasHandle_t cublasHandle)
-in
 {
-	assert (measured.rows == approximated.rows);
-	assert (measured.cols == approximated.cols);
-}
-body
-{
+	if (measured.rows != approximated.rows || measured.cols != approximated.cols)
+		throw new Error(
+			"Input matricies must have same size, got %dx%d and %dx%d."
+			.format(measured.rows, measured.cols, approximated.rows, approximated.cols)
+		);
+	
 	return MAE(measured, approximated, cublasHandle) / MAENaive(measured, cublasHandle);
 }
 

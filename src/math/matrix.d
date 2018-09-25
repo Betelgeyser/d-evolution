@@ -279,14 +279,14 @@ struct Matrix
 	 * This function acts like a normal slice but a unit of slicing is a single column rather than single value. The resulting
 	 * matrix points to a part of the original matrix and does not copy it.
 	 */
-	inout(Matrix) colSlice(in uint i, in uint j) inout nothrow @safe @nogc
-	in
+	inout(Matrix) colSlice(in uint i, in uint j) inout nothrow pure @safe
 	{
-		assert (i < j, "No columns is returned.");
-		assert (j <= _cols, "Column index is out of range.");
-	}
-	body
-	{
+		if (j > _cols)
+			throw new RangeError("Matrix size is %dx%d, but %d column is indexed.".format(_rows, _cols, j));
+		
+		if (i >= j)
+			throw new RangeError("Invalid range [%d, %d].".format(i, j));
+		
 		return inout Matrix(_rows, j - i, values[i * _rows .. j * _rows]);
 	}
 	
@@ -323,15 +323,14 @@ struct Matrix
  *     C = Output matrix.
  *     cublasHandle = Cublas handle.
  */
-void gemm(in Matrix A, in Matrix B, ref Matrix C, cublasHandle_t cublasHandle) nothrow @nogc
-in
+void gemm(in Matrix A, in Matrix B, ref Matrix C, cublasHandle_t cublasHandle) nothrow
 {
-	assert (A.cols == B.rows);
-	assert (A.rows == C.rows);
-	assert (B.cols == C.cols);
-}
-body
-{
+	if (A.cols != B.rows || A.rows != C.rows || B.cols != C.cols)
+		throw new Error(
+			"Wrong matrix-matrix multiplication %dx%d * %dx%d = %dx%d."
+			.format(A.rows, A.cols, B.rows, B.cols, C.rows, C.cols)
+		);
+	
 	immutable float alpha = 1;
 	immutable float beta  = 0;
 	
@@ -396,14 +395,14 @@ unittest
  *     C = Output matrix.
  *     cublasHandle = Cublas handle.
  */
-void geam(in float alpha, in Matrix A, in float beta, in Matrix B, ref Matrix C, cublasHandle_t cublasHandle) nothrow @nogc
-in
+void geam(in float alpha, in Matrix A, in float beta, in Matrix B, ref Matrix C, cublasHandle_t cublasHandle) nothrow
 {
-	assert ( (A.cols == B.cols) && (A.cols == C.cols) );
-	assert ( (A.rows == B.rows) && (A.rows == C.rows) );
-}
-body
-{
+	if (A.rows != B.rows || A.rows != C.rows || A.cols != B.cols || A.cols != C.cols)
+		throw new Error(
+			"Wrong matrix-matrix addition %dx%d + %dx%d = %dx%d."
+			.format(A.rows, A.cols, B.rows, B.cols, C.rows, C.cols)
+		);
+	
 	cublasSgeam(
 		cublasHandle,
 		cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
@@ -452,14 +451,11 @@ unittest
  *     C = Resulting matrix.
  *     cublasHandle = Cublas handle.
  */
-void transpose(in Matrix A, ref Matrix C, cublasHandle_t cublasHandle) nothrow @nogc
-in
+void transpose(in Matrix A, ref Matrix C, cublasHandle_t cublasHandle) nothrow
 {
-	assert (A.rows == C.cols);
-	assert (A.cols == C.rows);
-}
-body
-{
+	if (A.rows != C.cols || A.cols != C.rows)
+		throw new Error("Cannot transpose %dx%d matrix into %dx%d".format(A.rows, A.cols, C.rows, C.cols));
+	
 	immutable float alpha = 1;
 	immutable float beta  = 0;
 	
