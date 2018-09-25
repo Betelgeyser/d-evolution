@@ -385,7 +385,7 @@ struct Block
 	}
 	
 	/// ditto
-	this(void* ptr, in size_t size, in bool isAllocated) @nogc nothrow pure @safe
+	this(void* ptr, in size_t size, in bool isAllocated) @nogc nothrow pure
 	{
 		_ptr         = ptr;
 		_size        = size;
