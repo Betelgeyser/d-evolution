@@ -20,7 +20,6 @@ module memory; // TODO: All contents of this module are non thread-safe!
 // Standard D modules
 import core.stdc.stdlib : free, malloc;
 import std.conv         : to;
-import std.exception    : enforce;
 import std.traits       : isNumeric;
 
 import common;
@@ -609,15 +608,13 @@ struct UnifiedMemoryManager
 	 * Returns:
 	 *     Allocated array.
 	 */
-	T[] allocate(T)(in size_t items)
+	T[] allocate(T)(in size_t items) nothrow
 		if (isNumeric!T)
 	{
 		auto size = items * T.sizeof;
 		
-		enforce(
-			size <= poolSize,
-			"Allocating " ~ size.to!string ~ " bytes, but maximum pool size is " ~ poolSize.to!string ~ " bytes."
-		);
+		if (size > poolSize)
+			throw new Error("Allocating %d bytes, but maximum pool size is %d bytes.".format(size, poolSize));
 		
 		debug(memory) writeLog("Allocating ", size, " bytes");
 		
