@@ -150,7 +150,7 @@ struct RandomPool
 			throw new Error("RandomPool has %d values, but %d requested.".format(length, count));
 		
 		if (count > _available)
-			regenerate();
+			_regenerate();
 		
 		return _values[*_index .. *_index += count];
 	}
@@ -168,7 +168,7 @@ struct RandomPool
 		/**
 		 * Generates new values and resets _index.
 		 */
-		void regenerate() nothrow @nogc
+		void _regenerate() nothrow
 		{
 			*_index = 0;
 			_generator.generate(_values.ptr, length);
