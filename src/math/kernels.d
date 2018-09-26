@@ -21,11 +21,12 @@ module math.kernels;
 import cuda.cudaruntimeapi;
 
 // DNN modules
-import common;
-import math.matrix;
+import math.matrix : Matrix;
 
 version (unittest)
 {
+	import common;
+	
 	import std.algorithm : each, equal;
 	import std.math      : approxEqual;
 }
