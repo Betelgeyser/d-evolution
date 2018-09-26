@@ -207,7 +207,7 @@ struct Layer
 	 *     cublasHandle = Cublas handle.
 	 *     activate = If set to `true` activation function will be applied to the result.
 	 */
-	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle, in bool activate = true) const @nogc nothrow
+	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle, in bool activate = true) const nothrow
 	in
 	{
 		assert (inputs.cols   == connectionsLength);
