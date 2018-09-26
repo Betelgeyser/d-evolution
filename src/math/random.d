@@ -31,24 +31,6 @@ public import cuda.curand.types : curandRngType_t;
 import common;
 
 
-version (unittest)
-{
-	RandomPool randomPool;
-	private CurandGenerator curandGenerator;
-	
-	static this()
-	{
-		curandGenerator = CurandGenerator(curandRngType_t.PSEUDO_DEFAULT);
-		randomPool      = RandomPool(curandGenerator);
-	}
-	
-	static ~this()
-	{
-		randomPool.freeMem();
-		curandGenerator.destroy;
-	}
-}
-
 /**
  * Pool of random bits.
  *
@@ -184,19 +166,14 @@ unittest
 	
 	immutable size = 1_000;
 	
-	// Initialize cuRAND generator.
-	auto generator = CurandGenerator(curandRngType_t.PSEUDO_DEFAULT);
-	generator.setPseudoRandomGeneratorSeed(0);
-	scope(exit) generator.destroy;
-	
-	// Initialize pool
-	auto pool = RandomPool(generator, size);
-	scope(exit) pool.freeMem();
+	auto pool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, 0, size);
 	
 	// There is a chance of getting two equal numbers in a row, but chance is low
 	assert (pool(1)[0] != pool(1)[0]);
 	
 	// Ensure pool regenerates its values
 	assert (pool(size)[0] != pool(size)[0]);
+	
+	pool.freeMem();
 }
 
