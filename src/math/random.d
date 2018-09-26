@@ -144,12 +144,10 @@ struct RandomPool
 	 * Returns:
 	 *     a slice of random numbers that has not been used.
 	 */
-	uint[] opCall(in size_t count)
+	uint[] opCall(in size_t count) nothrow
 	{
-		enforce(
-			count <= length,
-			"RandomPool has %d values, but %d requested.".format(length, count)
-		);
+		if (count > length)
+			throw new Error("RandomPool has %d values, but %d requested.".format(length, count));
 		
 		if (count > _available)
 			regenerate();
