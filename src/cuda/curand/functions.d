@@ -35,8 +35,6 @@ struct CurandGenerator
 		curandGenerator_t _generator;
 	}
 	
-	@disable this();
-	
 	this(in curandRngType_t rng_type, in ulong seed = 0) nothrow
 	{
 		scope(failure) freeMem();
