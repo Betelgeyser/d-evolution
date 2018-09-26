@@ -18,6 +18,7 @@ module neural.layer;
 // Standard D modules
 import std.algorithm : all, each;
 import std.math      : isFinite;
+import std.string    : format;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
@@ -273,20 +274,20 @@ struct Layer
 	 *     pool = Pool of random bits. It is supposed to improve performance of a crossover as the cuRAND acheives maximum
 	 *         efficiency generating large quantities of numbers.
 	 */
-	void crossover(in Layer x, in Layer y, in float a, in float b, in float alpha, RandomPool pool)
-	in
+	void crossover(in Layer x, in Layer y, in float a, in float b, in float alpha, RandomPool pool) nothrow
 	{
-		assert (this.length == y.length);
-		assert (this.length == x.length);
+		if (a > b)
+			throw new Error("Invalid crossover boundaries [%g; %g].".format(a, b));
 		
-		assert (a <= b);
+		if (alpha < 0)
+			throw new Error("α parameter must be ≥ 0, got %g.".format(alpha));
 		
-		assert (alpha >= 0, "α parameter must be >= 0");
+		if (this.length != x.length || this.length != y.length)
+			throw new Error(
+				"Child layer must have the same lenght as parents, got %d (child), %d and %d (parents)"
+				.format(this.length, x.length, y.length)
+			);
 		
-		assert (this.length <= pool.length, "RandomPool must contain at least as much numbers as a layer does.");
-	}
-	body
-	{
 		cudaBLXa(x.weights, y.weights, _weights, a, b, alpha, pool(length));
 	}
 	
