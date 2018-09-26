@@ -34,16 +34,19 @@ version (unittest)
 	import std.algorithm : equal;
 	import std.math      : approxEqual;
 	
-	private cublasHandle_t  cublasHandle;
+	private cublasHandle_t cublasHandle;
+	private RandomPool     randomPool;
 	
 	static this()
 	{
+		randomPool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, 0, 100_000);
 		cublasCreate(cublasHandle);
 	}
 	
 	static ~this()
 	{
 		cublasDestroy(cublasHandle);
+		randomPool.freeMem();
 	}
 }
 
