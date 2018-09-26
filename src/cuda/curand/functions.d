@@ -33,40 +33,22 @@ struct CurandGenerator
 	private
 	{
 		curandGenerator_t _generator;
-		size_t* _refCounter;
 	}
 	
 	@disable this();
 	
 	this(in curandRngType_t rng_type, in ulong seed = 0)
 	{
-		_refCounter = cast(size_t*)malloc(size_t.sizeof);
-		scope(failure) free(_refCounter);
-		
-		*_refCounter = 1;
+		scope(failure) freeMem();
 		
 		enforceCurand(curand.curandCreateGenerator(&_generator, rng_type));
-		scope(failure) enforceCurand(curand.curandDestroyGenerator(_generator));
 		
 		setPseudoRandomGeneratorSeed(seed);
 	}
 	
-	this(this) @nogc nothrow pure @safe
+	void freeMem() nothrow
 	{
-		++*_refCounter;
-	}
-	
-	~this()
-	{
-		if (_refCounter)
-		{
-			--*_refCounter;
-			if (*_refCounter == 0)
-			{
-				free(_refCounter);
-				enforceCurand(curand.curandDestroyGenerator(_generator));
-			}
-		}
+		enforceCurand(curand.curandDestroyGenerator(_generator));
 	}
 	
 	void setPseudoRandomGeneratorSeed(in ulong seed)
