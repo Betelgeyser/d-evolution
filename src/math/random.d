@@ -119,13 +119,15 @@ struct RandomPool
 	 * causes spontaneous destructors calls. Apparently structs are not intended
 	 * to be used with dynamic memory, probably it should be implemented as a class.  
 	 */
-	void freeMem() nothrow @nogc
+	void freeMem() nothrow
 	{
 		if (_index)
 		{
 			free(_index);
 			_index = null;
 		}
+		
+		_generator.freeMem();
 		
 		if (_values.length)
 			cudaFree(_values);
