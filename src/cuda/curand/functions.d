@@ -37,7 +37,7 @@ struct CurandGenerator
 	
 	@disable this();
 	
-	this(in curandRngType_t rng_type, in ulong seed = 0)
+	this(in curandRngType_t rng_type, in ulong seed = 0) nothrow
 	{
 		scope(failure) freeMem();
 		
@@ -51,24 +51,25 @@ struct CurandGenerator
 		enforceCurand(curand.curandDestroyGenerator(_generator));
 	}
 	
-	void setPseudoRandomGeneratorSeed(in ulong seed)
+	void setPseudoRandomGeneratorSeed(in ulong seed) nothrow
 	{
 		enforceCurand(curand.curandSetPseudoRandomGeneratorSeed(_generator, seed));
 	}
 	
-	void generate(uint* outputPtr, in size_t num)
+	void generate(uint* outputPtr, in size_t num) nothrow
 	{
 		enforceCurand(curand.curandGenerate(_generator, outputPtr, num));
 	}
 
-	void generateUniform(float* outputPtr, in size_t num)
+	void generateUniform(float* outputPtr, in size_t num) nothrow
 	{
 		enforceCurand(curand.curandGenerateUniform(_generator, outputPtr, num));
 	}
 }
 
-package void enforceCurand(curandStatus_t error) pure @safe
+package void enforceCurand(curandStatus_t status) nothrow pure @safe
 {
-	enforce(error == curandStatus_t.SUCCESS, error.toString);
+	if (status != curandStatus_t.SUCCESS)
+		throw new Error(status.toString);
 }
 
