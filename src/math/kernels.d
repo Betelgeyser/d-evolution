@@ -47,7 +47,7 @@ private extern (C++) void cuda_tanh(float* x, const size_t n) nothrow @nogc;
  * Params:
  *     x = Array to calculate.
  */
-void cudaTanh(float[] x) nothrow @nogc
+void cudaTanh(float[] x) @nogc nothrow
 {
 	cuda_tanh(x.ptr, x.length);
 }

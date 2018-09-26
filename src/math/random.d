@@ -142,7 +142,7 @@ struct RandomPool
 		/**
 		 * Number of values that has not been used.
 		 */
-		@property size_t _available() const pure nothrow @safe @nogc
+		@property size_t _available() const @nogc nothrow pure @safe
 		{
 			return length - *_index;
 		}
