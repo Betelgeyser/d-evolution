@@ -25,6 +25,7 @@ import std.string    : format;
 // CUDA modules
 import cuda.cudaruntimeapi;
 import cuda.curand;
+public import cuda.curand.types : curandRngType_t;
 
 // DNN modules
 import common;
@@ -87,20 +88,19 @@ struct RandomPool
 	 *     generator = Curand pseudorandom number generator.
 	 *     size = Pool size in bytes. Defaults to 2GiB.
 	 */
-	this(CurandGenerator generator, in size_t size = 536_870_912) nothrow @nogc
-	in
-	{
-		assert (size >= 1);
-	}
+	this(in curandRngType_t rngType, in ulong seed = 0, in size_t size = 536_870_912) nothrow
 	out
 	{
 		assert (_values.length == size);
 	}
 	body
 	{
+		if (size < 1)
+			throw new Error("RandomPool must have at least 1 value, got %d.".format(size));
+		
 		scope(failure) freeMem();
 		
-		_generator = generator;
+		_generator = CurandGenerator(rngType, seed);
 		
 		_index  = cast(typeof(_index))malloc(_index.sizeof);
 		*_index = 0;
