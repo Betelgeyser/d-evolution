@@ -78,10 +78,28 @@ struct Matrix
 	// TODO: Pointer should not be reassignable.
 	float[] values; /// A pointer to an allocated memory.
 	
+	size_t opDollar() const @nogc nothrow pure @safe
+	{
+		return values.length;
+	}
+	
+	float opIndex(in size_t i) const @nogc nothrow pure @safe
+	{
+		return values[i];
+	}
+	
+	float opIndex(in size_t i, in size_t j) const nothrow pure @safe
+	{
+		if (i >= _rows || j >= _cols)
+			throw new RangeError("Matrix size is %dx%d, but [%d; %d] is indexed.".format(_rows, _cols, i, j));
+		
+		return values[i + j * _rows];
+	}
+	
 	float opIndexAssign(in float value, in size_t i, in size_t j) nothrow pure @safe
 	{
 		if (i >= _rows || j >= _cols)
-			throw new RangeError("Matrix size is %dx%d, but [%d, %d] is indexed.".format(_rows, _cols, i, j));			
+			throw new RangeError("Matrix size is %dx%d, but [%d; %d] is indexed.".format(_rows, _cols, i, j));
 		
 		return values[i + j * _rows] = value;
 	}
