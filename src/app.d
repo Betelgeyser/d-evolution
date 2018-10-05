@@ -44,9 +44,11 @@ import math.statistics      : MAE, MASE, MPE;
 
 void main(string[] args)
 {
-	uint   device;      /// Device to use.
-	uint   minuteLimit; /// Time cap for ANN to train. For convenience is integer, minutes.
-	string pathToData;  /// Path to the folder cointaining datasets. Must be of the specific structure.
+	version (unittest) {} else {
+	uint   device;               /// GPU device to use.
+	uint   timeLimit;            /// Time limit to train ANN, seconds.
+	float  populationMultiplier; /// Population multiplier.
+	string pathToData;           /// Path to the folder cointaining datasets. Must be of the specific structure.
 	
 	// Network parameters
 	uint  layers;
@@ -54,18 +56,18 @@ void main(string[] args)
 	float min;
 	float max;
 	
-	
 	immutable helpString = "Use " ~ args[0] ~ " --help for help.";
 	
 	auto opts = getopt(
 		args,
-		"path",      "Path to data directory", &pathToData,
-		"device|d",  "A device to use.",       &device,
-		"time|t",    "Time limit, minutes.",   &minuteLimit,
-		"layers|l",  "Number of layers.",      &layers,
-		"neurons|n", "Number of neurons.",     &neurons,
-		"min",       "Minimum weight.",        &min,
-		"max",       "Maximum weight.",        &max
+		"path",          "Path to data directory.",    &pathToData,
+		"device|d",      "GPU device to use.",         &device,
+		"time|t",        "Time limit, seconds.",       &timeLimit,
+		"layers|l",      "Number of layers.",          &layers,
+		"neurons|n",     "Number of neurons.",         &neurons,
+		"multiplier|m",  "Population multiplier.",     &populationMultiplier,
+		"min",           "Minimum connection weight.", &min,
+		"max",           "Maximum connection weight.", &max
 	);
 	
 	if (opts.helpWanted)
@@ -76,9 +78,9 @@ void main(string[] args)
 	
 	enforce(device < cudaGetDeviceCount(), "%d GPU device is used, but only %d found.".format(device, cudaGetDeviceCount()));
 	
-	enforce(minuteLimit >= 1, "Time limit is set to %d minute(s), but must be at leats 1 minute.".format(minuteLimit));
-	enforce(neurons     >= 2, "Neural network must have at leas 2 neurons, but got %d.".format(neurons));
-	enforce(layers      >= 2, "Neural network must have at leas 2 layers, but got %d.".format(layers));
+	enforce(timeLimit >= 1, "Time limit is set to %d minute(s), but must be at leats 1 second.".format(timeLimit));
+	enforce(neurons   >= 2, "Neural network must have at leas 2 neurons, but got %d.".format(neurons));
+	enforce(layers    >= 2, "Neural network must have at leas 2 layers, but got %d.".format(layers));
 	
 	enforce(isFinite(min), "Minimum weigth must be finite, but got %f".format(min));
 	enforce(isFinite(max), "Maximum weigth must be finite, but got %f".format(max));
@@ -86,9 +88,6 @@ void main(string[] args)
 	enforce(max >= min, "Minimum weight %f is greater than maximum weight %f.".format(min, max));
 	
 	cudaSetDevice(device);
-	
-	immutable timeLimit            = minuteLimit.minutes();
-	immutable populationMultiplier = 10;
 	
 	immutable seed = unpredictableSeed();
 	writeln("Random seed = %d".ansiFormat(ANSIColor.white).format(seed));
