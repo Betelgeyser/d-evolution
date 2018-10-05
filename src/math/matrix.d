@@ -30,7 +30,16 @@ import cuda.cublas;
 
 // DNN modules
 import common;
-import memory;
+
+version(UMM)
+{
+	import memory;
+	pragma(msg, "Using UnifiaedMemoryManager.");
+}
+else
+{
+	pragma(msg, "Using default cuda memory management.");
+}
 
 version (unittest)
 {
@@ -173,7 +182,8 @@ struct Matrix
 		_rows = rows;
 		_cols = cols;
 		
-		values = UMM.allocate!float(_rows * _cols);
+		version(UMM) values = UMM.allocate!float(_rows * _cols);
+		else cudaMallocManaged(values, _rows * _cols);
 	}
 	
 	///
@@ -213,7 +223,8 @@ struct Matrix
 		string firstLine = matchFirst(csv, firstLineCTR)[0];
 		_cols = firstLine.count(",").to!uint + 1;
 		
-		values = UMM.allocate!float(_rows * _cols);
+		version(UMM) values = UMM.allocate!float(_rows * _cols);
+		else cudaMallocManaged(values, _rows * _cols);
 		
 		size_t i = 0;
 		foreach (record; csv.csvReader!float)
@@ -290,7 +301,8 @@ struct Matrix
 	 */
 	void freeMem() @nogc nothrow
 	{
-		UMM.free(values);
+		version(UMM) UMM.free(values);
+		else cudaFree(values);
 	}
 	
 	static void copy(in Matrix src, Matrix dst)
