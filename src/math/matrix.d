@@ -356,6 +356,14 @@ struct Matrix
 }
 
 /**
+ * Returns $(D_KEYWORD true) if sizes of A and B are equal. Otherwise returns $(D_KEYWORD false).
+ */
+static bool isSameSize(in Matrix A, in Matrix B) nothrow pure @safe
+{
+	return A.rows == B.rows && A.cols == B.cols;
+}
+
+/**
  * Simpified version of gemm function.
  *
  * Performs matrix multiplication C = A * B.
@@ -368,7 +376,7 @@ struct Matrix
  */
 void gemm(in Matrix A, in Matrix B, ref Matrix C, cublasHandle_t cublasHandle) nothrow
 {
-	if (A.cols != B.rows || A.rows != C.rows || B.cols != C.cols)
+	if (A.rows != C.rows || A.cols != B.rows || B.cols != C.cols)
 		throw new Error(
 			"Wrong matrix-matrix multiplication %dx%d * %dx%d = %dx%d."
 			.format(A.rows, A.cols, B.rows, B.cols, C.rows, C.cols)
@@ -440,7 +448,7 @@ unittest
  */
 void geam(in float alpha, in Matrix A, in float beta, in Matrix B, ref Matrix C, cublasHandle_t cublasHandle) nothrow
 {
-	if (A.rows != B.rows || A.rows != C.rows || A.cols != B.cols || A.cols != C.cols)
+	if (!isSameSize(A, B) || !isSameSize(A, C))
 		throw new Error(
 			"Wrong matrix-matrix addition %dx%d + %dx%d = %dx%d."
 			.format(A.rows, A.cols, B.rows, B.cols, C.rows, C.cols)
