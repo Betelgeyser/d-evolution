@@ -42,16 +42,19 @@ version (unittest)
 	import std.algorithm : equal;
 	import std.math      : approxEqual;
 	
-	private cublasHandle_t  cublasHandle;
+	private cublasHandle_t cublasHandle;
+	private RandomPool     randomPool;
 	
 	static this()
 	{
+		randomPool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, 0, 100_000);
 		cublasCreate(cublasHandle);
 	}
 	
 	static ~this()
 	{
 		cublasDestroy(cublasHandle);
+		randomPool.freeMem();
 	}
 }
 
@@ -219,9 +222,11 @@ struct Network
 	{
 		mixin(writeTest!__ctor);
 		
+		auto pool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, 0, 1000);
+		
 		NetworkParams params = { layers : 4, inputs : 2, neurons : 3, outputs : 1 };
 		
-		Network network = Network(params, randomPool);
+		Network network = Network(params, pool);
 		scope(exit) network.freeMem();
 		
 		with (network)
@@ -404,18 +409,20 @@ struct Network
 			max     :  1.0e3
 		};
 		
+		auto pool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, 0, 10000);
+		
 		immutable alpha = 0.5;
 		
-		auto parent1 = Network(params, randomPool);
+		auto parent1 = Network(params, pool);
 		scope(exit) parent1.freeMem();
 		
-		auto parent2 = Network(params, randomPool);
+		auto parent2 = Network(params, pool);
 		scope(exit) parent2.freeMem();
 		
-		auto offspring = Network(params, randomPool);
+		auto offspring = Network(params, pool);
 		scope(exit) offspring.freeMem();
 		
-		offspring.crossover(parent1, parent2, params.min, params.max, alpha, randomPool);
+		offspring.crossover(parent1, parent2, params.min, params.max, alpha, pool);
 		cudaDeviceSynchronize();
 		
 		with (offspring)
