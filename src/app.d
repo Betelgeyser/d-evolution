@@ -23,7 +23,7 @@ import std.datetime.stopwatch : StopWatch;
 import std.exception          : enforce;
 import std.file               : readText;
 import std.getopt             : defaultGetoptPrinter, getopt;
-import std.math               : isFinite;
+import std.math               : isFinite, lround;
 import std.random             : unpredictableSeed;
 import std.range              : zip;
 import std.stdio              : stdout, write, writeln;
@@ -142,13 +142,13 @@ void main(string[] args)
 	writeln(
 		("\tPopulation multiplier = %d. Total population size is "
 			~ "%d".ansiFormat(ANSIColor.white) ~ " networks"
-		).format(populationMultiplier, populationMultiplier * params.degreesOfFreedom)
+		).format(populationMultiplier, lround(populationMultiplier * params.degreesOfFreedom))
 	);
 	
 	write("\tGenerating population...");
 	stdout.flush();
 	
-	auto population = Population(params, params.degreesOfFreedom * populationMultiplier, pool);
+	auto population = Population(params, lround(params.degreesOfFreedom * populationMultiplier), pool);
 	scope(exit) population.freeMem();
 	
 	writeln(" [ " ~ "done".ansiFormat(ANSIColor.green) ~ " ]");
