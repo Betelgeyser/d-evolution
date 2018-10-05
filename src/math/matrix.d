@@ -305,6 +305,13 @@ struct Matrix
 		else cudaFree(values);
 	}
 	
+	/**
+	 * Deep copy.
+	 *
+	 * Params:
+	 *     src = Matrix to copy.
+	 *     dst = Destination matrix.
+	 */
 	static void copy(in Matrix src, Matrix dst) nothrow pure @safe
 	{
 		if (!isSameSize(src, dst))
