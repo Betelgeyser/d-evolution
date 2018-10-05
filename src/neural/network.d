@@ -132,7 +132,7 @@ struct Network
 	/**
 	 * Returns: The input (the first) layer.
 	 */
-	@property const(Layer) inputLayer() const @nogc nothrow pure @safe
+	@property const(Layer) inputLayer() const @nogc nothrow
 	{
 		return _layers[0];
 	}
@@ -148,7 +148,7 @@ struct Network
 	/**
 	 * Returns: The output (the last) layer.
 	 */
-	@property const(Layer) outputLayer() const @nogc nothrow pure @safe
+	@property const(Layer) outputLayer() const @nogc nothrow
 	{
 		return _layers[$ - 1];
 	}
@@ -164,7 +164,7 @@ struct Network
 	/**
 	 * Returns: How many input values the network takes.
 	 */
-	@property uint inputLength() const @nogc nothrow pure @safe
+	@property uint inputLength() const @nogc nothrow
 	{
 		return inputLayer.connectionsLength();
 	}
@@ -172,7 +172,7 @@ struct Network
 	/**
 	 * Returns: How many output values the network returns.
 	 */
-	@property uint outputLength() const @nogc nothrow pure @safe
+	@property uint outputLength() const @nogc nothrow
 	{
 		return outputLayer.neuronsLength();
 	}
@@ -180,7 +180,7 @@ struct Network
 	/**
 	 * Returns: The number of neurons per a hidden layer.
 	 */
-	@property uint neuronsPerLayer() const @nogc nothrow pure @safe
+	@property uint neuronsPerLayer() const @nogc nothrow
 	{
 		return inputLayer.neuronsLength;
 	}
@@ -188,7 +188,7 @@ struct Network
 	/**
 	 * Returns: Size of the network in bytes.
 	 */
-	@property size_t size() const @nogc nothrow pure @safe
+	@property size_t size() const @nogc nothrow
 	{
 		return inputLayer.size + outputLayer.size + (hiddenLayers.length ? hiddenLayers.length * hiddenLayers[0].size : 0);
 	}
