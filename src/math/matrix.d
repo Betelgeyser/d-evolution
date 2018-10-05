@@ -305,14 +305,14 @@ struct Matrix
 		else cudaFree(values);
 	}
 	
-	static void copy(in Matrix src, Matrix dst)
-	in
+	static void copy(in Matrix src, Matrix dst) nothrow pure @safe
 	{
-		assert (src.rows == src.rows);
-		assert (src.cols == dst.cols);
-	}
-	body
-	{
+		if (!isSameSize(src, dst))
+			throw new Error(
+				"Source and destination matrices have different sizes %dx%d and %dx%d."
+				.format(src.rows, src.cols, dst.rows, dst.cols)
+			);
+		
 		src.values.each!((i, x) => dst.values[i] = x);
 	}
 	
