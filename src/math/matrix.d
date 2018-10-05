@@ -16,7 +16,7 @@
 module math.matrix;
 
 // Standard D modules
-import std.algorithm    : count;
+import std.algorithm    : each, count;
 import std.conv         : to;
 import std.csv          : csvReader;
 import std.exception    : enforce;
@@ -34,7 +34,7 @@ import memory;
 
 version (unittest)
 {
-	import std.algorithm : each, equal;
+	import std.algorithm : equal;
 	import std.math      : approxEqual;
 	
 	private cublasHandle_t cublasHandle;
