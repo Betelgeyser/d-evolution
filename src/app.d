@@ -92,10 +92,7 @@ void main(string[] args)
 	immutable seed = unpredictableSeed();
 	writeln("Random seed = %d".ansiFormat(ANSIColor.white).format(seed));
 	
-	auto curandGenerator = CurandGenerator(curandRngType_t.PSEUDO_DEFAULT, seed);
-	scope(exit) curandGenerator.destroy;
-	
-	auto pool = RandomPool(curandGenerator);
+	auto pool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, seed);
 	scope(exit) pool.freeMem();
 	
 	cublasHandle_t cublasHandle;
