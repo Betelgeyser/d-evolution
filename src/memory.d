@@ -37,6 +37,7 @@ immutable poolSize = 128 * 2^^20; /// Size of a newly allocated block. Defaults 
 debug(memory)
 {
 	import std.exception : assumeWontThrow;
+	import std.stdio     : writeln;
 	
 	/**
 	 * Dirty way to supress some errors in debug builds that apperantly should not happen, like failing to compile
@@ -616,7 +617,7 @@ struct UnifiedMemoryManager
 		if (size > poolSize)
 			throw new Error("Allocating %d bytes, but maximum pool size is %d bytes.".format(size, poolSize));
 		
-		debug(memory) writeLog("Allocating %d bytes".format(size));
+		debug(memory) writeLog("Allocating ", size, " bytes.");
 		
 		return cast(T[])_firstFit(size)[0 .. size];
 	}
