@@ -7,7 +7,9 @@ docs/*
 data/*
 trace.log
 trace.def
+profile.*
 profilegc.log
 *.so
 log
+log.*
 dnn
