@@ -229,7 +229,10 @@ struct Layer
 		gemm(inputs, _weights, outputs, cublasHandle);
 		
 		if (activate)
-			cudaTanh(outputs);
+//			cudaTanh(outputs);
+//			cudaReLU(outputs);
+//			cudaSoftPlus(outputs);
+			cudaLeakyReLU(outputs.values);
 	}
 	
 	///
