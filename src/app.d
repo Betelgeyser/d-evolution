@@ -41,7 +41,6 @@ import math.matrix          : Matrix, transpose;
 import math.random          : RandomPool;
 import math.statistics      : MAE, MASE, MPE;
 
-
 void main(string[] args)
 {
 	version (unittest) {} else {
@@ -126,8 +125,8 @@ void main(string[] args)
 			~ "%d".ansiFormat(ANSIColor.white) ~ " hidden neurons, "
 			~ "%d".ansiFormat(ANSIColor.white) ~ " outputs, "
 			~ "%d".ansiFormat(ANSIColor.white) ~ " layers, "
-			~ "minimum weigth is " ~ "%f ".ansiFormat(ANSIColor.white)
-			~ "maximun weight is " ~ "%f. ".ansiFormat(ANSIColor.white)
+			~ "minimum weigth is " ~ "%g ".ansiFormat(ANSIColor.white)
+			~ "maximun weight is " ~ "%g. ".ansiFormat(ANSIColor.white)
 			~ "In total %d degrees of freedom"
 		).format(
 			params.inputs,
@@ -140,7 +139,7 @@ void main(string[] args)
 	));
 	
 	writeln(
-		("\tPopulation multiplier = %d. Total population size is "
+		("\tPopulation multiplier = %g. Total population size is "
 			~ "%d".ansiFormat(ANSIColor.white) ~ " networks"
 		).format(populationMultiplier, lround(populationMultiplier * params.degreesOfFreedom))
 	);
@@ -154,35 +153,42 @@ void main(string[] args)
 	writeln(" [ " ~ "done".ansiFormat(ANSIColor.green) ~ " ]");
 	writeln("\tEstimated memory usage: " ~ population.size.humanReadable.ansiFormat(ANSIColor.white));
 	
-	writeln("\tTime limit is set to " ~ "%s".ansiFormat(ANSIColor.white).format(timeLimit));
+	writeln("\tTime limit is set to " ~ "%s".ansiFormat(ANSIColor.white).format(timeLimit.seconds()));
 	
 	StopWatch stopWatch;
 	stopWatch.start();
 	while (true)
 	{
-		write("\tGeneration #%d: ".format(population.generation).ansiFormat(ANSIColor.white));
+		write("\tGeneration #%d:".format(population.generation).ansiFormat(ANSIColor.white));
 		stdout.flush();
 		
 		population.fitness(trainingInputs, trainingOutputs, cublasHandle);
 		
 		writeln(
-			("\tbest = " ~ "%f".ansiFormat(ANSIColor.brightGreen)
-				~ "\tworst = " ~ "%f".ansiFormat(ANSIColor.brightRed)
-				~ "\tmean = " ~ "%f".ansiFormat(ANSIColor.brightYellow)
-				~ "\t%s".ansiFormat(ANSIColor.white).format(timeLimit - stopWatch.peek()) ~ " left"
+			("\tbest = " ~ "%e".ansiFormat(ANSIColor.brightGreen)
+				~ "\tworst = " ~ "%e".ansiFormat(ANSIColor.brightRed)
+				~ "\tmean = " ~ "%e".ansiFormat(ANSIColor.brightYellow)
+				~ "\t%s".ansiFormat(ANSIColor.white).format(timeLimit.seconds() - stopWatch.peek()) ~ " left"
 			).format(
 				population.best.fitness,
 				population.worst,
 				population.mean
 		));
 		
-		if (stopWatch.peek() >= timeLimit)
+		if (stopWatch.peek() >= timeLimit.seconds())
 		{
 			writeln("\tExceeded time limit [ " ~ "stopped".ansiFormat(ANSIColor.red) ~ " ]");
 			break;
 		}
 		
-		if (population.best.fitness <= 0.05)
+		if (population.best.fitness <= 0.1)
+		{
+			writeln("\tAcceptable solution found [ " ~ "stopped".ansiFormat(ANSIColor.green) ~ " ]");
+			break;
+		}
+		
+		import std.math : approxEqual;
+		if (approxEqual(population.best.fitness, population.worst) && approxEqual(population.best.fitness, population.mean))
 		{
 			writeln("\tAcceptable solution found [ " ~ "stopped".ansiFormat(ANSIColor.green) ~ " ]");
 			break;
@@ -193,52 +199,91 @@ void main(string[] args)
 	stopWatch.stop();
 	stopWatch.reset();
 	
-	// TODO: Check validation data
 	auto trainingOutputsT = Matrix(trainingOutputs.cols, trainingOutputs.rows);
 	scope(exit) trainingOutputsT.freeMem();
 	
 	auto validationOutputsT = Matrix(validationOutputs.cols, validationOutputs.rows);
 	scope(exit) validationOutputsT.freeMem();
+	
+	auto trainingApprox = Matrix(trainingOutputs.rows, trainingOutputs.cols);
+	scope(exit) trainingApprox.freeMem();
+	
+	auto trainingApproxT = Matrix(trainingOutputs.cols, trainingOutputs.rows);
+	scope(exit) trainingApproxT.freeMem();
 							
-	auto approx = Matrix(trainingOutputs.rows, trainingOutputs.cols);
-	scope(exit) approx.freeMem();
+	auto validationApprox = Matrix(validationOutputs.rows, validationOutputs.cols);
+	scope(exit) validationApprox.freeMem();
 	
-	auto approxT = Matrix(trainingOutputs.cols, trainingOutputs.rows); // MASE operates on transposed matrices
-	scope(exit) approxT.freeMem();
+	auto validationApproxT = Matrix(validationOutputs.cols, validationOutputs.rows);
+	scope(exit) validationApproxT.freeMem();
 	
-	transpose(trainingOutputs,   trainingOutputsT,   cublasHandle);
-	transpose(validationOutputs, validationOutputsT, cublasHandle);
+	population.best()(trainingInputs, trainingApprox, cublasHandle);
 	
-	population.best()(trainingInputs, approx, cublasHandle);
-	transpose(approx, approxT, cublasHandle);
-	
-	float tMase = MASE(trainingOutputsT, approxT, cublasHandle);
-	float tMae = MAE(trainingOutputsT, approxT, cublasHandle);
-	float tMpe = MPE(trainingOutputsT, approxT, cublasHandle);
-	
-	population.best()(validationInputs, approx, cublasHandle);
-	transpose(approx, approxT, cublasHandle);
-	
-	float vMase = MASE(validationOutputsT, approxT, cublasHandle);
-	float vMae = MAE(validationOutputsT, approxT, cublasHandle);
-	float vMpe = MPE(validationOutputsT, approxT, cublasHandle);
+	transpose(trainingOutputs, trainingOutputsT, cublasHandle);
+	transpose(trainingApprox, trainingApproxT, cublasHandle);
 	
 	cudaDeviceSynchronize();
 	
-	foreach (j, v; approx)
-		writeln("\t>>> Expected %f, got %f".format(trainingOutputs[j], approx[j]));
+	float tMase = MASE(trainingOutputsT, trainingApproxT, cublasHandle);
+	float tMae  = MAE(trainingOutputsT, trainingApproxT, cublasHandle);
+	float tMpe  = MPE(trainingOutputsT, trainingApproxT, cublasHandle);
 	
+	cudaDeviceSynchronize();
+	
+	population.best()(validationInputs, validationApprox, cublasHandle);
+	transpose(validationApprox, validationApproxT, cublasHandle);
+	
+	cudaDeviceSynchronize();
+	
+	float vMase = MASE(validationOutputsT, validationApproxT, cublasHandle);
+	float vMae  = MAE(validationOutputsT, validationApproxT, cublasHandle);
+	float vMpe  = MPE(validationOutputsT, validationApproxT, cublasHandle);
+	
+	cudaDeviceSynchronize();
+	
+//	auto l2Outputs = Matrix(1, trainingOutputs.rows);
+//	scope(exit) l2Outputs.freeMem();
+//	
+//	auto l2Approx = Matrix(1, approx.rows);
+//	scope(exit) l2Approx.freeMem();
+//	
+//	cudaL2(trainingOutputsT, l2Outputs.values);
+//	cudaL2(approxT, l2Approx.values);
+	
+	cudaDeviceSynchronize();
+//	
+//	writeln();
+//	writeln("Ot,Ht,Lt,Ct,L2t,Oa,Ha,La,Ca,L2a,AE,PE");
+//	for (int i = 0; i < approx.rows; ++i)
+//	{
+//		writeln("%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g".format(
+//			trainingOutputs[i, 0],
+//			trainingOutputs[i, 1],
+//			trainingOutputs[i, 2],
+//			trainingOutputs[i, 3],
+//			l2Outputs[0, i],
+//			approx[i, 0],
+//			approx[i, 1],
+//			approx[i, 2],
+//			approx[i, 3],
+//			l2Approx[0, i],
+//			abs(l2Outputs[0, i] - l2Approx[0, i]),
+//			abs(l2Outputs[0, i] - l2Approx[0, i]) / l2Outputs[0, i] * 100.0
+//		));
+//	}
+	
+	writeln();
 	writeln("Training results:".ansiFormat(ANSIColor.white));
 	writeln("\tTraning dataset:"
-		~ " best MASE = " ~ "%f".ansiFormat(ANSIColor.white).format(tMase)
-		~ ", best MAE = " ~ "%f".ansiFormat(ANSIColor.white).format(tMae)
-		~ ", best MPE = " ~ "%f%%".ansiFormat(ANSIColor.white).format(tMpe)
+		~ " best MASE = " ~ "%g".ansiFormat(ANSIColor.white).format(tMase)
+		~ ", best MAE = " ~ "%g".ansiFormat(ANSIColor.white).format(tMae)
+		~ ", best MPE = " ~ "%g%%".ansiFormat(ANSIColor.white).format(tMpe)
 	);
 	writeln("\tValidation dataset:"
-		~ " best MASE = " ~ "%f".ansiFormat(ANSIColor.white).format(vMase)
-		~ ", best MAE = " ~ "%f".ansiFormat(ANSIColor.white).format(vMae)
-		~ ", best MPE = " ~ "%f%%".ansiFormat(ANSIColor.white).format(vMpe)
+		~ " best MASE = " ~ "%g".ansiFormat(ANSIColor.white).format(vMase)
+		~ ", best MAE = " ~ "%g".ansiFormat(ANSIColor.white).format(vMae)
+		~ ", best MPE = " ~ "%g%%".ansiFormat(ANSIColor.white).format(vMpe)
 	);
 	writeln("Best solution so far is ", population.best());
-}
+}}
 
