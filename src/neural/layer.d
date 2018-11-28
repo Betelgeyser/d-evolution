@@ -192,7 +192,14 @@ struct Layer
 		_weights.freeMem();
 	}
 	
-	static void copy(in Layer src, Layer dst)
+	/**
+	 * Deep copy.
+	 *
+	 * Params:
+	 *     src = Layer to copy.
+	 *     dst = Destination layer.
+	 */
+	static void copy(in Layer src, Layer dst) nothrow pure @safe
 	{
 		Matrix.copy(src._weights, dst._weights);
 	}
