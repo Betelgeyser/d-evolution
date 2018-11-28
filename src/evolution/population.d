@@ -17,7 +17,8 @@ module evolution.population;
 
 // D modules
 import std.algorithm : each, map, mean, sort, swap;
-import std.math      : lround;
+import std.math      : lround, isNaN;
+import std.string : format;
 
 // CUDA modules
 import cuda.cudaruntimeapi;
@@ -35,6 +36,18 @@ version (unittest)
 {
 	import std.algorithm : all, isSorted;
 	import std.math      : isFinite;
+	
+	private RandomPool     randomPool;
+	
+	static this()
+	{
+		randomPool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, 0, 100_000);
+	}
+	
+	static ~this()
+	{
+		randomPool.freeMem();
+	}
 }
 
 /**
@@ -52,7 +65,9 @@ struct Individual
 	 */
 	bool opEquals()(auto ref in Individual i) const @nogc nothrow pure @safe
 	{
-		return this.fitness == i.fitness;
+		return
+			this.fitness == i.fitness ||
+			(isNaN(this.fitness) && isNaN(i.fitness));
 	}
 	
 	unittest
@@ -74,16 +89,16 @@ struct Individual
 	/**
 	 * Compares fitness values of two individuals.
 	 */
-	int opCmp()(auto ref in Individual i) const @nogc nothrow pure @safe
+	int opCmp()(auto ref in Individual i) const @safe
 	{
 		if (this.opEquals(i))
 			return 0;
-		else if (this.fitness > i.fitness)
+		else if (this.fitness > i.fitness || isNaN(i.fitness))
 			return 1;
-		else if (this.fitness < i.fitness)
+		else if (this.fitness < i.fitness || isNaN(this.fitness))
 			return -1;
 		else
-			assert (0, "float comparasion error.");
+			assert (0, "Float comparasion error. Could not compare %f and %f".format(this.fitness, i.fitness));
 	}
 	
 	unittest
@@ -142,7 +157,7 @@ struct Population
 	 * The required size means that total amount of memory is counted including additional memory to store offspring and
 	 * other implementation details.
 	 */
-	@property size_t size() const @nogc nothrow pure @safe
+	@property size_t size() const @nogc nothrow
 	{
 		return _individuals.length * _individuals[0].size;
 	}
@@ -258,7 +273,7 @@ struct Population
 	 */
 	void freeMem() nothrow @nogc
 	{
-		_individuals.each!(x => x.freeMem);
+		_individuals.each!(x => x.freeMem());
 		
 		if (_individuals.length)
 			nogcFree(_individuals);
@@ -300,7 +315,7 @@ struct Population
 	
 	unittest
 	{
-		// Have no idea what to test here. Network activation and MASE themselves must be already tested at this point.
+		// Have no idea how to test this. Network activation and MASE themselves must be already tested at this point.
 		mixin(notTested!fitness);
 	}
 	
@@ -392,6 +407,7 @@ struct Population
 //		_newGeneration[$ - _elite .. $] = _currentGeneration[$ - _elite .. $];
 		swap(_currentGeneration, _newGeneration);
 		
+		_isOrdered = false;
 		++_generation;
 	}
 	
@@ -400,13 +416,15 @@ struct Population
 	{
 		mixin(notTested!evolve);
 		
+		auto pool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, 0, 10000);
+		
 		NetworkParams params = { inputs : 5, outputs : 1, neurons : 3, layers : 5, min : -1.0e3, max : 1.0e3 };
 		immutable size = 100;
 		
-		auto population = Population(params, size, randomPool);
+		auto population = Population(params, size, pool);
 		scope(exit) population.freeMem();
 		
-		population.evolve(randomPool);
+		population.evolve(pool);
 	}
 }
 
