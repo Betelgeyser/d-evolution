@@ -307,7 +307,7 @@ struct Population
 			
 			transpose(approx, approxT, cublasHandle);
 			
-			i.fitness = MASE(outputsT, approxT, cublasHandle);
+			i.fitness = MAE(outputsT, approxT, cublasHandle);
 		}
 		
 		_isOrdered = false;
