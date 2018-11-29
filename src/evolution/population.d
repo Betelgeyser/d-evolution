@@ -271,7 +271,7 @@ struct Population
 	 * causes spontaneous destructors calls. Apparently structs are not intended
 	 * to be used with dynamic memory, probably it should be implemented as a class.  
 	 */
-	void freeMem() nothrow @nogc
+	void freeMem() nothrow
 	{
 		_individuals.each!(x => x.freeMem());
 		

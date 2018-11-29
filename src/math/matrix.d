@@ -304,7 +304,7 @@ struct Matrix
 	 * causes spontaneous destructors calls. Apparently structs are not intended
 	 * to be used with dynamic memory, probably it should be implemented as a class.  
 	 */
-	void freeMem() @nogc nothrow
+	void freeMem() nothrow
 	{
 		version(UMM) UMM.free(values);
 		else cudaFree(values);

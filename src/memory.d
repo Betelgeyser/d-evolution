@@ -37,335 +37,8 @@ UnifiedMemoryManager UMM;
 
 private:
 
-immutable poolSize = 128 * 2^^20; /// Size of a newly allocated block. Defaults to 128 MiB. This number is purely random,
-                                  /// probably it will need some optimization later.
-
-debug(memory)
-{
-	import std.exception : assumeWontThrow;
-	import std.stdio     : writeln;
-	
-	/**
-	 * Dirty way to supress some errors in debug builds that apperantly should not happen, like failing to compile
-	 * $(D_KEYWORD nothrow) function inspite it should be ignored with $(D_KEYWORD debug)(memory).
-	 */
-	void writeLog(T...)(T args, string file = __FILE__, int line = __LINE__) @nogc nothrow pure @safe
-	{
-		debug(memory) assumeWontThrow(writeln(file, " ", line, "\t", args));
-	}
-}
-
-/**
- * Simple double-linked list.
- *
- * It is tuned to the specific task of memory menegement. E. g. it lacks any search and relies more on iteration through it.
- */
-struct List(T)
-{
-	this(this) @nogc nothrow pure @safe
-	{
-		_current = _tail; // We need to reset the _current pointer on copy for iterators
-	}
-	
-	private
-	{
-		/**
-		 * Structure that wraps list element with poitners to its neighbors.
-		 */
-		struct Node(T)
-		{
-			@disable this();
-			@disable this(this);
-			
-			private
-			{
-				T       _payload;     /// The data itself.
-				Node!T* _prev = null; /// Pointer to the previous node.
-				Node!T* _next = null; /// Pointer to the next node.
-			}
-		}
-		
-		Node!T* _tail    = null; /// Pointer to the first element of the list.
-		Node!T* _head    = null; /// Pointer to the last element of the list.
-		Node!T* _current = null; /// Pointer to the currently iterated element of the list.
-		
-		size_t _length; /// Number of elements in the list.
-	}
-	
-	/**
-	 * Returns: Number of elements in the list.
-	 */
-	@property size_t length() const @nogc nothrow pure @safe
-	{
-		return _length;
-	}
-	
-	/**
-	 * Returns: Pointer to the first element of the list.
-	 */
-	@property T* tail() @nogc nothrow pure @safe
-	{
-		if (_tail !is null)
-			return &_tail._payload;
-		else
-			return null;
-	}
-	
-	/**
-	 * Returns: Pointer to the last element of the list.
-	 */
-	@property T* head() @nogc nothrow pure @safe
-	{
-		if (_head !is null)
-			return &_head._payload;
-		else
-			return null;
-	}
-	
-	/**
-	 * Returns: Pointer to the element previous to the current one.
-	 */
-	@property T* prev() @nogc nothrow pure @safe
-	{
-		if (_current._prev !is null)
-			return &_current._prev._payload;
-		else
-			return null;
-	}
-	
-	/**
-	 * Returns: Pointer to the element next to the current one.
-	 */
-	@property T* next() @nogc nothrow pure @safe
-	{
-		if (_current._next !is null)
-			return &_current._next._payload;
-		else
-			return null;
-	}
-	
-	/**
-	 * Append a new element at the end of the list. The current pointer is then set to a new head.
-	 *
-	 * Params:
-	 *     value = Value of a the new element.
-	 */
-	void pushFront(T value) @nogc nothrow
-	{
-		auto newHead = cast(Node!T*)malloc((Node!T).sizeof);
-		
-		newHead._payload = value;
-		newHead._next    = null;
-		newHead._prev    = _head;
-		
-		if (_head !is null)
-			_head._next = newHead;
-		
-		if (_tail is null)
-			_tail = newHead;
-		
-		if (_current is null)
-			_current = newHead;
-		
-		_head = newHead;
-		
-		++_length;
-	}
-	
-	/**
-	 * Insert a new element into the list after the current one. The new element will be set as a current one.
-	 *
-	 * Params:
-	 *     value = Value of a the new element.
-	 */
-	void insertAfter(T value) @nogc nothrow
-	{
-		auto newNode = cast(Node!T*)malloc((Node!T).sizeof);
-		
-		newNode._payload = value;
-		
-		if (_current is null)
-		{
-			newNode._prev = null;
-			newNode._next = null;
-		}
-		else
-		{
-			newNode._prev = _current;
-			newNode._next = _current._next;
-			
-			if (_current._next is null)
-				_head = newNode;
-			else
-				_current._next._prev = newNode;
-			
-			_current._next = newNode;
-		}
-		
-		_current = newNode;
-		
-		if (_tail is null)
-			_tail = newNode;
-		
-		if (_head is null)
-			_head = newNode;
-		
-		++_length;
-	}
-	
-	/**
-	 * Remove an element before the current one.
-	 */
-	void removeBefore() @nogc nothrow
-	{
-		_remove(_current._prev);
-	}
-	
-	/**
-	 * Remove an element after the current one.
-	 */
-	void removeAfter() @nogc nothrow
-	{
-		_remove(_current._next);
-	}
-	
-	/**
-	 * Remove an element $(D_PARAM node) from the list.
-	 */
-	private void _remove(Node!T* node) @nogc nothrow
-	{
-		if (node !is null)
-		{
-			if (node == _tail)
-				_tail = node._next;
-			
-			if (node == _head)
-				_head = node._prev;
-			
-			if (node._prev !is null)
-				node._prev._next = node._next;
-			
-			if (node._next !is null)
-				node._next._prev = node._prev;
-			
-			free(node);
-			
-			--_length;
-		}
-	}
-	
-	/**
-	 * Returns: $(D_KEYWORD true) if there are no more elements avaliable in the list.
-	 */
-	bool empty() const @nogc nothrow pure @safe
-	{
-		return _current is null;
-	}
-	
-	/**
-	 * For foreach.
-	 *
-	 * Foreach implemented through ranges will result in somewhat different behaviour. Fetching an element will move
-	 * `_current` pointer to the next node so the fetched and `_current` node would be different. This behaviour is even more
-	 * inconsistent when there is only one node in the list. In this case fetched and `_current` nodes would be same.
-	 *
-	 * That way, opApply ensures coherence between fetched and `_current` elements when foreach loop is used.
-	 */
-	auto opApply(scope int delegate(ref T) @nogc nothrow dg) @nogc nothrow
-	{
-		int result = 0;
-		
-		_current = _tail;
-		while (!empty)
-		{
-			result = dg(_current._payload);
-			if (result)
-				break;
-			
-			_current = _current._next;
-		}
-		_current = _tail;
-		
-		return result;
-	}
-}
-
-///
-unittest
-{
-	mixin(writeTest!List);
-	
-	struct S
-	{
-		int   i;
-		float f;
-	}
-	
-	List!S list;
-	
-	with (list)
-	{
-		pushFront( S(1, 1f) );
-		assert (_current._payload == S(1, 1f));
-		assert (_current          == _tail);
-		assert (_current          == _head);
-		assert (_current._prev    is null);
-		assert (_current._next    is null);
-		assert (_length           == 1);
-		
-		pushFront( S(3, 1f) );
-		assert (_current       == _tail);
-		assert (_tail._payload == S(1, 1f));
-		assert (_tail._next    == _head);
-		assert (_head._payload == S(3, 1f));
-		assert (_head._prev    == _tail);
-		assert (_head._next    is null);
-		assert (_length        == 2);
-		
-		insertAfter( S(2, 1f) );
-		assert (_current._payload == S(2, 1f));
-		assert (_current          != _tail);
-		assert (_current          != _head);
-		assert (_current._prev    == _tail);
-		assert (_current._next    == _head);
-		assert (_tail._next       == _current);
-		assert (_head._prev       == _current);
-		assert (_length           == 3);
-		
-		int i = 1;
-		foreach (el; list)
-		{
-			assert (el == S(i, 1f));
-			++i;
-		}
-		
-		// Try to remove this foreach and foreach by reference will suddenly fail. DMD64 D Compiler v2.079.0
-		foreach (el; list)
-			el.f = 2f;
-		foreach (el; list)
-			assert (el.f == 1f, "foreach by value changed an element in the list.");
-		
-		foreach (ref el; list)
-			el.f = 2f;
-		foreach (el; list)
-			assert (el.f == 2f, "foreach by reference failed to change an element in the list.");
-		
-		foreach (ref el; list)
-		{
-			if (el == S(2, 1f))
-			{
-				removeBefore();
-				removeAfter();
-				assert (_current._payload == S(2, 1f));
-				assert (_current          == _tail);
-				assert (_current          == _head);
-				assert (_current._prev    is null);
-				assert (_current._next    is null);
-				assert (_length           == 1);
-			}
-		}
-	}
-}
+immutable blockSize = 128 * 2^^20; /// Size of a newly allocated block. Defaults to 128 MiB. This number is purely random,
+                                          /// probably it will need some optimization later.
 
 /**
  * Continuous block of memory. It is the minimum unit of allocation.
@@ -480,32 +153,15 @@ struct Block
 	}
 	
 	/**
-	 * Allocates memory in the block.
-	 *
-	 * Params:
-	 *     size = Allocated bytes.
-	 *
-	 * Returns:
-	 *     Pointer to the allocated memory.
+	 * Mark the block as allocated.
 	 */
-	void* allocate(in size_t size) @nogc nothrow pure @safe
+	void allocate() @nogc nothrow pure @safe
 	{
-		debug(memory) assert (isFree, "Cannot allocate in already allocated block.");
-		debug(memory) assert (
-			_size >= size,
-			assumeWontThrow(
-				"%s %d\tBlock cannot allocate %d bytes. Only %d is available."
-				.format(__FILE__, __LINE__, size, _size)
-		));
-		
 		_isAllocated = true;
-		_size        = size;
-		
-		return _ptr;
 	}
 	
 	/**
-	 * Free block.
+	 * Mark the block as free.
 	 *
 	 * The block is not returned to the OS, it is just been marked as free so it can be allocated further.
 	 */
@@ -528,7 +184,7 @@ struct Block
 	 * Returns:
 	 *     Array of one or two blocks. The firts one is of $(D_PARAM size) size, the second one is of the remaining size.
 	 */
-	Block[] split(in size_t size) nothrow pure
+	Block[] split(in size_t size) nothrow
 	out(result)
 	{
 		assert (result.length == 1 || result.length == 2);
@@ -587,7 +243,7 @@ struct Block
 	}
 	
 	/// TODO: Error control.
-	static Block merge(Block leftBlock, Block rightBlock)
+	static Block merge(Block leftBlock, Block rightBlock) nothrow
 	{
 		return Block(
 			leftBlock.ptr,
@@ -607,118 +263,6 @@ struct Block
 		auto splitBlocks = block.split(60);
 		
 		assert (merge(splitBlocks[0], splitBlocks[1]) == block);
-	}
-}
-
-/**
- * Memory pool.
- *
- * It is a sufficiently large area of memory which is allocated at once. Any further allocations are done from this region
- * which improves performance by reducing the number of cudaMallocManaged calls.
- *
- * Every pool is devided into blocks which may be allocated or free. Whenever new allocation is performed, pool looks for
- * the first free block of the sufficient size and splits this block into two parts: allocated and free (if any free space
- * is left).
- */
-struct Pool
-{
-	/**
-	 * Params:
-	 *     size = Size of the pool.
-	 */
-	this(in size_t size) @nogc nothrow
-	{
-		_size = size;
-		
-		auto block = Block(size);
-		_blocks.pushFront(block);
-	}
-	
-	private
-	{
-		immutable size_t _size;   /// Size of the pool.
-		List!Block       _blocks; /// List of the pool's blocks.
-	}
-	
-	/**
-	 * Allocates memory in the pool.
-	 *
-	 * Params:
-	 *     size = Size in bytes to allocate.
-	 *
-	 * Returns:
-	 *     Pointer to the allocated memory. If there were no sufficient block found in the pool, then $(D_KEYWORD null)
-	 *     is returned.
-	 */
-	void* allocate(in size_t size) @nogc nothrow
-	{
-		debug(memory) size_t i = 0;
-		foreach (ref block; _blocks)
-		{
-			debug(memory) writeLog(
-				"Scanning ", i, " block at ", block.ptr, ". ",
-				"It is ", block.isFree ? "free" : "allocated", ", its size is ", block.size, " bytes"
-			);
-			if (block.isFree && block.size >= size)
-			{
-				debug(memory) writeLog("This block is sufficient. Allocating");
-				
-				auto freeBlock = Block(block.ptr + size, block.size - size, false);
-				_blocks.insertAfter(freeBlock);
-				
-				debug(memory) writeLog("New free block address is ", freeBlock.ptr);
-				
-				return block.allocate(size);
-			}
-			debug(memory) ++i;
-		}
-		
-		return null;
-	}
-	
-	/**
-	 * Free allocated block.
-	 *
-	 * Params:
-	 *     ptr = Pointer to a block being freed.
-	 *
-	 * Returns:
-	 *     $(D_KEYWORD true) if the block were successefuly freed. If the block pointed by this pointer were not found
-	 *     in the pool and were not freed, then $(D_KEYWORD false) is returned. 
-	 */
-	bool free(void* ptr) @nogc nothrow
-	{
-		debug(memory) size_t i = 0;
-		foreach (ref block; _blocks)
-		{
-			debug(memory) writeLog("Searching in the ", i, " block");
-			if (block.ptr == ptr)
-			{
-				debug(memory) writeLog("Ptr ", ptr, " is found");
-				block.free();
-				
-				if (_blocks.prev !is null && _blocks.prev.isFree)
-				{
-					debug(memory) writeLog("Previous block ", _blocks.prev.ptr, " is free. Merging");
-					
-					block = Block(_blocks.prev.ptr, _blocks.prev.size + block.size, false);
-					_blocks.removeBefore();
-				}
-				
-				if (_blocks.next !is null && _blocks.next.isFree)
-				{
-					debug(memory) writeLog("Next block ", _blocks.next.ptr, " is free. Merging");
-					
-					block = Block(block.ptr, block.size + _blocks.next.size, false);
-					_blocks.removeAfter();
-				}
-				
-				return true;
-			}
-			debug(memory) ++i;
-		}
-		
-		return false;
 	}
 }
 
@@ -744,165 +288,105 @@ struct UnifiedMemoryManager
 {
 	@disable this(this);
 	
+	@property size_t capacity()
+	{
+		return _capacity;
+	}
+
+	// TODO: Freeing memory
+	
 	private
 	{
-		List!Pool _pools; /// List of avaliable pools.
 		Block[void*] _allocatedBlocks; /// AA of all existing memory blocks.
-		Block[void*]      _freeBlocks; /// AA of free memory blocks.
+		Block[void*] _freeBlocks;      /// AA of free memory blocks.
+		
+		size_t _capacity;
 	}
 	
-	/**
-	 * Allocate an array.
-	 *
-	 * Params:
-	 *     T (template) = The type of elements to allocate. Must be numerical POD.
-	 *     items = Number of items to allocate.
-	 *
-	 * Returns:
-	 *     Allocated array.
-	 */
 	T[] allocate(T)(in size_t items) nothrow
-		if (isNumeric!T)
-	{
-		auto size = items * T.sizeof;
-		
-		if (size > poolSize)
-			throw new Error("Allocating %d bytes, but maximum pool size is %d bytes.".format(size, poolSize));
-		
-		debug(memory) writeLog("Allocating ", size, " bytes.");
-		
-		return cast(T[])_firstFit(size)[0 .. size];
-	}
-	
-	/**
-	 * Free an allocated array.
-	 *
-	 * Params:
-	 *     array = Array to free.
-	 */
-	void free(T)(ref T[] array) @nogc nothrow
-	{
-		debug(memory) writeLog("Freeing ptr ", array.ptr);
-		debug(memory) size_t i = 0;
-		foreach (ref pool; _pools)
-		{
-			debug(memory) writeLog("Searching in the ", i, " pool");
-			
-			if (pool.free(array.ptr))
-			{
-				array.destroy();
-				return;
-			}
-			debug(memory) ++i;
-		}
-		debug(memory) assert (false, "%s %d\tUnable to free %s, memory violation".format(__FILE__, __LINE__, array.ptr));
-	}
-	
-	T[] allocate2(T)(in size_t items) nothrow
 		if (isNumeric!T)
 	{
 		if (items == 0)
 			return null;
 		
-		size_t size = items * T.sizeof;
+		T[] result = _allocate!T(items);
 		
-		foreach (freeBlock; _freeBlocks.byValue())
+		if (result is null)
 		{
-			if (freeBlock.size >= size)
-			{
-				auto newBlocks = freeBlock.split(size);
-				
-				_allocatedBlocks[newBlocks[0].ptr] = newBlocks[0];
-				_allicatedBlocks[newBlocks[0].ptr].allocate();
-				
-				if (newBlocks.lenght == 2)
-					_freeBlocks[newBlocks[1].ptr] = newBlocks[1].ptr;
-				
-				_freeBlocks.remove(freeBlock.ptr);
-				
-				return cast(T[])newBlocks[0].ptr[0 .. size];
-			}
+			this._extend();
+			result = _allocate!T(items);
 		}
 		
-		return null;
+		if (result is null)
+			throw new Error("Memory allocation error.");
+		
+		return result;
 	}
 	
-	void free2(T)(ref T[] array) nothrow
+	void free(T)(ref T[] array) nothrow
 	{
-		auto block = _allocatedBlocks[array.ptr];
+		if (array is null)
+			return;
 		
-		if (block.prev in _freeBlocks)
-		{
-			auto prevBlock = _freeBlocks[block.prev];
-			
-			newPtr = prevBlock.ptr;
-			newSize += prevBlock.size;
-			newPrev = prevBlock.prev;
-			
-			_freeBlocks.remove(block.prev);
-		}
+		auto block = _allocatedBlocks[array.ptr];
+		block.free();
+		
+		_allocatedBlocks.remove(block.ptr);
+		_freeBlocks[block.ptr] = block;
 		
 		if (block.next in _freeBlocks)
 		{
 			auto nextBlock = _freeBlocks[block.next];
 			
-			newSize += nextBlock.size;
-			newNext = nextBlock.next;
-			
 			_freeBlocks.remove(block.next);
+			_freeBlocks[block.ptr] = Block.merge(block, nextBlock);
+			_freeBlocks[block.ptr].free();
 		}
 		
-		_freeBlocks[newPtr] = Block(newPtr, newSize, false, newPrev, newNext);
-		_allocatedBlocks.remove(block.ptr);
+		if (block.prev in _freeBlocks)
+		{
+			auto prevBlock = _freeBlocks[block.prev];
+			
+			_freeBlocks.remove(block.ptr);
+			_freeBlocks[block.prev] = Block.merge(prevBlock, block);
+			_freeBlocks[block.prev].free();
+		}
 		
 		array = null;
 	}
 	
 	private
 	{
-		/**
-		 * Allocating using the firts fit stratagy.
-		 *
-		 * Params:
-		 *     size = Size in bytes to allocate.
-		 *
-		 * Returns:
-		 *     Pointer to the allocated memory.
-		 *
-		 * See_Also:
-		 *     $(LINK http://www.memorymanagement.org/mmref/alloc.html#first-fit)
-		 */
-		void* _firstFit(in size_t size) @nogc nothrow
+		T[] _allocate(T)(in size_t items) nothrow
 		{
-			debug(memory) size_t i = 0;
-			foreach (ref pool; _pools)
+			size_t size = T.sizeof * items;
+			
+			foreach (freeBlock; _freeBlocks.byValue())
 			{
-				debug(memory) writeLog("Searching a sufficient block in the ", i, " pool");
-				
-				auto ptr = pool.allocate(size);
-				if (ptr !is null)
-					return ptr;
-				
-				debug(memory) ++i;
+				if (freeBlock.size >= size)
+				{
+					auto newBlocks = freeBlock.split(size);
+					
+					_allocatedBlocks[newBlocks[0].ptr] = newBlocks[0];
+					_allocatedBlocks[newBlocks[0].ptr].allocate();
+					
+					if (newBlocks.length == 2)
+						_freeBlocks[newBlocks[1].ptr] = newBlocks[1];
+					
+					_freeBlocks.remove(freeBlock.ptr);
+					
+					return cast(T[])newBlocks[0].ptr[0 .. size];
+				}
 			}
 			
-			debug(memory) writeLog("No sufficient pool was found. Creating a new one");
-			
-			_addPool(poolSize);
-			
-			return _pools.head.allocate(size);
+			return null;
 		}
 		
-		/**
-		 * Create a new pool and add it to the list.
-		 *
-		 * Params:
-		 *     size = Size of a new pool in bytes.
-		 */
-		void _addPool(in size_t size) @nogc nothrow
+		void _extend() nothrow
 		{
-			auto pool = Pool(poolSize);
-			_pools.pushFront(pool);
+			auto block = Block(blockSize);
+			_freeBlocks[block.ptr] = block;
+			_capacity += blockSize;
 		}
 	}
 }
@@ -910,55 +394,53 @@ struct UnifiedMemoryManager
 ///
 unittest
 {
-	// This is a simplified unittest and it cannot detect every possible error, but is OK for now.
-	// Use `-debug memory` switch to enable full memory logging in case of errors.
-	
 	mixin(writeTest!UnifiedMemoryManager);
 	UnifiedMemoryManager manager;
 	
-	float[][] a;
+	auto a = manager.allocate!float(0);
+	assert (a is null);
+	assert (a.length == 0);
 	
-	a ~= manager.allocate!float(15728640);
-	assert (manager._pools.length == 1); // Created 1st pool
-	assert (manager._pools.head._blocks.length == 2); // 1st block in the pool is splited into two new blocks:
-	                                                  // allocated and free
-	assert (a[0].length == 15728640);
-	assert (a[0][$ - 1] == a[0][$ - 1]); // Ckeck memory accessability
+	manager.free(a); // Must not crash
 	
-	a ~= manager.allocate!float(15728640);
-	assert (manager._pools.length == 1); // As there are enough free space in the 1st pool, no new pool is created
-	assert (manager._pools.head._blocks.length == 3); // New block is allocated from the free one
-	assert (a[1].length == 15728640);
-	assert (a[1][$ - 1] == a[1][$ - 1]);
+	import std.stdio;
+	writeln();
 	
-	a ~= manager.allocate!float(15728640);
-	assert (manager._pools.length == 2); // As there is not enough free space in the 1st pool, a new one is created
-	assert (manager._pools.tail._blocks.length == 3); // The 1st pool is unaffected
-	assert (manager._pools.head._blocks.length == 2); // A new block is created in the 2nd pool
-	assert (a[2].length == 15728640);
-	assert (a[2][$ - 1] == a[2][$ - 1]);
+	auto a1 = manager.allocate!float(15_000_000); // 4KiB of memory
+	writeln("15_000_000 float allocated");
+	writeln(manager._allocatedBlocks);
+	writeln(manager._freeBlocks);
 	
-	manager.free(a[0]);
-	assert (manager._pools.length == 2); // Pools are never freed right now
-	assert (manager._pools.tail._blocks.length == 3); // Freed block is not adjacent to any other free block so it can't be merged
-	assert (manager._pools.head._blocks.length == 2);
-	assert (a[0].ptr    == null); // The destroyed array must not be accessable any more
-	assert (a[0].length == 0);
+	auto a2 = manager.allocate!float(15_000_000);
+	writeln("60_000_000 byte allocated");
+	writeln(manager._allocatedBlocks);
+	writeln(manager._freeBlocks);
 	
-	manager.free(a[1]);
-	assert (manager._pools.length == 2); // Pools are never freed right now
-	assert (manager._pools.tail._blocks.length == 1); // Freed block was adjacent to free blocks from the both sides, so they
-	                                                  // have been merged together
-	assert (manager._pools.head._blocks.length == 2);
-	assert (a[1].ptr    == null);
-	assert (a[1].length == 0);
+	auto a3 = manager.allocate!float(15);
+	writeln("15 float allocated");
+	writeln(manager._allocatedBlocks);
+	writeln(manager._freeBlocks);
 	
-	a[0] = manager.allocate!float(15728640);
-	assert (manager._pools.length == 2);
-	assert (manager._pools.tail._blocks.length == 2); // As now there is enough free space in the 1st pool, a new array is
-	                                                  // allocated there
-	assert (manager._pools.head._blocks.length == 2);
-	assert (a[0].length == 15728640);
-	assert (a[0][$ - 1] == a[0][$ - 1]); // As we allocated a[0] one more time, it must be accessable again
+	auto a4 = manager.allocate!float(15_000_000);
+	writeln("15_000_000 float allocated");
+	writeln(manager._allocatedBlocks);
+	writeln(manager._freeBlocks);
+	
+	manager.free(a2);
+	assert (a2 is null);
+	writeln("2 is freed");
+	writeln(manager._allocatedBlocks);
+	writeln(manager._freeBlocks);
+	
+	manager.free(a3);
+	assert (a3 is null);
+	writeln("3 is freed");
+	writeln(manager._allocatedBlocks);
+	writeln(manager._freeBlocks);
+	
+//	auto a2 = manager.allocate!float(15_000_000);
+//	writeln("60_000_000 byte allocated");
+//	writeln(manager._allocatedBlocks);
+//	writeln(manager._freeBlocks);
 }
 
