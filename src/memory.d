@@ -341,6 +341,8 @@ struct UnifiedMemoryManager
 			_freeBlocks.remove(block.next);
 			_freeBlocks[block.ptr] = Block.merge(block, nextBlock);
 			_freeBlocks[block.ptr].free();
+			
+			block = _freeBlocks[block.ptr];
 		}
 		
 		if (block.prev in _freeBlocks)
@@ -438,9 +440,10 @@ unittest
 	writeln(manager._allocatedBlocks);
 	writeln(manager._freeBlocks);
 	
-//	auto a2 = manager.allocate!float(15_000_000);
-//	writeln("60_000_000 byte allocated");
-//	writeln(manager._allocatedBlocks);
-//	writeln(manager._freeBlocks);
+	manager.free(a1);
+	manager.free(a4);
+	writeln("all is freed");
+	writeln(manager._allocatedBlocks);
+	writeln(manager._freeBlocks);
 }
 
