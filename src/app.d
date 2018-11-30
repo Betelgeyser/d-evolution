@@ -44,10 +44,10 @@ import math.statistics      : MAE, MASE, MPE;
 void main(string[] args)
 {
 	version (unittest) {} else {
-	uint   device;               /// GPU device to use.
-	uint   timeLimit;            /// Time limit to train ANN, seconds.
-	float  populationMultiplier; /// Population multiplier.
-	string pathToData;           /// Path to the folder cointaining datasets. Must be of the specific structure.
+	uint   device;     /// GPU device to use.
+	uint   timeLimit;  /// Time limit to train ANN, seconds.
+	uint   populationSize; /// Population size.
+	string pathToData; /// Path to the folder cointaining datasets. Must be of the specific structure.
 	
 	// Network parameters
 	uint  layers;
@@ -59,32 +59,63 @@ void main(string[] args)
 	
 	auto opts = getopt(
 		args,
-		"path",          "Path to data directory.",    &pathToData,
-		"device|d",      "GPU device to use.",         &device,
-		"time|t",        "Time limit, seconds.",       &timeLimit,
-		"layers|l",      "Number of layers.",          &layers,
-		"neurons|n",     "Number of neurons.",         &neurons,
-		"multiplier|m",  "Population multiplier.",     &populationMultiplier,
-		"min",           "Minimum connection weight.", &min,
-		"max",           "Maximum connection weight.", &max
+		"path",         "Path to data directory.",    &pathToData,
+		"device|d",     "GPU device to use.",         &device,
+		"time|t",       "Time limit, seconds.",       &timeLimit,
+		"layers|l",     "Number of layers.",          &layers,
+		"neurons|n",    "Number of neurons.",         &neurons,
+		"population|p", "Population multiplier.",     &populationSize,
+		"min",          "Minimum connection weight.", &min,
+		"max",          "Maximum connection weight.", &max
 	);
 	
 	if (opts.helpWanted)
 	{
-		defaultGetoptPrinter("\n\tThis is SteamSpyder. It collects data from Steam\n", opts.options);
+		defaultGetoptPrinter("\n\tDNN is D Neural Network. It uses neuroevolution to learn.\n", opts.options);
 		return;
 	}
 	
-	enforce(device < cudaGetDeviceCount(), "%d GPU device is used, but only %d found.".format(device, cudaGetDeviceCount()));
+	if (device >= cudaGetDeviceCount())
+	{
+		writeln("%d GPU device is not found.".format(device));
+		return;
+	}
 	
-	enforce(timeLimit >= 1, "Time limit is set to %d minute(s), but must be at leats 1 second.".format(timeLimit));
-	enforce(neurons   >= 2, "Neural network must have at leas 2 neurons, but got %d.".format(neurons));
-	enforce(layers    >= 2, "Neural network must have at leas 2 layers, but got %d.".format(layers));
+	if (neurons < 2) // Why 2? Isn't 1 sufficient?
+	{
+		writeln("Neural network must have at leas 2 neurons.");
+		return;
+	}
 	
-	enforce(isFinite(min), "Minimum weigth must be finite, but got %f".format(min));
-	enforce(isFinite(max), "Maximum weigth must be finite, but got %f".format(max));
+	if (layers < 2) // Why?
+	{
+		writeln("Neural network must have at leas 2 layers.");
+		return;
+	}
 	
-	enforce(max >= min, "Minimum weight %f is greater than maximum weight %f.".format(min, max));
+	if (!isFinite(min))
+	{
+		writeln("Minimum weigth must be a finite number, not %g".format(min));
+		return;
+	}
+	
+	if (!isFinite(max))
+	{
+		writeln("Maximum weigth must be a finite number, not %g".format(max));
+		return;
+	}
+	
+	if (min >= max)
+	{
+		writeln("The minimum weight %g must be less than the maximum weight %g.".format(min, max));
+		return;
+	}
+	
+	if (populationSize < 2)
+	{
+		writeln("Population must be at leats 2 individuals.");
+		return;
+	}
 	
 	cudaSetDevice(device);
 	
@@ -127,27 +158,24 @@ void main(string[] args)
 			~ "%d".ansiFormat(ANSIColor.white) ~ " layers, "
 			~ "minimum weigth is " ~ "%g ".ansiFormat(ANSIColor.white)
 			~ "maximun weight is " ~ "%g. ".ansiFormat(ANSIColor.white)
-			~ "In total %d degrees of freedom"
 		).format(
 			params.inputs,
 			params.neurons,
 			params.outputs,
 			params.layers,
 			params.min,
-			params.max,
-			params.degreesOfFreedom
+			params.max
 	));
 	
 	writeln(
-		("\tPopulation multiplier = %g. Total population size is "
-			~ "%d".ansiFormat(ANSIColor.white) ~ " networks"
-		).format(populationMultiplier, lround(populationMultiplier * params.degreesOfFreedom))
+		("\tPopulation size is " ~ "%d".ansiFormat(ANSIColor.white) ~ " networks")
+			.format(populationSize)
 	);
 	
 	write("\tGenerating population...");
 	stdout.flush();
 	
-	auto population = Population(params, lround(params.degreesOfFreedom * populationMultiplier), pool);
+	auto population = Population(params, populationSize, pool);
 	scope(exit) population.freeMem();
 	
 	writeln(" [ " ~ "done".ansiFormat(ANSIColor.green) ~ " ]");

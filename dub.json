@@ -4,50 +4,50 @@
 	"authors" : ["Sergei Iurevich Filippov"],
 	"copyright" : "Copyright © 2017 Sergei Iurevich Filippov, All Rights Reserved.",
 	"license" : "Apache-2.0",
-	"lflags": ["--library-path=."],
-	"libs": ["cudart", "cublas", "curand", "kernels"],
-	"excludedSourceFiles": ["src/cuda/cudadriverapi/*"],
-	"dflags" : ["-vgc", "-color", "-mcpu=native", "-version=UMM"],
-	"buildTypes": {
-		"docs": {
-			"buildOptions": ["syntaxOnly"],
-			"dflags": ["-D", "-Dddocs", "-op"]
+	"lflags" : ["--library-path=."],
+	"libs" : ["cudart", "cublas", "curand", "kernels"],
+	"excludedSourceFiles" : ["src/cuda/cudadriverapi/*"],
+	"dflags" : ["-color", "-mcpu=native"],
+	"buildTypes" : {
+		"docs" : {
+			"buildOptions" : ["syntaxOnly"],
+			"dflags" : ["-D", "-Dddocs", "-op"]
 		},
-		"debug": {
-			"buildOptions": ["debugMode", "debugInfo"],
-			"preBuildCommands": ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
+		"debug" : {
+			"buildOptions" : ["debugMode", "debugInfo"],
+			"preBuildCommands" : ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
 		},
-		"release": {
-			"buildOptions": ["releaseMode", "optimize", "inline"],
-			"preBuildCommands": ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
+		"release" : {
+			"buildOptions" : ["releaseMode", "optimize", "inline"],
+			"preBuildCommands" : ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
 		},
-		"release-debug": {
-			"buildOptions": ["releaseMode", "optimize", "inline", "debugInfo"],
-			"preBuildCommands": ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
+		"release-debug" : {
+			"buildOptions" : ["releaseMode", "optimize", "inline", "debugInfo"],
+			"preBuildCommands" : ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
 		},
-		"release-nobounds": {
-			"buildOptions": ["releaseMode", "optimize", "inline", "noBoundsCheck"],
-			"preBuildCommands": ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
+		"release-nobounds" : {
+			"buildOptions" : ["releaseMode", "optimize", "inline", "noBoundsCheck"],
+			"preBuildCommands" : ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
 		},
-		"unittest": {
-			"buildOptions": ["unittests", "debugMode", "debugInfo"],
-			"preBuildCommands": ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
+		"unittest" : {
+			"buildOptions" : ["unittests", "debugMode", "debugInfo"],
+			"preBuildCommands" : ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
 		},
-		"profile": {
-			"buildOptions": ["profile", "optimize", "inline", "debugInfo"],
-			"preBuildCommands": ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
+		"profile" : {
+			"buildOptions" : ["profile", "optimize", "inline", "debugInfo"],
+			"preBuildCommands" : ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
 		},
-		"profile-gc": {
-			"buildOptions": ["profileGC", "debugInfo"],
-			"preBuildCommands": ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
+		"profile-gc" : {
+			"buildOptions" : ["profileGC", "debugInfo"],
+			"preBuildCommands" : ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
 		},
-		"cov": {
-			"buildOptions": ["coverage", "debugInfo"],
-			"preBuildCommands": ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
+		"cov" : {
+			"buildOptions" : ["coverage", "debugInfo"],
+			"preBuildCommands" : ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
 		},
-		"unittest-cov": {
-			"buildOptions": ["unittests", "coverage", "debugMode", "debugInfo"],
-			"preBuildCommands": ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
+		"unittest-cov" : {
+			"buildOptions" : ["unittests", "coverage", "debugMode", "debugInfo"],
+			"preBuildCommands" : ["nvcc --gpu-architecture=sm_61 src/kernels.cu -rdc=true -shared -Xcompiler -fPIC -std=c++11 -o libkernels.so"]
 		}
 	}
 }
