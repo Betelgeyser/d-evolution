@@ -223,12 +223,12 @@ void main(string[] args)
 			break;
 		}
 		
-//		import std.math : approxEqual;
-//		if (approxEqual(population.best.fitness, population.worst) && approxEqual(population.best.fitness, population.mean))
-//		{
-//			writeln("\tAcceptable solution found [ " ~ "stopped".ansiFormat(ANSIColor.green) ~ " ]");
-//			break;
-//		}
+		import std.math : approxEqual;
+		if (approxEqual(population.best.fitness, population.worst) && approxEqual(population.best.fitness, population.mean))
+		{
+			writeln("\tGenetic divercity lost [ " ~ "stopped".ansiFormat(ANSIColor.red) ~ " ]");
+			break;
+		}
 		
 		population.evolve(pool);
 	}
