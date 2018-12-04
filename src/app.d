@@ -187,21 +187,21 @@ void main(string[] args)
 	stopWatch.start();
 	while (true)
 	{
-		write("\tGeneration #%d:".format(population.generation).ansiFormat(ANSIColor.white));
-		stdout.flush();
+		string report = "\tGeneration #%d:".format(population.generation).ansiFormat(ANSIColor.white);
 		
 		population.fitness(trainingInputs, trainingOutputs, cublasHandle);
 		
-		writeln(
-			("\tbest = " ~ "%e".ansiFormat(ANSIColor.brightGreen)
-				~ "\tworst = " ~ "%e".ansiFormat(ANSIColor.brightRed)
-				~ "\tmean = " ~ "%e".ansiFormat(ANSIColor.brightYellow)
-				~ "\t%s".ansiFormat(ANSIColor.white).format(timeLimit.seconds() - stopWatch.peek()) ~ " left"
-			).format(
-				population.best.fitness,
-				population.worst,
-				population.mean
-		));
+		report ~= ("\n\t\tT: best = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightGreen)
+			~ "\tmean = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightYellow)
+			~ "\tworst = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightRed)
+		).format(
+			population.best.fitness,
+			population.mean,
+			population.worst
+		);
+		
+		report ~= "\n\t\t%s".format(timeLimit.seconds() - stopWatch.peek()) ~ " left\n";
+		writeln(report);
 		
 		if (stopWatch.peek() >= timeLimit.seconds())
 		{
