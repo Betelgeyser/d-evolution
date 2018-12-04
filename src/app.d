@@ -39,10 +39,10 @@ import math.statistics      : MAE, MASE, MPE;
 void main(string[] args)
 {
 	version (unittest) {} else {
-	uint   device;     /// GPU device to use.
-	uint   timeLimit;  /// Time limit to train ANN, seconds.
+	uint   device;         /// GPU device to use.
+	uint   timeLimit;      /// Time limit to train ANN, seconds.
 	uint   populationSize; /// Population size.
-	string pathToData; /// Path to the folder cointaining datasets. Must be of the specific structure.
+	string pathToData;     /// Path to the folder cointaining datasets. Must be of the specific structure.
 	
 	// Network parameters
 	uint  layers;
@@ -182,6 +182,7 @@ void main(string[] args)
 	stopWatch.start();
 	while (true)
 	{
+		/// Caching generation report prevents output from fast scrolling which causes your eyes bleed.
 		string report = "\tGeneration #%d:".format(population.generation).ansiFormat(ANSIColor.white);
 		
 		// Not the smartest thing, but Ok for now.
