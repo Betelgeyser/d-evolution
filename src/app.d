@@ -16,16 +16,11 @@
 
 // Standard D modules
 import core.time              : Duration, minutes, seconds;
-import std.algorithm          : count;
-import std.conv               : to;
-import std.csv                : csvReader;
 import std.datetime.stopwatch : StopWatch;
-import std.exception          : enforce;
 import std.file               : readText;
 import std.getopt             : defaultGetoptPrinter, getopt;
 import std.math               : isFinite, lround;
 import std.random             : unpredictableSeed;
-import std.range              : zip;
 import std.stdio              : stdout, write, writeln;
 import std.string             : format;
 
