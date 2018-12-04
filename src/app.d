@@ -184,6 +184,18 @@ void main(string[] args)
 	{
 		string report = "\tGeneration #%d:".format(population.generation).ansiFormat(ANSIColor.white);
 		
+		// Not the smartest thing, but Ok for now.
+		population.fitness(validationInputs, validationOutputs, cublasHandle);
+		
+		report ~= ("\n\t\tV: best = " ~ "%e".ansiFormat(ANSIColor.green)
+			~ "\tmean = " ~ "%e".ansiFormat(ANSIColor.yellow)
+			~ "\tworst = " ~ "%e".ansiFormat(ANSIColor.red)
+		).format(
+			population.best.fitness,
+			population.mean,
+			population.worst
+		);
+		
 		population.fitness(trainingInputs, trainingOutputs, cublasHandle);
 		
 		report ~= ("\n\t\tT: best = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightGreen)
