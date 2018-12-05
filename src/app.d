@@ -42,6 +42,7 @@ void main(string[] args)
 	uint   device;         /// GPU device to use.
 	uint   timeLimit;      /// Time limit to train ANN, seconds.
 	uint   populationSize; /// Population size.
+	uint   report;         /// Report every X generation.
 	string pathToData;     /// Path to the folder cointaining datasets. Must be of the specific structure.
 	
 	// Network parameters
@@ -54,14 +55,15 @@ void main(string[] args)
 	
 	auto opts = getopt(
 		args,
-		"path",         "Path to data directory.",    &pathToData,
-		"device|d",     "GPU device to use.",         &device,
-		"time|t",       "Time limit, seconds.",       &timeLimit,
-		"layers|l",     "Number of layers.",          &layers,
-		"neurons|n",    "Number of neurons.",         &neurons,
-		"population|p", "Population multiplier.",     &populationSize,
-		"min",          "Minimum connection weight.", &min,
-		"max",          "Maximum connection weight.", &max
+		"path",         "Path to data directory.",                   &pathToData,
+		"device|d",     "GPU device to use.",                        &device,
+		"time|t",       "Time limit, seconds.",                      &timeLimit,
+		"layers|l",     "Number of layers.",                         &layers,
+		"neurons|n",    "Number of neurons.",                        &neurons,
+		"population|p", "Population multiplier.",                    &populationSize,
+		"report|r",     "Print training report every X generations", &report,
+		"min",          "Minimum connection weight.",                &min,
+		"max",          "Maximum connection weight.",                &max
 	);
 	
 	if (opts.helpWanted)
@@ -183,12 +185,12 @@ void main(string[] args)
 	while (true)
 	{
 		/// Caching generation report prevents output from fast scrolling which causes your eyes bleed.
-		string report = "\tGeneration #%d:".format(population.generation).ansiFormat(ANSIColor.white);
+		string reportString = "\tGeneration #%d:".format(population.generation).ansiFormat(ANSIColor.white);
 		
 		// Not the smartest thing, but Ok for now.
 		population.fitness(validationInputs, validationOutputs, cublasHandle);
 		
-		report ~= ("\n\t\tV: best = " ~ "%e".ansiFormat(ANSIColor.green)
+		reportString ~= ("\n\t\tV: best = " ~ "%e".ansiFormat(ANSIColor.green)
 			~ "\tmean = " ~ "%e".ansiFormat(ANSIColor.yellow)
 			~ "\tworst = " ~ "%e".ansiFormat(ANSIColor.red)
 		).format(
@@ -199,7 +201,7 @@ void main(string[] args)
 		
 		population.fitness(trainingInputs, trainingOutputs, cublasHandle);
 		
-		report ~= ("\n\t\tT: best = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightGreen)
+		reportString ~= ("\n\t\tT: best = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightGreen)
 			~ "\tmean = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightYellow)
 			~ "\tworst = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightRed)
 		).format(
@@ -208,8 +210,10 @@ void main(string[] args)
 			population.worst
 		);
 		
-		report ~= "\n\t\t%s".format(timeLimit.seconds() - stopWatch.peek()) ~ " left\n";
-		writeln(report);
+		reportString ~= "\n\t\t%s".format(timeLimit.seconds() - stopWatch.peek()) ~ " left\n";
+		
+		if (report == 0 || population.generation % report == 0)
+			writeln(reportString);
 		
 		if (stopWatch.peek() >= timeLimit.seconds())
 		{
