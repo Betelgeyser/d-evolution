@@ -240,59 +240,58 @@ void main(string[] args)
 			break;
 		}
 		
-		if (approxEqual(population.best.fitness, population.worst) && approxEqual(population.best.fitness, population.mean))
-		{
-			writeln("\tGenetic divercity lost [ " ~ "stopped".ansiFormat(ANSIColor.red) ~ " ]");
-			break;
-		}
+//		if (approxEqual(population.best.fitness, population.worst, 1000) && approxEqual(population.best.fitness, population.mean, 1000))
+//		{
+//			writeln("\tGenetic divercity lost [ " ~ "stopped".ansiFormat(ANSIColor.red) ~ " ]");
+//			break;
+//		}
 		
 		population.evolve(pool);
 	}
 	stopWatch.stop();
-	stopWatch.reset();
 	
-	auto trainingOutputsT = Matrix(trainingOutputs.cols, trainingOutputs.rows);
-	scope(exit) trainingOutputsT.freeMem();
-	
-	auto validationOutputsT = Matrix(validationOutputs.cols, validationOutputs.rows);
-	scope(exit) validationOutputsT.freeMem();
-	
+//	auto trainingOutputsT = Matrix(trainingOutputs.cols, trainingOutputs.rows);
+//	scope(exit) trainingOutputsT.freeMem();
+//	
+//	auto validationOutputsT = Matrix(validationOutputs.cols, validationOutputs.rows);
+//	scope(exit) validationOutputsT.freeMem();
+//	
 	auto trainingApprox = Matrix(trainingOutputs.rows, trainingOutputs.cols);
 	scope(exit) trainingApprox.freeMem();
-	
-	auto trainingApproxT = Matrix(trainingOutputs.cols, trainingOutputs.rows);
-	scope(exit) trainingApproxT.freeMem();
-	
+//	
+//	auto trainingApproxT = Matrix(trainingOutputs.cols, trainingOutputs.rows);
+//	scope(exit) trainingApproxT.freeMem();
+//	
 	auto validationApprox = Matrix(validationOutputs.rows, validationOutputs.cols);
 	scope(exit) validationApprox.freeMem();
-	
-	auto validationApproxT = Matrix(validationOutputs.cols, validationOutputs.rows);
-	scope(exit) validationApproxT.freeMem();
-	
+//	
+//	auto validationApproxT = Matrix(validationOutputs.cols, validationOutputs.rows);
+//	scope(exit) validationApproxT.freeMem();
+//	
 	population.best()(trainingInputs, trainingApprox, cublasHandle);
 	
-	transpose(trainingOutputs, trainingOutputsT, cublasHandle);
-	transpose(trainingApprox, trainingApproxT, cublasHandle);
+//	transpose(trainingOutputs, trainingOutputsT, cublasHandle);
+//	transpose(trainingApprox, trainingApproxT, cublasHandle);
 	
 	cudaDeviceSynchronize();
 	
-	float tMase = MASE(trainingOutputsT, trainingApproxT, cublasHandle);
-	float tMae  = MAE(trainingOutputsT, trainingApproxT, cublasHandle);
-	float tMpe  = MPE(trainingOutputsT, trainingApproxT, cublasHandle);
-	
-	cudaDeviceSynchronize();
-	
+//	float tMase = MASE(trainingOutputsT, trainingApproxT, cublasHandle);
+//	float tMae  = MAE(trainingOutputsT, trainingApproxT, cublasHandle);
+//	float tMpe  = MPE(trainingOutputsT, trainingApproxT, cublasHandle);
+//	
+//	cudaDeviceSynchronize();
+//	
 	population.best()(validationInputs, validationApprox, cublasHandle);
-	transpose(validationApprox, validationApproxT, cublasHandle);
+//	transpose(validationApprox, validationApproxT, cublasHandle);
 	
 	cudaDeviceSynchronize();
 	
-	float vMase = MASE(validationOutputsT, validationApproxT, cublasHandle);
-	float vMae  = MAE(validationOutputsT, validationApproxT, cublasHandle);
-	float vMpe  = MPE(validationOutputsT, validationApproxT, cublasHandle);
-	
-	cudaDeviceSynchronize();
-	
+//	float vMase = MASE(validationOutputsT, validationApproxT, cublasHandle);
+//	float vMae  = MAE(validationOutputsT, validationApproxT, cublasHandle);
+//	float vMpe  = MPE(validationOutputsT, validationApproxT, cublasHandle);
+//	
+//	cudaDeviceSynchronize();
+//	
 //	auto l2Outputs = Matrix(1, trainingOutputs.rows);
 //	scope(exit) l2Outputs.freeMem();
 //	
@@ -301,41 +300,42 @@ void main(string[] args)
 //	
 //	cudaL2(trainingOutputsT, l2Outputs.values);
 //	cudaL2(approxT, l2Approx.values);
-	
-	cudaDeviceSynchronize();
 //	
-//	writeln();
-//	writeln("Ot,Ht,Lt,Ct,L2t,Oa,Ha,La,Ca,L2a,AE,PE");
-//	for (int i = 0; i < approx.rows; ++i)
-//	{
-//		writeln("%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g".format(
-//			trainingOutputs[i, 0],
-//			trainingOutputs[i, 1],
-//			trainingOutputs[i, 2],
-//			trainingOutputs[i, 3],
-//			l2Outputs[0, i],
-//			approx[i, 0],
-//			approx[i, 1],
-//			approx[i, 2],
-//			approx[i, 3],
-//			l2Approx[0, i],
-//			abs(l2Outputs[0, i] - l2Approx[0, i]),
-//			abs(l2Outputs[0, i] - l2Approx[0, i]) / l2Outputs[0, i] * 100.0
-//		));
-//	}
-	
+//	cudaDeviceSynchronize();
+//	
 	writeln();
-	writeln("Training results:".ansiFormat(ANSIColor.white));
-	writeln("\tTraning dataset:"
-		~ " best MASE = " ~ "%g".ansiFormat(ANSIColor.white).format(tMase)
-		~ ", best MAE = " ~ "%g".ansiFormat(ANSIColor.white).format(tMae)
-		~ ", best MPE = " ~ "%g%%".ansiFormat(ANSIColor.white).format(tMpe)
-	);
-	writeln("\tValidation dataset:"
-		~ " best MASE = " ~ "%g".ansiFormat(ANSIColor.white).format(vMase)
-		~ ", best MAE = " ~ "%g".ansiFormat(ANSIColor.white).format(vMae)
-		~ ", best MPE = " ~ "%g%%".ansiFormat(ANSIColor.white).format(vMpe)
-	);
+	writeln("Training dataset:");
+	
+	for (int i = 0; i < trainingApprox.rows; ++i)
+		if (i % 50 == 0)
+			writeln("(%g,\t%g,\t%g,\t%g)\t(%g,\t%g,\t%g,\t%g))".format(
+				trainingOutputs[i, 0],
+				trainingOutputs[i, 1],
+				trainingOutputs[i, 2],
+				trainingOutputs[i, 3],
+				trainingApprox[i, 0],
+				trainingApprox[i, 1],
+				trainingApprox[i, 2],
+				trainingApprox[i, 3]
+			));
+	
+//	writeln();
+//	writeln("Validation dataset:");
+//	writeln("Real (MPa)  , Approx (MPa)");
+//	
+//	for (int i = 0; i < validationApprox.rows; ++i)
+//		writeln("%g, %g".format(validationOutputs[i, 0], validationApprox[i, 0]));
+//	writeln("\tTraning dataset:"
+//		~ " best MASE = " ~ "%g".ansiFormat(ANSIColor.white).format(tMase)
+//		~ ", best MAE = " ~ "%g".ansiFormat(ANSIColor.white).format(tMae)
+//		~ ", best MPE = " ~ "%g%%".ansiFormat(ANSIColor.white).format(tMpe)
+//	);
+//	writeln("\tValidation dataset:"
+//		~ " best MASE = " ~ "%g".ansiFormat(ANSIColor.white).format(vMase)
+//		~ ", best MAE = " ~ "%g".ansiFormat(ANSIColor.white).format(vMae)
+//		~ ", best MPE = " ~ "%g%%".ansiFormat(ANSIColor.white).format(vMpe)
+//	);
+	writeln();
 	writeln("Best solution so far is ", population.best());
 }}
 
