@@ -134,11 +134,17 @@ struct Population
 		
 		NetworkParams _networkParams; /// Stored network parameters.
 		
-		size_t _size;
+		size_t _size;      /// Size of the population.
 		ulong _generation; /// Current generation number.
 		
 		bool _isOrdered; /// Shows if individuals are already ordered.
 		
+		/**
+		 * Size of the elite.
+		 *
+		 * Elite are individuals that are guaranteed to survive till the next generation. This is generally considered to improve
+		 * GA convergence as saving the elites prevents good individuals from death.
+		 */
 		static immutable _elite = 10;
 		
 		float function(in Matrix, in Matrix, cublasHandle_t) _fitnessFunction;
