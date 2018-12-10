@@ -51,6 +51,14 @@ version (unittest)
 	}
 }
 
+class MatrixError : Error
+{
+	this (string msg, string file = __FILE__, size_t line = __LINE__)
+	{
+		super(msg, file, line);
+	}
+}
+
 import core.exception : RangeError;
 
 
@@ -381,8 +389,8 @@ static bool isSameSize(in Matrix A, in Matrix B) nothrow pure @safe
 void gemm(in Matrix A, in Matrix B, ref Matrix C, cublasHandle_t cublasHandle) nothrow
 {
 	if (A.rows != C.rows || A.cols != B.rows || B.cols != C.cols)
-		throw new Error(
-			"Wrong matrix-matrix multiplication %dx%d * %dx%d = %dx%d."
+		throw new MatrixError(
+			"Illegal matrix multiplication %dx%d * %dx%d = %dx%d."
 			.format(A.rows, A.cols, B.rows, B.cols, C.rows, C.cols)
 		);
 	
@@ -453,8 +461,8 @@ unittest
 void geam(in float alpha, in Matrix A, in float beta, in Matrix B, ref Matrix C, cublasHandle_t cublasHandle) nothrow
 {
 	if (!isSameSize(A, B) || !isSameSize(A, C))
-		throw new Error(
-			"Wrong matrix-matrix addition %dx%d + %dx%d = %dx%d."
+		throw new MatrixError(
+			"Illegal matrix addition %dx%d + %dx%d = %dx%d."
 			.format(A.rows, A.cols, B.rows, B.cols, C.rows, C.cols)
 		);
 	
@@ -509,7 +517,10 @@ unittest
 void transpose(in Matrix A, ref Matrix C, cublasHandle_t cublasHandle) nothrow
 {
 	if (A.rows != C.cols || A.cols != C.rows)
-		throw new Error("Cannot transpose %dx%d matrix into %dx%d".format(A.rows, A.cols, C.rows, C.cols));
+		throw new MatrixError(
+			"Illegal matrix transpose from %dx%d to %dx%d"
+			.format(A.rows, A.cols, C.rows, C.cols)
+		);
 	
 	immutable float alpha = 1;
 	immutable float beta  = 0;
