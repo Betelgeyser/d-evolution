@@ -226,7 +226,7 @@ struct Layer
 	}
 	body
 	{
-		gemm(inputs, _weights, outputs, cublasHandle);
+		gemm(inputs, false, _weights, false, outputs, cublasHandle);
 		
 		if (activate)
 //			cudaTanh(outputs);

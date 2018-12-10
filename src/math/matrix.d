@@ -130,19 +130,31 @@ struct Matrix
 //	}
 	
 	/**
-	 * Returns: The number of rows.
+	 * Returns: The number of rows if $(D_PARAM transpose) is $(D_KEYWORD false)
+	 * or the number of columns if $(D_PARAM transpose) is $(D_KEYWORD true).
+	 *
+	 * No actual transposition is performed.
+	 *
+	 * Params:
+	 *     transpose = Whether to consider the matrix to be transposed.
 	 */
-	@property uint rows() const @nogc nothrow pure @safe
+	@property uint rows(in bool transpose = false) const @nogc nothrow pure @safe
 	{
-		return _rows;
+		return transpose ? _cols : _rows;
 	}
 	
 	/**
-	 * Returns: The number of columns.
+	 * Returns: The number of columns if $(D_PARAM transpose) is $(D_KEYWORD false)
+	 * or the number of rows if $(D_PARAM transpose) is $(D_KEYWORD true).
+	 *
+	 * No actual transposition is performed.
+	 *
+	 * Params:
+	 *     transpose = Whether to consider the matrix to be transposed.
 	 */
-	@property uint cols() const @nogc nothrow pure @safe
+	@property uint cols(in bool transpose = false) const @nogc nothrow pure @safe
 	{
-		return _cols;
+		return transpose ? _rows : _cols;
 	}
 	
 	/**
@@ -376,36 +388,55 @@ static bool isSameSize(in Matrix A, in Matrix B) nothrow pure @safe
 }
 
 /**
- * Simpified version of gemm function.
+ * A convenient wrapper around cublasSgemm.
  *
- * Performs matrix multiplication C = A * B.
+ * Performs the matrix-matrix multiplication C = op(A)op(B) + C.
+ *
+ * Despite this function is similar to original cublasSgemm function it provides a better interface.
+ * Instead of taking raw pointers data and cryptic dimentions parameters it takes matrices and
+ * figures out dimentions on its own. Also this function provides better control over dimentions
+ * of the matrises.
  *
  * Params:
  *     A = The first matrix.
+ *     transA = If $(D_KEYWORD true) then the matrix A is transposed.
  *     B = The second matrix.
+ *     transB = If $(D_KEYWORD true) then the matrix B is transposed.
  *     C = Output matrix.
  *     cublasHandle = Cublas handle.
+ *
+ * See_also:
+ *     For reference and implementation details see
+ *     $(LINK https://docs.nvidia.com/cuda/cublas/index.html#cublas-lt-t-gt-gemm)
  */
-void gemm(in Matrix A, in Matrix B, ref Matrix C, cublasHandle_t cublasHandle) nothrow
+void gemm(in Matrix A, in bool transA, in Matrix B, in bool transB, ref Matrix C, cublasHandle_t cublasHandle) nothrow
 {
-	if (A.rows != C.rows || A.cols != B.rows || B.cols != C.cols)
-		throw new MatrixError(
-			"Illegal matrix multiplication %dx%d * %dx%d = %dx%d."
-			.format(A.rows, A.cols, B.rows, B.cols, C.rows, C.cols)
-		);
+	cublasOperation_t cublasTransA = transA ? cublasOperation_t.CUBLAS_OP_T : cublasOperation_t.CUBLAS_OP_N;
+	cublasOperation_t cublasTransB = transB ? cublasOperation_t.CUBLAS_OP_T : cublasOperation_t.CUBLAS_OP_N;
+	
+	int m = A.rows(transA);
+	int n = B.cols(transB);
+	int k = A.cols(transA);
+	
+	int lda = A.rows;
+	int ldb = B.rows;
+	int ldc = C.rows;
+	
+	if (C.rows != m || C.cols != n || k != B.rows(transB))
+		throw new MatrixError("Illegam matrix-matrix multiplication.");
 	
 	immutable float alpha = 1;
 	immutable float beta  = 0;
 	
 	cublasSgemm(
 		cublasHandle,
-		cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
-		A.rows, B.cols, A.cols,
+		cublasTransA, cublasTransB,
+		m, n, k,
 		&alpha,
-		A.ptr, A.rows,
-		B.ptr, B.rows,
+		A.ptr, lda,
+		B.ptr, ldb,
 		&beta,
-		C.ptr, C.rows
+		C.ptr, ldc
 	);
 }
 
@@ -414,32 +445,39 @@ unittest
 {
 	mixin(writeTest!gemm);
 	
-	immutable n = 7;
-	immutable k = 3;
-	immutable m = 5;
-	
-	auto A = Matrix(n, k);
+	auto A = Matrix(3, 2);
 	scope(exit) A.freeMem();
 	
-	auto B = Matrix(k, m);
+	auto B = Matrix(2, 3);
 	scope(exit) B.freeMem();
 	
-	auto C = Matrix(n, m);
+	auto C = Matrix(3, 3);
 	scope(exit) C.freeMem();
 	
 	A.each!"a = i";
 	B.each!"a = i";
 	
-	gemm(A, B, C, cublasHandle);
+	gemm(A, false, B, false, C, cublasHandle);
 	cudaDeviceSynchronize();
 	
 	// cuBLAS is column-major
-	immutable float[] result = [
-		 35,  38,  41,  44,  47,  50,  53,
-		 98, 110, 122, 134, 146, 158, 170,
-		161, 182, 203, 224, 245, 266, 287,
-		224, 254, 284, 314, 344, 374, 404,
-		287, 326, 365, 404, 443, 482, 521
+	float[] result = [
+		 3,  4,  5,
+		 9, 14, 19,
+		15, 24, 33
+	];
+	
+	assert (equal!approxEqual(C.values, result));
+	
+	C.freeMem();
+	C = Matrix(2, 2);
+	
+	gemm(A, true, B, true, C, cublasHandle);
+	cudaDeviceSynchronize();
+	
+	result = [
+		10, 28,
+		13, 40
 	];
 	
 	assert (equal!approxEqual(C.values, result));
