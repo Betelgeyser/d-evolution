@@ -278,38 +278,6 @@ struct Network
 		src._layers.each!((i, x) => Layer.copy(x, dst._layers[i]));
 	}
 	
-////	static ref Network[] create(in NetworkParams params, in size_t count, RandomPool pool)
-////	in
-////	{
-////		assert (&params, "Neural network parameters are incorrect.");
-////	}
-////	body
-////	{
-////		auto result = nogcMalloc!Network(count);
-////		scope(failure) result.each!freeMem();
-////		
-////		float[] preAllocatedMemory;
-////		cudaMallocManaged(preAllocatedMemory, params.degreesOfFreedom * count);
-////		scope(failure) cudaFree(devPtr)
-////		
-////		foreach (ref network; result)
-////		{
-////			network._layers = nogcMalloc!Layer(params.layers);
-////			
-////			_weights = Matrix(params.inputs + biasLength, params.neurons);
-////		
-////		auto tmpPtr = cudaScale(pool(length), params.min, params.max);
-////		cudaDeviceSynchronize();
-////		
-////		_weights.values[0 .. $] = tmpPtr[0 .. $];
-////			
-////			_layers[0]     = Layer(params.inputParams,  pool);
-////			_layers[$ - 1] = Layer(params.outputParams, pool);
-////			
-////			_layers[1 .. $-1].each!((ref x) => x = Layer(params.hiddenParams, pool));
-////		}
-////	}
-//	
 	/**
 	 * Activate the network.
 	 *
