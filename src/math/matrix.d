@@ -28,18 +28,10 @@ import std.string       : format;
 import cuda.cudaruntimeapi;
 import cuda.cublas;
 
+import memory;
+
 // DNN modules
 import common;
-
-version(UMM)
-{
-	import memory;
-	pragma(msg, "Using UnifiaedMemoryManager.");
-}
-else
-{
-	pragma(msg, "Using default cuda memory management.");
-}
 
 version (unittest)
 {
@@ -187,8 +179,8 @@ struct Matrix
 		_rows = rows;
 		_cols = cols;
 		
-		version(UMM) values = UMM.allocate!float(_rows * _cols);
-		else cudaMallocManaged(values, _rows * _cols);
+		values = UMM.allocate!float(_rows * _cols);
+//		else cudaMallocManaged(values, _rows * _cols);
 	}
 	
 	///
@@ -228,8 +220,8 @@ struct Matrix
 		string firstLine = matchFirst(csv, firstLineCTR)[0];
 		_cols = firstLine.count(",").to!uint + 1;
 		
-		version(UMM) values = UMM.allocate!float(_rows * _cols);
-		else cudaMallocManaged(values, _rows * _cols);
+		values = UMM.allocate!float(_rows * _cols);
+//		else cudaMallocManaged(values, _rows * _cols);
 		
 		size_t i = 0;
 		foreach (record; csv.csvReader!float)
@@ -306,8 +298,8 @@ struct Matrix
 	 */
 	void freeMem() nothrow
 	{
-		version(UMM) UMM.free(values);
-		else cudaFree(values);
+		UMM.free(values);
+		//else cudaFree(values);
 	}
 	
 	/**
