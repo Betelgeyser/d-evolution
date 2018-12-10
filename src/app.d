@@ -43,6 +43,7 @@ void main(string[] args)
 	uint   timeLimit;      /// Time limit to train ANN, seconds.
 	uint   populationSize; /// Population size.
 	uint   report;         /// Report every X generation.
+	string fitnessString;  /// Error function.
 	string pathToData;     /// Path to the folder cointaining datasets. Must be of the specific structure.
 	
 	// Network parameters
@@ -50,6 +51,8 @@ void main(string[] args)
 	uint  neurons;
 	float min;
 	float max;
+	
+	float function(in Matrix, in Matrix, cublasHandle_t) fitnessFunction = &MAE;
 	
 	immutable helpString = "Use " ~ args[0] ~ " --help for help.";
 	
@@ -62,6 +65,7 @@ void main(string[] args)
 		"neurons|n",    "Number of neurons.",                        &neurons,
 		"population|p", "Population multiplier.",                    &populationSize,
 		"report|r",     "Print training report every X generations", &report,
+		"fitness-function|f", "Fitness function. Available values: MAE (default), MPE, MASE, MSE, RMSE", &fitnessString,
 		"min",          "Minimum connection weight.",                &min,
 		"max",          "Maximum connection weight.",                &max
 	);
@@ -112,6 +116,18 @@ void main(string[] args)
 	{
 		writeln("Population must be at leats 2 individuals.");
 		return;
+	}
+	
+	if (fitnessString != "")
+	{
+		if (fitnessString == "MAE")
+			fitnessFunction = &MAE;
+		
+		if (fitnessString == "MPE")
+			fitnessFunction = &MPE;
+		
+		if (fitnessString == "MASE")
+			fitnessFunction = &MASE;
 	}
 	
 	cudaSetDevice(device);
@@ -172,7 +188,7 @@ void main(string[] args)
 	write("\tGenerating population...");
 	stdout.flush();
 	
-	auto population = Population(params, populationSize, pool);
+	auto population = Population(params, populationSize, pool, fitnessFunction);
 	scope(exit) population.freeMem();
 	
 	writeln(" [ " ~ "done".ansiFormat(ANSIColor.green) ~ " ]");

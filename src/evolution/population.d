@@ -140,6 +140,8 @@ struct Population
 		bool _isOrdered; /// Shows if individuals are already ordered.
 		
 		static immutable _elite = 10;
+		
+		float function(in Matrix, in Matrix, cublasHandle_t) _fitnessFunction;
 	}
 	
 	invariant
@@ -208,7 +210,7 @@ struct Population
 	 *     size = Number of individuals in a single generation.
 	 *     pool = Pool of random values.
 	 */
-	this(in NetworkParams params, in ulong size, RandomPool pool)
+	this(in NetworkParams params, in ulong size, RandomPool pool, float function(in Matrix, in Matrix, cublasHandle_t) fitnessFunction = &math.MAE)
 	in
 	{
 		assert (&params, "Incorrect network parameters");
@@ -229,6 +231,8 @@ struct Population
 		_newGeneration.each!((ref x) => x = Network(params, pool)); // There is no need to initialize offsprings
 		                                                            // in the first generation, but we need to allocate memory,
 		                                                            // without that freeMem will fail.
+		
+		_fitnessFunction = fitnessFunction;
 	}
 	
 	///
@@ -290,6 +294,8 @@ struct Population
 	 */
 	void fitness(in Matrix inputs, in Matrix outputs, cublasHandle_t cublasHandle)
 	{
+		_isOrdered = false;
+		
 		auto outputsT = Matrix(outputs.cols, outputs.rows); // MASE operates on transposed matrices
 		scope(exit) outputsT.freeMem();
 		
@@ -301,16 +307,14 @@ struct Population
 		
 		transpose(outputs, outputsT, cublasHandle);
 		
-		foreach (ref i; _currentGeneration)
+		foreach (ref individual; _currentGeneration)
 		{
-			i(inputs, approx, cublasHandle);
+			individual(inputs, approx, cublasHandle);
 			
 			transpose(approx, approxT, cublasHandle);
 			
-			i.fitness = MAE(outputsT, approxT, cublasHandle);
+			individual.fitness = _fitnessFunction(outputsT, approxT, cublasHandle);
 		}
-		
-		_isOrdered = false;
 	}
 	
 	unittest
