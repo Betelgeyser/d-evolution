@@ -91,7 +91,7 @@ void AE(in Matrix A, in Matrix B, Matrix error, cublasHandle_t cublasHandle)
 	auto C = Matrix(A.rows, A.cols);
 	scope(exit) C.freeMem();
 	
-	geam(1, A, -1, B, C, cublasHandle);
+	geam(1, A, false, -1, B, false, C, cublasHandle);
 	cudaL2(C, error);
 }
 

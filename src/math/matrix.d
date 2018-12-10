@@ -484,35 +484,49 @@ unittest
 }
 
 /**
- * Simpified version of geam function.
+ * A convenient wrapper around cublasSgeam.
  *
- * Performs matrix addition. C = αA + βB.
+ * Performs the matrix-matrix addition C = αop(A) + βop(B).
+ *
+ * Despite this function is similar to original cublasSgeam function it provides a better interface.
+ * Instead of taking raw pointers data and cryptic dimentions parameters it takes matrices and
+ * figures out dimentions on its own. Also this function provides better control over dimentions
+ * of the matrises.
  *
  * Params:
  *     alpha = α constant multiplier.
  *     A = The first matrix.
+ *     transA = Whether to transpose matrix A or not.
  *     beta = β constant multiplier.
  *     B = The second matrix.
+ *     transB = Whether to transpose matrix B or not.
  *     C = Output matrix.
  *     cublasHandle = Cublas handle.
  */
-void geam(in float alpha, in Matrix A, in float beta, in Matrix B, ref Matrix C, cublasHandle_t cublasHandle) nothrow
+void geam(in float alpha, in Matrix A, in bool transA, in float beta, in Matrix B, in bool transB, ref Matrix C, cublasHandle_t cublasHandle) nothrow
 {
-	if (!isSameSize(A, B) || !isSameSize(A, C))
-		throw new MatrixError(
-			"Illegal matrix addition %dx%d + %dx%d = %dx%d."
-			.format(A.rows, A.cols, B.rows, B.cols, C.rows, C.cols)
-		);
+	cublasOperation_t opA = transA ? cublasOperation_t.CUBLAS_OP_T : cublasOperation_t.CUBLAS_OP_N;
+	cublasOperation_t opB = transB ? cublasOperation_t.CUBLAS_OP_T : cublasOperation_t.CUBLAS_OP_N;
+	
+	int m = A.rows(transA);
+	int n = B.cols(transB);
+	
+	int lda = A.rows;
+	int ldb = B.rows;
+	int ldc = C.rows;
+	
+	if (C.rows != m || C.cols != n)
+		throw new MatrixError("Illegal matrix-matrix addition.");
 	
 	cublasSgeam(
 		cublasHandle,
-		cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N,
-		C.rows, C.cols,
+		opA, opB,
+		m, n,
 		&alpha,
-		A.ptr, A.rows,
+		A.ptr, lda,
 		&beta,
-		B.ptr, B.rows,
-		C.ptr, C.rows
+		B.ptr, ldb,
+		C.ptr, ldc
 	);
 }
 
@@ -521,25 +535,43 @@ unittest
 {
 	mixin(writeTest!geam);
 	
-	immutable size = 10;
-	
-	auto A = Matrix(size, size);
+	auto A = Matrix(3, 2);
 	scope(exit) A.freeMem();
 	
-	auto B = Matrix(size, size);
+	auto B = Matrix(3, 2);
 	scope(exit) B.freeMem();
 	
-	auto C = Matrix(size, size);
+	auto C = Matrix(3, 2);
 	scope(exit) C.freeMem();
 	
 	A.each!"a = i";
 	B.each!"a = i";
 	
-	geam(1, A, 2, B, C, cublasHandle);
+	geam(1, A, false, 2, B, false, C, cublasHandle);
+	
+	float[] result = [
+		0,  3,  6,
+		9, 12, 15
+	];
+	
 	cudaDeviceSynchronize();
 	
-	foreach (i, c; C)
-		assert (approxEqual(c, 3 * i));
+	assert (equal!approxEqual(C.values, result));
+	
+	C.freeMem();
+	C = Matrix(2, 3);
+	
+	geam(1, A, true, 2, B, true, C, cublasHandle);
+	
+	result = [
+		0,  9,
+		3, 12,
+		6, 15
+	];
+	
+	cudaDeviceSynchronize();
+	
+	assert (equal!approxEqual(C.values, result));
 }
 
 /**
