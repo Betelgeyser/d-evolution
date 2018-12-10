@@ -118,7 +118,7 @@ unittest
 }
 
 /**
- * Calculate a Mean Absolute Error between $(D_PARAM A) and $(D_PARAM B) array of vectors on GPU.
+ * Calculate the Mean Absolute Error between $(D_PARAM A) and $(D_PARAM B) arrays of vectors on GPU.
  *
  * Though $(D_PARAM A) and $(D_PARAM B) are of the type `Matrix` this is a technical convinience. They are interpreted
  * as arrays of vectors where a single column is a single vector.
@@ -172,7 +172,10 @@ unittest
 }
 
 /**
- * TODO: docs, GPU, unittest
+ * Calculate the Mean Percentage Error between $(D_PARAM A) and $(D_PARAM B) arrays of vectors on GPU.
+ *
+ * See_also:
+ *     $(LINK https://en.wikipedia.org/wiki/Mean_percentage_error)
  */
 float MPE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle)
 in
