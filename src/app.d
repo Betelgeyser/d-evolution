@@ -184,38 +184,51 @@ void main(string[] args)
 	stopWatch.start();
 	while (true)
 	{
-		/// Caching generation report prevents output from fast scrolling which causes your eyes bleed.
-		string reportString = "\tGeneration #%d:".format(population.generation).ansiFormat(ANSIColor.white);
+		auto time = stopWatch.peek();
+		string reportString; /// Caching generation report prevents output from fast scrolling which causes your eyes bleed.
 		
-		// Not the smartest thing, but Ok for now.
-		population.fitness(validationInputs, validationOutputs, cublasHandle);
-		
-		reportString ~= ("\n\t\tV: best = " ~ "%e".ansiFormat(ANSIColor.green)
-			~ "\tmean = " ~ "%e".ansiFormat(ANSIColor.yellow)
-			~ "\tworst = " ~ "%e".ansiFormat(ANSIColor.red)
-		).format(
-			population.best.fitness,
-			population.mean,
-			population.worst
-		);
-		
+		// Calculation error on training dataset. Evolution desision is based on it.
 		population.fitness(trainingInputs, trainingOutputs, cublasHandle);
 		
-		reportString ~= ("\n\t\tT: best = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightGreen)
-			~ "\tmean = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightYellow)
-			~ "\tworst = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightRed)
-		).format(
-			population.best.fitness,
-			population.mean,
-			population.worst
-		);
-		
-		reportString ~= "\n\t\t%s".format(timeLimit.seconds() - stopWatch.peek()) ~ " left\n";
-		
-		if (report == 0 || population.generation % report == 0)
+		if (report == 0 || population.generation % report == 0 || time >= timeLimit.seconds())
+		{
+			reportString = "\tGeneration #%d:".format(population.generation).ansiFormat(ANSIColor.white);
+			
+			reportString ~= ("\n\t\tT: best = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightGreen)
+				~ "    mean = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightYellow)
+				~ "    worst = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightRed)
+			).format(
+				population.best.fitness,
+				population.mean,
+				population.worst
+			);
+			
+			auto validationOutputsT = Matrix(validationOutputs.cols, validationOutputs.rows);
+			scope(exit) validationOutputsT.freeMem();
+			
+			transpose(validationOutputs, validationOutputsT, cublasHandle);
+			
+			auto validationApprox = Matrix(validationOutputs.rows, validationOutputs.cols);
+			scope(exit) validationApprox.freeMem();
+			
+			population.best()(validationInputs, validationApprox, cublasHandle);
+			
+			auto validationApproxT = Matrix(validationOutputs.cols, validationOutputs.rows);
+			scope(exit) validationApproxT.freeMem();
+			
+			transpose(validationApprox, validationApproxT, cublasHandle);
+			
+			auto Error = fitnessFunction(validationOutputsT, validationApproxT, cublasHandle);
+			
+			cudaDeviceSynchronize();
+			
+			reportString ~= "\n\t\tV: best = " ~ "%e".ansiFormat(ANSIColor.green).format(Error);
+			reportString ~= "\n\t\t%s".format(timeLimit.seconds() - time) ~ " left\n";
+			
 			writeln(reportString);
+		}
 		
-		if (stopWatch.peek() >= timeLimit.seconds())
+		if (time >= timeLimit.seconds())
 		{
 			writeln("\tExceeded time limit [ " ~ "stopped".ansiFormat(ANSIColor.red) ~ " ]");
 			break;
