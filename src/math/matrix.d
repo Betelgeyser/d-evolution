@@ -411,8 +411,8 @@ static bool isSameSize(in Matrix A, in Matrix B) nothrow pure @safe
  */
 void gemm(in Matrix A, in bool transA, in Matrix B, in bool transB, ref Matrix C, cublasHandle_t cublasHandle) nothrow
 {
-	cublasOperation_t cublasTransA = transA ? cublasOperation_t.CUBLAS_OP_T : cublasOperation_t.CUBLAS_OP_N;
-	cublasOperation_t cublasTransB = transB ? cublasOperation_t.CUBLAS_OP_T : cublasOperation_t.CUBLAS_OP_N;
+	cublasOperation_t opA = transA ? cublasOperation_t.CUBLAS_OP_T : cublasOperation_t.CUBLAS_OP_N;
+	cublasOperation_t opB = transB ? cublasOperation_t.CUBLAS_OP_T : cublasOperation_t.CUBLAS_OP_N;
 	
 	int m = A.rows(transA);
 	int n = B.cols(transB);
@@ -430,7 +430,7 @@ void gemm(in Matrix A, in bool transA, in Matrix B, in bool transB, ref Matrix C
 	
 	cublasSgemm(
 		cublasHandle,
-		cublasTransA, cublasTransB,
+		opA, opB,
 		m, n, k,
 		&alpha,
 		A.ptr, lda,
