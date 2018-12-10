@@ -19,7 +19,7 @@ import core.time              : Duration, minutes, seconds;
 import std.datetime.stopwatch : StopWatch;
 import std.file               : readText;
 import std.getopt             : defaultGetoptPrinter, getopt;
-import std.math               : isFinite, lround;
+import std.math               : approxEqual, isFinite, lround;
 import std.random             : unpredictableSeed;
 import std.stdio              : stdout, write, writeln;
 import std.string             : format;
@@ -240,7 +240,6 @@ void main(string[] args)
 			break;
 		}
 		
-		import std.math : approxEqual;
 		if (approxEqual(population.best.fitness, population.worst) && approxEqual(population.best.fitness, population.mean))
 		{
 			writeln("\tGenetic divercity lost [ " ~ "stopped".ansiFormat(ANSIColor.red) ~ " ]");
