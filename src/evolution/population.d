@@ -404,7 +404,7 @@ struct Population
 		
 		foreach (i; _size - _elite .. _size)
 			Network.copy(_currentGeneration[i], _newGeneration[i]);
-//		_newGeneration[$ - _elite .. $] = _currentGeneration[$ - _elite .. $];
+		
 		swap(_currentGeneration, _newGeneration);
 		
 		_isOrdered = false;
