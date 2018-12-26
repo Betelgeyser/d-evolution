@@ -302,24 +302,14 @@ struct Population
 	{
 		_isOrdered = false;
 		
-		auto outputsT = Matrix(outputs.cols, outputs.rows); // MASE operates on transposed matrices
-		scope(exit) outputsT.freeMem();
-		
-		auto approx = Matrix(outputs.rows, outputs.cols); // Network's output is an approximated result
+		auto approx = Matrix(outputs.rows, outputs.cols);
 		scope(exit) approx.freeMem();
-		
-		auto approxT = Matrix(outputs.cols, outputs.rows); // MASE operates on transposed matrices
-		scope(exit) approxT.freeMem();
-		
-		transpose(outputs, outputsT, cublasHandle);
 		
 		foreach (ref individual; _currentGeneration)
 		{
 			individual(inputs, approx, cublasHandle);
 			
-			transpose(approx, approxT, cublasHandle);
-			
-			individual.fitness = _fitnessFunction(outputsT, approxT, cublasHandle);
+			individual.fitness = _fitnessFunction(outputs, approx, cublasHandle);
 		}
 	}
 	

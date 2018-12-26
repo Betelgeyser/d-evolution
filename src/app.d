@@ -219,22 +219,12 @@ void main(string[] args)
 				population.worst
 			);
 			
-			auto validationOutputsT = Matrix(validationOutputs.cols, validationOutputs.rows);
-			scope(exit) validationOutputsT.freeMem();
-			
-			transpose(validationOutputs, validationOutputsT, cublasHandle);
-			
 			auto validationApprox = Matrix(validationOutputs.rows, validationOutputs.cols);
 			scope(exit) validationApprox.freeMem();
 			
 			population.best()(validationInputs, validationApprox, cublasHandle);
 			
-			auto validationApproxT = Matrix(validationOutputs.cols, validationOutputs.rows);
-			scope(exit) validationApproxT.freeMem();
-			
-			transpose(validationApprox, validationApproxT, cublasHandle);
-			
-			auto Error = fitnessFunction(validationOutputsT, validationApproxT, cublasHandle);
+			auto Error = fitnessFunction(validationOutputs, validationApprox, cublasHandle);
 			
 			cudaDeviceSynchronize();
 			
