@@ -402,7 +402,14 @@ void kernel_L2(const float *x, float *y, const unsigned int dim, const size_t co
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	
 	if (i < count)
-		y[i] = normf(dim, x + dim * i);
+	{
+		y[i] = 0;
+		
+		for (int j = 0; j < dim; ++j)
+			y[i] += powf(x[i + count * j], 2);
+		
+		y[i] = sqrtf(y[i]);
+	}
 }
 
 /// ditto

@@ -469,14 +469,12 @@ private extern(C++) void cuda_L2(const(float)* x, float* y, const uint dim, cons
  *         Thus, each row is a dimention.
  *     y = A resulting array of L2 norm values. Its length must equals to number of the columns in the input matrix.
  */
-void cudaL2(in Matrix x, float[] y) nothrow @nogc
-in
+void cudaL2(in Matrix x, float[] y) nothrow
 {
-	assert (x.cols == y.length);
-}
-body
-{
-	cuda_L2(x.ptr, y.ptr, x.rows, x.cols);
+	if (x.rows != y.length)
+		throw new Error("Input and output arrays have different sizes.");
+	
+	cuda_L2(x.ptr, y.ptr, x.cols, x.rows);
 }
 
 ///
@@ -487,7 +485,7 @@ unittest
 	immutable dim    = 4;
 	immutable length = 2;
 	
-	Matrix data = Matrix(dim, length);
+	Matrix data = Matrix(length, dim);
 	scope(exit) data.freeMem();
 	
 	float[] norm;
@@ -499,7 +497,7 @@ unittest
 	cudaL2(data, norm);
 	cudaDeviceSynchronize();
 	
-	immutable float[] result = [3.741657, 11.224972];
+	immutable float[] result = [7.483315, 9.165151];
 	assert (equal!approxEqual(norm, result));
 }
 
