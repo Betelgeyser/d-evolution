@@ -72,27 +72,33 @@ version (unittest)
  * as arrays of vectors where a single column is a single vector.
  *
  * Params:
- *     A = The first array of vectors.
- *     B = The second array of vectors.
+ *     actual = Matrix of actual values.
+ *     predicted = Matrix of predicted values.
  *     error = The resulting array of errors. 
  *     cublasHandle = cuBLAS handle.
  */
-void AE(in Matrix A, in Matrix B, Matrix error, cublasHandle_t cublasHandle)
+void AE(in Matrix actual, in Matrix predicted, Matrix error, cublasHandle_t cublasHandle)
 {
-	if (A.rows != B.rows || A.cols != B.cols)
-		throw new Error("Input matricies must have same size, got %dx%d and %dx%d.".format(A.rows, A.cols, B.rows, B.cols));
+	if (actual.rows != predicted.rows || actual.cols != predicted.cols)
+		throw new Error(
+			"Input matrices have diffent sizes %dx%d and %dx%d"
+			.format(actual.rows, actual.cols, predicted.rows, predicted.cols)
+		);
 	
-	if (A.cols != error.cols || error.rows != 1)
-		throw new Error("Output matrix must be 1x%d, got %dx%d".format(A.cols, error.rows, error.cols));
+	if (actual.rows != error.rows)
+		throw new Error("Input and output matrices have different number of rows %d and %d.".format(actual.rows, error.rows));
+	
+	if (error.cols != 1)
+		throw new Error("Output matrix must be only 1 column width, not %d.".format(error.cols));
 	
 	immutable float alpha =  1;
 	immutable float beta  = -1;
 	
-	auto C = Matrix(A.rows, A.cols);
-	scope(exit) C.freeMem();
+	auto absError = Matrix(actual.rows, actual.cols);
+	scope(exit) absError.freeMem();
 	
-	geam(1, A, false, -1, B, false, C, cublasHandle);
-	cudaL2(C, error);
+	geam(1, actual, false, -1, predicted, false, absError, cublasHandle);
+	cudaL2(absError, error);
 }
 
 ///
@@ -100,8 +106,8 @@ unittest
 {
 	mixin(writeTest!AE);
 	
-	immutable cols = 3;
 	immutable rows = 4;
+	immutable cols = 3;
 	
 	auto A = Matrix(cols, rows);
 	auto B = Matrix(cols, rows);
@@ -126,22 +132,25 @@ unittest
  * Calls cudaDeviceSyncronize() internally.
  *
  * Params:
- *     A = The first array of vectors.
- *     B = The second array of vectors.
+ *     actual = Matrix of actual values.
+ *     predicted = Matrix of predicted values.
  *     cublasHandle = cuBLAS handle.
  *
  * See_also:
  *     $(LINK https://en.wikipedia.org/wiki/Mean_absolute_error)
  */
-float MAE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle)
+float MAE(in Matrix actual, in Matrix predicted, cublasHandle_t cublasHandle)
 {
-	if (A.rows != B.rows || A.cols != B.cols)
-		throw new Error("Input matricies must have same size, got %dx%d and %dx%d.".format(A.rows, A.cols, B.rows, B.cols));
+	if (actual.rows != predicted.rows || actual.cols != predicted.cols)
+		throw new Error(
+			"Input matrices have different sizes %dx%d and %dx%d."
+			.format(actual.rows, actual.cols, predicted.rows, predicted.cols)
+		);
 	
 	auto error = Matrix(1, A.cols);
 	scope(exit) error.freeMem();
 	
-	AE(A, B, error, cublasHandle);
+	AE(actual, predicted, error, cublasHandle);
 	cudaDeviceSynchronize();
 	
 	// TODO: less accurate than std.algorith.mean but much faster.
@@ -178,14 +187,11 @@ unittest
  *     $(LINK https://en.wikipedia.org/wiki/Mean_percentage_error)
  */
 float MPE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle)
-in
 {
-	assert (A.cols == B.cols);
-	assert (A.rows == B.rows);
-}
-body
-{
-	auto error = Matrix(1, A.cols);
+	if (A.rows != B.rows || A.cols != B.cols)
+		throw new Error("Input matricies must have same size, got %dx%d and %dx%d.".format(A.rows, A.cols, B.rows, B.cols));
+	
+	auto error = Matrix(A.rows, 1);
 	scope(exit) error.freeMem();
 	
 	auto C = Matrix(1, A.cols);
