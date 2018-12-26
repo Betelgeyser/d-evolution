@@ -34,7 +34,7 @@ import common               : ANSIColor, ansiFormat, humanReadable;
 import evolution.population : NetworkParams, Population;
 import math.matrix          : Matrix, transpose;
 import math.random          : RandomPool;
-import math.statistics      : MAE, MASE, MPE;
+import math.statistics      : MAE, MPE;
 
 void main(string[] args)
 {
@@ -65,7 +65,7 @@ void main(string[] args)
 		"neurons|n",    "Number of neurons.",                        &neurons,
 		"population|p", "Population multiplier.",                    &populationSize,
 		"report|r",     "Print training report every X generations", &report,
-		"fitness-function|f", "Fitness function. Available values: MAE (default), MPE, MASE, MSE, RMSE", &fitnessString,
+		"fitness-function|f", "Fitness function. Available values: MAE (default), MPE", &fitnessString,
 		"min",          "Minimum connection weight.",                &min,
 		"max",          "Maximum connection weight.",                &max
 	);
@@ -126,8 +126,8 @@ void main(string[] args)
 		if (fitnessString == "MPE")
 			fitnessFunction = &MPE;
 		
-		if (fitnessString == "MASE")
-			fitnessFunction = &MASE;
+//		if (fitnessString == "MASE")
+//			fitnessFunction = &MASE;
 	}
 	
 	cudaSetDevice(device);

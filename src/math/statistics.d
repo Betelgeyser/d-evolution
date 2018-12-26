@@ -213,86 +213,87 @@ float MPE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle)
 	return result * 100;
 }
 
-/**
- * Calculate a Mean Absolute Error of naive forecast on GPU.
- *
- * Useful for MASE calculation.
- *
- * Though $(D_PARAM data) is of the type `Matrix` this is a technical convinience. It is interpreted as an array of vectors
- * where a single column is a single vector.
- *
- * Calls cudaDeviceSyncronize() internally.
- *
- * Params:
- *     data = An array of input vectors.
- *     cublasHandle = cuBLAS handle.
- */
-float MAENaive(in Matrix data, cublasHandle_t cublasHandle)
-{
-	auto measured = data.colSlice(0, data.cols - 1);
-	auto naive    = data.colSlice(1, data.cols);
-	
-	return MAE(measured, naive, cublasHandle);
-}
-
-///
-unittest
-{
-	mixin(writeTest!MAENaive);
-	
-	auto data = Matrix(2, 3);
-	scope(exit) data.freeMem();
-	
-	data.each!"a = i * i";
-	
-	float error = MAENaive(data, cublasHandle);
-	
-	assert (approxEqual(error, 14.472136));
-}
-
-/**
- * Calculate a Mean Absolute Scalde Error between $(D_PARAM measured) and $(D_PARAM approximated) arrays of vectors on GPU.
- *
- * Though data is of the type `Matrix` this is a technical convinience. It is interpreted as an array of vectors
- * where a single column is a single vector.
- *
- * Calls cudaDeviceSyncronize() internally.
- *
- * Params:
- *     measured = An array of vectors of measured/actual/real data.
- *     approximated = An array of vectors of approximated/estimated data.
- *     cublasHandle = cuBLAS handle.
- */
-float MASE(in Matrix measured, in Matrix approximated, cublasHandle_t cublasHandle)
-{
-	if (measured.rows != approximated.rows || measured.cols != approximated.cols)
-		throw new Error(
-			"Input matricies must have same size, got %dx%d and %dx%d."
-			.format(measured.rows, measured.cols, approximated.rows, approximated.cols)
-		);
-	
-	return MAE(measured, approximated, cublasHandle) / MAENaive(measured, cublasHandle);
-}
-
-///
-unittest
-{
-	mixin(writeTest!MASE);
-	
-	immutable cols = 3;
-	immutable rows = 4;
-	
-	auto measured = Matrix(cols, rows);
-	scope(exit) measured.freeMem();
-	
-	auto approximated = Matrix(cols, rows);
-	scope(exit) approximated.freeMem();
-	
-	measured.each!"a = i";
-	approximated.each!"a = i + 1";
-	
-	float error = MASE(measured, approximated, cublasHandle);
-	
-	assert (approxEqual(error, 0.333333));
-}
+// /**
+// * Calculate a Mean Absolute Error of naive forecast on GPU.
+// *
+// * Useful for MASE calculation.
+// *
+// * Though $(D_PARAM data) is of the type `Matrix` this is a technical convinience. It is interpreted as an array of vectors
+// * where a single column is a single vector.
+// *
+// * Calls cudaDeviceSyncronize() internally.
+// *
+// * Params:
+// *     data = An array of input vectors.
+// *     cublasHandle = cuBLAS handle.
+// */
+//float MAENaive(in Matrix data, cublasHandle_t cublasHandle)
+//{
+//	auto measured = data.colSlice(0, data.cols - 1);
+//	auto naive    = data.colSlice(1, data.cols);
+//	
+//	return MAE(measured, naive, cublasHandle);
+//}
+//
+// ///
+//unittest
+//{
+//	mixin(writeTest!MAENaive);
+//	
+//	auto data = Matrix(2, 3);
+//	scope(exit) data.freeMem();
+//	
+//	data.each!"a = i * i";
+//	
+//	float error = MAENaive(data, cublasHandle);
+//	writeln(error);
+//	
+//	assert (approxEqual(error, 10.344080));
+//}
+//
+// /**
+// * Calculate a Mean Absolute Scalde Error between $(D_PARAM measured) and $(D_PARAM approximated) arrays of vectors on GPU.
+// *
+// * Though data is of the type `Matrix` this is a technical convinience. It is interpreted as an array of vectors
+// * where a single column is a single vector.
+// *
+// * Calls cudaDeviceSyncronize() internally.
+// *
+// * Params:
+// *     measured = An array of vectors of measured/actual/real data.
+// *     approximated = An array of vectors of approximated/estimated data.
+// *     cublasHandle = cuBLAS handle.
+// */
+//float MASE(in Matrix measured, in Matrix forecasted, cublasHandle_t cublasHandle)
+//{
+//	if (measured.rows != forecasted.rows || measured.cols != forecasted.cols)
+//		throw new Error(
+//			"Input matricies must have same size, got %dx%d and %dx%d."
+//			.format(measured.rows, measured.cols, forecasted.rows, forecasted.cols)
+//		);
+//	
+//	return MAE(measured, forecasted, cublasHandle) / MAENaive(measured, cublasHandle);
+//}
+//
+// ///
+//unittest
+//{
+//	mixin(writeTest!MASE);
+//	
+//	immutable rows = 4;
+//	immutable cols = 3;
+//	
+//	auto measured = Matrix(rows, cols);
+//	scope(exit) measured.freeMem();
+//	
+//	auto forecasted = Matrix(rows, cols);
+//	scope(exit) forecasted.freeMem();
+//	
+//	measured.each!"a = i * i";
+//	forecasted.each!"a = i";
+//	
+//	float error = MASE(measured, forecasted, cublasHandle);
+//	
+//	assert (approxEqual(error, 0.583906));
+//}
 
