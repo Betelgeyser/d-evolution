@@ -110,8 +110,13 @@ unittest
 	immutable cols = 3;
 	
 	auto A = Matrix(rows, cols);
+	scope(exit) A.freeMem();
+	
 	auto P = Matrix(rows, cols);
+	scope(exit) P.freeMem();
+	
 	auto E = Matrix(rows, 1);
+	scope(exit) E.freeMem();
 	
 	A.each!"a = i";
 	P.each!"a = 1.5 * i";
