@@ -109,17 +109,17 @@ unittest
 	immutable rows = 4;
 	immutable cols = 3;
 	
-	auto A = Matrix(cols, rows);
-	auto B = Matrix(cols, rows);
-	auto E = Matrix(1,    rows);
+	auto A = Matrix(rows, cols);
+	auto P = Matrix(rows, cols);
+	auto E = Matrix(rows, 1);
 	
 	A.each!"a = i";
-	B.each!"a = 1.5 * i";
+	P.each!"a = 1.5 * i";
 	
-	AE(A, B, E, cublasHandle);
+	AE(A, P, E, cublasHandle);
 	cudaDeviceSynchronize();
 	
-	immutable float[] result = [1.118034, 3.535534, 6.103278, 8.689074];
+	immutable float[] result = [4.472136, 5.172040, 5.916080, 6.689544];
 	assert (equal!approxEqual(E.values, result));
 }
 
@@ -147,7 +147,7 @@ float MAE(in Matrix actual, in Matrix predicted, cublasHandle_t cublasHandle)
 			.format(actual.rows, actual.cols, predicted.rows, predicted.cols)
 		);
 	
-	auto error = Matrix(1, A.cols);
+	auto error = Matrix(actual.rows, 1);
 	scope(exit) error.freeMem();
 	
 	AE(actual, predicted, error, cublasHandle);
@@ -169,15 +169,15 @@ unittest
 	auto A = Matrix(rows, cols);
 	scope(exit) A.freeMem();
 	
-	auto B = Matrix(rows, cols);
-	scope(exit) B.freeMem();
+	auto P = Matrix(rows, cols);
+	scope(exit) P.freeMem();
 	
 	A.each!"a = i";
-	B.each!"a = 1.5 * i";
+	P.each!"a = 1.5 * i";
 	
-	float error = MAE(A, B, cublasHandle);
+	float error = MAE(A, P, cublasHandle);
 	
-	assert (approxEqual(error, 4.861480));
+	assert (approxEqual(error, 6.456302));
 }
 
 /**
@@ -194,7 +194,7 @@ float MPE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle)
 	auto error = Matrix(A.rows, 1);
 	scope(exit) error.freeMem();
 	
-	auto C = Matrix(1, A.cols);
+	auto C = Matrix(A.rows, 1);
 	scope(exit) C.freeMem();
 	
 	AE(A, B, error, cublasHandle);
