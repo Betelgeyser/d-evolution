@@ -396,54 +396,54 @@ struct UnifiedMemoryManager
 ///
 unittest
 {
-	mixin(writeTest!UnifiedMemoryManager);
-	UnifiedMemoryManager manager;
-	
-	auto a = manager.allocate!float(0);
-	assert (a is null);
-	assert (a.length == 0);
-	
-	manager.free(a); // Must not crash
-	
-	import std.stdio;
-	writeln();
-	
-	auto a1 = manager.allocate!float(15_000_000); // 4KiB of memory
-	writeln("15_000_000 float allocated");
-	writeln(manager._allocatedBlocks);
-	writeln(manager._freeBlocks);
-	
-	auto a2 = manager.allocate!float(15_000_000);
-	writeln("60_000_000 byte allocated");
-	writeln(manager._allocatedBlocks);
-	writeln(manager._freeBlocks);
-	
-	auto a3 = manager.allocate!float(15);
-	writeln("15 float allocated");
-	writeln(manager._allocatedBlocks);
-	writeln(manager._freeBlocks);
-	
-	auto a4 = manager.allocate!float(15_000_000);
-	writeln("15_000_000 float allocated");
-	writeln(manager._allocatedBlocks);
-	writeln(manager._freeBlocks);
-	
-	manager.free(a2);
-	assert (a2 is null);
-	writeln("2 is freed");
-	writeln(manager._allocatedBlocks);
-	writeln(manager._freeBlocks);
-	
-	manager.free(a3);
-	assert (a3 is null);
-	writeln("3 is freed");
-	writeln(manager._allocatedBlocks);
-	writeln(manager._freeBlocks);
-	
-	manager.free(a1);
-	manager.free(a4);
-	writeln("all is freed");
-	writeln(manager._allocatedBlocks);
-	writeln(manager._freeBlocks);
+	mixin(notTested!UnifiedMemoryManager);
+//	UnifiedMemoryManager manager;
+//	
+//	auto a = manager.allocate!float(0);
+//	assert (a is null);
+//	assert (a.length == 0);
+//	
+//	manager.free(a); // Must not crash
+//	
+//	import std.stdio;
+//	writeln();
+//	
+//	auto a1 = manager.allocate!float(15_000_000); // 4KiB of memory
+//	writeln("15_000_000 float allocated");
+//	writeln(manager._allocatedBlocks);
+//	writeln(manager._freeBlocks);
+//	
+//	auto a2 = manager.allocate!float(15_000_000);
+//	writeln("60_000_000 byte allocated");
+//	writeln(manager._allocatedBlocks);
+//	writeln(manager._freeBlocks);
+//	
+//	auto a3 = manager.allocate!float(15);
+//	writeln("15 float allocated");
+//	writeln(manager._allocatedBlocks);
+//	writeln(manager._freeBlocks);
+//	
+//	auto a4 = manager.allocate!float(15_000_000);
+//	writeln("15_000_000 float allocated");
+//	writeln(manager._allocatedBlocks);
+//	writeln(manager._freeBlocks);
+//	
+//	manager.free(a2);
+//	assert (a2 is null);
+//	writeln("2 is freed");
+//	writeln(manager._allocatedBlocks);
+//	writeln(manager._freeBlocks);
+//	
+//	manager.free(a3);
+//	assert (a3 is null);
+//	writeln("3 is freed");
+//	writeln(manager._allocatedBlocks);
+//	writeln(manager._freeBlocks);
+//	
+//	manager.free(a1);
+//	manager.free(a4);
+//	writeln("all is freed");
+//	writeln(manager._allocatedBlocks);
+//	writeln(manager._freeBlocks);
 }
 
