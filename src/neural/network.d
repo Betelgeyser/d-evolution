@@ -295,7 +295,7 @@ struct Network
 			"Inputs must have %d columns, got %d".format(inputLength - biasLength, inputs.cols)
 		);
 		
-		auto inputsE = Matrix(inputs.rows, inputs.cols + biasLength);
+		auto inputsE = Matrix(inputs.rows, inputs.cols + biasLength); // Extended
 		scope(exit) inputsE.freeMem();
 		
 		inputsE.colSlice(0, inputs.cols).values[0 .. $] = inputs.values[0 .. $];
