@@ -94,7 +94,7 @@ private extern (C++) void cuda_ReLU(float* x, const size_t n) @nogc nothrow;
  * Params:
  *     x = Array to calculate.
  */
-void cudaReLU(float[] x) nothrow @nogc
+void cudaReLU(float[] x) @nogc nothrow @trusted
 {
 	cuda_ReLU(x.ptr, x.length);
 }
@@ -140,7 +140,7 @@ private extern (C++) void cuda_LeakyReLU(float* x, const size_t n) @nogc nothrow
  * Params:
  *     x = Array to calculate.
  */
-void cudaLeakyReLU(float[] x) nothrow @nogc
+void cudaLeakyReLU(float[] x) @nogc nothrow @trusted
 {
 	cuda_LeakyReLU(x.ptr, x.length);
 }
