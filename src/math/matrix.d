@@ -187,8 +187,8 @@ struct Matrix
 		_rows = rows;
 		_cols = cols;
 		
-		values = UMM.allocate!float(_rows * _cols);
-//		else cudaMallocManaged(values, _rows * _cols);
+		version(UMM) values = UMM.allocate!float(_rows * _cols);
+		else cudaMallocManaged(values, _rows * _cols);
 	}
 	
 	///
@@ -228,8 +228,8 @@ struct Matrix
 		string firstLine = matchFirst(csv, firstLineCTR)[0];
 		_cols = firstLine.count(",").to!uint + 1;
 		
-		values = UMM.allocate!float(_rows * _cols);
-//		else cudaMallocManaged(values, _rows * _cols);
+		version(UMM) values = UMM.allocate!float(_rows * _cols);
+		else cudaMallocManaged(values, _rows * _cols);
 		
 		size_t i = 0;
 		foreach (record; csv.csvReader!float)
@@ -306,8 +306,8 @@ struct Matrix
 	 */
 	void freeMem() nothrow
 	{
-		UMM.free(values);
-		//else cudaFree(values);
+		version(UMM) UMM.free(values);
+		else cudaFree(values);
 	}
 	
 	/**
