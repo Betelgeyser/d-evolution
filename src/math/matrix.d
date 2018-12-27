@@ -130,31 +130,19 @@ struct Matrix
 //	}
 	
 	/**
-	 * Returns: The number of rows if $(D_PARAM transpose) is $(D_KEYWORD false)
-	 * or the number of columns if $(D_PARAM transpose) is $(D_KEYWORD true).
-	 *
-	 * No actual transposition is performed.
-	 *
-	 * Params:
-	 *     transpose = Whether to consider the matrix to be transposed.
+	 * Returns: The number of rows.
 	 */
-	@property uint rows(in bool transpose = false) const @nogc nothrow pure @safe
+	@property uint rows() const @nogc nothrow pure @safe
 	{
-		return transpose ? _cols : _rows;
+		return _rows;
 	}
 	
 	/**
-	 * Returns: The number of columns if $(D_PARAM transpose) is $(D_KEYWORD false)
-	 * or the number of rows if $(D_PARAM transpose) is $(D_KEYWORD true).
-	 *
-	 * No actual transposition is performed.
-	 *
-	 * Params:
-	 *     transpose = Whether to consider the matrix to be transposed.
+	 * Returns: The number of columns.
 	 */
-	@property uint cols(in bool transpose = false) const @nogc nothrow pure @safe
+	@property uint cols() const @nogc nothrow pure @safe
 	{
-		return transpose ? _rows : _cols;
+		return _cols;
 	}
 	
 	/**
@@ -414,16 +402,16 @@ void gemm(in Matrix A, in bool transA, in Matrix B, in bool transB, ref Matrix C
 	cublasOperation_t opA = transA ? cublasOperation_t.CUBLAS_OP_T : cublasOperation_t.CUBLAS_OP_N;
 	cublasOperation_t opB = transB ? cublasOperation_t.CUBLAS_OP_T : cublasOperation_t.CUBLAS_OP_N;
 	
-	int m = A.rows(transA);
-	int n = B.cols(transB);
-	int k = A.cols(transA);
+	int m = transA ? A.cols : A.rows;
+	int n = transB ? B.rows : B.cols;
+	int k = transA ? A.rows : A.cols;
 	
 	int lda = A.rows;
 	int ldb = B.rows;
 	int ldc = C.rows;
 	
-	if (C.rows != m || C.cols != n || k != B.rows(transB))
-		throw new MatrixError("Illegam matrix-matrix multiplication.");
+	if (C.rows != m || C.cols != n || k != (transB ? B.cols : B.rows))
+		throw new MatrixError("Invalid matrix-matrix multiplication.");
 	
 	immutable float alpha = 1;
 	immutable float beta  = 0;
@@ -508,8 +496,8 @@ void geam(in float alpha, in Matrix A, in bool transA, in float beta, in Matrix 
 	cublasOperation_t opA = transA ? cublasOperation_t.CUBLAS_OP_T : cublasOperation_t.CUBLAS_OP_N;
 	cublasOperation_t opB = transB ? cublasOperation_t.CUBLAS_OP_T : cublasOperation_t.CUBLAS_OP_N;
 	
-	int m = A.rows(transA);
-	int n = B.cols(transB);
+	int m = transA ? A.cols : A.rows;
+	int n = transB ? B.rows : B.cols;
 	
 	int lda = A.rows;
 	int ldb = B.rows;
