@@ -128,40 +128,6 @@ void cuda_LeakyReLU(float *x, const size_t count)
 }
 
 /**
- * Calculate softplus functions of each element of an array x on a GPU in place.
- *
- * <math><mrow>
- *     <mi mathvariant="italic">SoftPlus</mi><mo>(</mo><mi>x</mi><mo>)</mo>
- *     <mo>=</mo>
- *     <mi mathvariant="italic">ln</mi><mo>(</mo><mn>1</mn><mo>-</mo><msup><mi>e</mi><mi>x</mi></msup><mo>)</mo>
- * </mrow></math>
- *
- * Params:
- *     x = A pointer to an array to calculate.
- *     count = Size of the array.
- */
-__global__
-void kernel_softPlus(float *x, const size_t count)
-{
-	int i = blockIdx.x * blockDim.x + threadIdx.x;
-	
-	if (i < count)
-		// Attempt to optimize. As on extreme values of x exp(x) can got to inf, 
-		// result will be inf too while must be almost the same value with negligible error.
-		if (x[i] < -37.0f)
-			x[i] = 0.0f;
-		else if(x[i] < 24.0f)
-			x[i] = log1pf(expf(x[i]));
-}
-
-/// ditto
-__host__
-void cuda_softPlus(float *x, const size_t count)
-{
-	kernel_softPlus<<<(count + 1023) / 1023, 1024>>>(x, count);
-}
-
-/**
  * Returns a floating point value scaled from unsigned integer number x to a given segment [a; b],
  * meaning 0 will return a and MAX(unsigned int) will return b.
  * 

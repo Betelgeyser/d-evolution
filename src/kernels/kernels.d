@@ -48,7 +48,7 @@ private extern (C++) void cuda_tanh(float* x, const size_t n) nothrow @nogc;
  * Params:
  *     x = Array to calculate.
  */
-void cudaTanh(float[] x) @nogc nothrow
+void cudaTanh(float[] x) @nogc nothrow @trusted
 {
 	cuda_tanh(x.ptr, x.length);
 }
@@ -162,44 +162,6 @@ unittest
 	cudaDeviceSynchronize();
 	
 	immutable float[] result = [-0.01, 0, 1];
-	assert (equal!approxEqual(data, result));
-}
-
-private extern (C++) void cuda_softPlus(float* x, const size_t n) @nogc nothrow;
-/**
- * Calculate softplus function of each element of an array $(D_PARAM x) on a GPU in place.
- *
- * <math><mrow>
- *     <mi mathvariant="italic">SoftPlus</mi><mo>(</mo><mi>x</mi><mo>)</mo>
- *     <mo>=</mo>
- *     <mi mathvariant="italic">ln</mi><mo>(</mo><mn>1</mn><mo>-</mo><msup><mi>e</mi><mi>x</mi></msup><mo>)</mo>
- * </mrow></math>
- *
- * Params:
- *     x = Array to calculate.
- */
-void cudaSoftPlus(float[] x) nothrow @nogc
-{
-	cuda_softPlus(x.ptr, x.length);
-}
-
-///
-unittest
-{
-	mixin(writeTest!cudaSoftPlus);
-	
-	immutable length = 7;
-	
-	float[] data;
-	cudaMallocManaged(data, length);
-	scope(exit) cudaFree(data);
-	
-	data[0 .. $] = [-1000, -10, -1, 0, 1, 10, 1000];
-	
-	cudaSoftPlus(data);
-	cudaDeviceSynchronize();
-	
-	immutable float[] result = [0.000000, 0.000045, 0.313261, 0.693147, 1.313261, 10.000045, 1000.000000];
 	assert (equal!approxEqual(data, result));
 }
 
