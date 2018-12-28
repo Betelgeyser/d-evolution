@@ -187,12 +187,10 @@ private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, 
  * Returns: A new pointer to the array $(D_PARAM x) of float type.
  */
 float[] cudaScale(uint[] x, in float a, in float b) @nogc nothrow pure
-in
 {
-	assert (a <= b);
-}
-body
-{
+	if (a > b)
+		throw new Error("Invalid bounds.");
+	
 	cuda_scale(x.ptr, a, b, x.length);
 	return cast(float[])x;
 }
@@ -280,16 +278,19 @@ private extern (C++) void cuda_BLX_a(
  *         and uint.max - to the right bound.
  */
 void cudaBLXa(in float[] x, in float[] y, float[] offspring, in float a, in float b, const float alpha, in uint[] u) @nogc nothrow pure
-in
 {
-	assert (offspring.length == x.length);
-	assert (offspring.length == y.length);
-	assert (offspring.length == u.length);
+	if (x.length != y.length)
+		throw new Error("Parrents have different sizes.");
 	
-	assert (alpha >= 0);
-}
-body
-{
+	if (x.length != offspring.length)
+		throw new Error("Parrents and offspring have different sizes.");
+	
+	if (x.length != u.length)
+		throw new Error("Wrong random bits array's size.");
+	
+	if (alpha < 0)
+		throw new Error("α parameter is negative.");
+	
 	cuda_BLX_a(x.ptr, y.ptr, offspring.ptr, a, b, alpha, u.ptr, offspring.length);
 }
 
@@ -359,12 +360,10 @@ private extern(C++) void cuda_RBS(uint* ranks, const float* scores, const size_t
  *     scores = Array of scores.
  */
 void cudaRBS(uint[] ranks, in float[] scores) @nogc nothrow pure
-in
 {
-	assert (ranks.length == scores.length);
-}
-body
-{
+	if (ranks.length != scores.length)
+		throw new Error("RBS parameters' length mismatch.");
+	
 	cuda_RBS(ranks.ptr, scores.ptr, ranks.length);
 }
 
@@ -431,7 +430,7 @@ private extern(C++) void cuda_L2(const(float)* x, float* y, const uint dim, cons
  *         Thus, each row is a dimention.
  *     y = A resulting array of L2 norm values. Its length must equals to number of the columns in the input matrix.
  */
-void cudaL2(in Matrix x, float[] y) nothrow pure
+void cudaL2(in Matrix x, float[] y) @nogc nothrow pure
 {
 	if (x.rows != y.length)
 		throw new Error("Input and output arrays have different sizes.");
