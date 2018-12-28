@@ -84,6 +84,7 @@ void cudaSetDevice(int device)
  */
 package void enforceCudart(cudaError_t error) pure nothrow @safe @nogc
 {
-	assert (error == cudaError_t.cudaSuccess, error.toString);
+	if (error != cudaError_t.cudaSuccess)
+		throw new Error(error.toString);
 }
 
