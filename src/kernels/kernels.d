@@ -32,7 +32,7 @@ version (unittest)
 }
 
 
-private extern (C++) void cuda_tanh(float* x, const size_t n) nothrow @nogc;
+private extern (C++) void cuda_tanh(float* x, const size_t n) @nogc nothrow;
 /**
  * Calculate hyperbolic tangent of each element of an array $(D_PARAM x) on a GPU in place.
  *
@@ -165,7 +165,7 @@ unittest
 	assert (equal!approxEqual(data, result));
 }
 
-private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, const size_t count) nothrow @nogc;
+private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, const size_t count) @nogc nothrow;
 /**
  * Transform uniformly distrubuted random bits into uniformly distributed random floating point numbers in range 
  * [$(D_PARAM a); $(D_PARAM b)], where $(D_PARAM a) &le; $(D_PARAM b). 0 will translate to $(D_PARAM a) and uint.max
@@ -186,7 +186,7 @@ private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, 
  *
  * Returns: A new pointer to the array $(D_PARAM x) of float type.
  */
-float[] cudaScale(uint[] x, in float a, in float b) nothrow @nogc
+float[] cudaScale(uint[] x, in float a, in float b) @nogc nothrow
 in
 {
 	assert (a <= b);
@@ -233,7 +233,7 @@ private extern (C++) void cuda_BLX_a(
 	const float alpha,
 	const(uint*) u,
 	const size_t n
-) nothrow @nogc;
+) @nogc nothrow;
 /**
  * BLX-α crossover.
  *
@@ -279,7 +279,7 @@ private extern (C++) void cuda_BLX_a(
  *         in range [0; 1]. These bits will be translated to float, where 0 translates to the left bound of the search space
  *         and uint.max - to the right bound.
  */
-void cudaBLXa(in float[] x, in float[] y, float[] offspring, in float a, in float b, const float alpha, in uint[] u) nothrow @nogc
+void cudaBLXa(in float[] x, in float[] y, float[] offspring, in float a, in float b, const float alpha, in uint[] u) @nogc nothrow
 in
 {
 	assert (offspring.length == x.length);
@@ -390,7 +390,7 @@ unittest
 	assert (equal(ranks, result));
 }
 
-private extern(C++) void cuda_fill(float* x, const float val, const size_t n) nothrow @nogc;
+private extern(C++) void cuda_fill(float* x, const float val, const size_t n) @nogc nothrow;
 /**
  * Fill the array $(D_PARAM x) on a GPU with the value $(D_PARAM val).
  *
@@ -398,7 +398,7 @@ private extern(C++) void cuda_fill(float* x, const float val, const size_t n) no
  *     x = An array to fill.
  *     val = A value to fill with.
  */
-void cudaFill(float[] x, in float val) nothrow @nogc
+void cudaFill(float[] x, in float val) @nogc nothrow
 {
 	cuda_fill(x.ptr, val, x.length);
 }
@@ -422,7 +422,7 @@ unittest
 	assert (equal!approxEqual(data, result));
 }
 
-private extern(C++) void cuda_L2(const(float)* x, float* y, const uint dim, const size_t count) nothrow @nogc;
+private extern(C++) void cuda_L2(const(float)* x, float* y, const uint dim, const size_t count) @nogc nothrow;
 /**
  * Per-vector calculation of the Euclidean distance (L2 norm) of a vector array on a GPU.
  *
