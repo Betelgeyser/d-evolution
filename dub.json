@@ -7,7 +7,7 @@
 	"lflags" : ["--library-path=."],
 	"libs" : ["cudart", "cublas", "curand", "kernels"],
 	"excludedSourceFiles" : ["src/cuda/cudadriverapi/*"],
-	"dflags" : ["-color", "-mcpu=native"],
+	"dflags" : ["-color", "-mcpu=native", "-dip1008"],
 	"versions" : ["UMM"],
 	"buildTypes" : {
 		"docs" : {
