@@ -186,7 +186,7 @@ private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, 
  *
  * Returns: A new pointer to the array $(D_PARAM x) of float type.
  */
-float[] cudaScale(uint[] x, in float a, in float b) @nogc nothrow pure
+float[] cudaScale(uint[] x, in float a, in float b) @nogc nothrow pure @trusted
 {
 	if (a > b)
 		throw new Error("Invalid bounds.");
@@ -277,7 +277,7 @@ private extern (C++) void cuda_BLX_a(
  *         in range [0; 1]. These bits will be translated to float, where 0 translates to the left bound of the search space
  *         and uint.max - to the right bound.
  */
-void cudaBLXa(in float[] x, in float[] y, float[] offspring, in float a, in float b, const float alpha, in uint[] u) @nogc nothrow pure
+void cudaBLXa(in float[] x, in float[] y, float[] offspring, in float a, in float b, const float alpha, in uint[] u) @nogc nothrow pure @trusted
 {
 	if (x.length != y.length)
 		throw new Error("Parrents have different sizes.");
@@ -359,7 +359,7 @@ private extern(C++) void cuda_RBS(uint* ranks, const float* scores, const size_t
  *     ranks = Ranks selected based on scores.
  *     scores = Array of scores.
  */
-void cudaRBS(uint[] ranks, in float[] scores) @nogc nothrow pure
+void cudaRBS(uint[] ranks, in float[] scores) @nogc nothrow pure @trusted
 {
 	if (ranks.length != scores.length)
 		throw new Error("RBS parameters' length mismatch.");
@@ -397,7 +397,7 @@ private extern(C++) void cuda_fill(float* x, const float val, const size_t n) @n
  *     x = An array to fill.
  *     val = A value to fill with.
  */
-void cudaFill(float[] x, in float val) @nogc nothrow pure
+void cudaFill(float[] x, in float val) @nogc nothrow pure @trusted
 {
 	cuda_fill(x.ptr, val, x.length);
 }
