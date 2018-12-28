@@ -19,7 +19,7 @@ module cuda.cudaruntimeapi.exp;
 
 import cuda.cudaruntimeapi.types;
 
-extern(C) package nothrow @nogc:
+extern(C) package @nogc nothrow:
 	cudaError_t cudaMalloc(void** devPtr, size_t size);
 	cudaError_t cudaMallocManaged(void** devPtr, size_t size, uint flags = cudaMemAttachGlobal); 
 	cudaError_t cudaFree(void* devPtr);

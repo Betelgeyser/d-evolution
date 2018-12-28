@@ -23,7 +23,7 @@ import cuda.common;
 import cuda.cudaruntimeapi.types;
 static import cudart = cuda.cudaruntimeapi.exp;
 
-void cudaMalloc(T)(ref T* devPtr, ulong nitems) nothrow @nogc
+void cudaMalloc(T)(ref T* devPtr, ulong nitems) @nogc nothrow
 {
 	void* tmp;
 	enforceCudart(cudart.cudaMalloc(&tmp, nitems * T.sizeof));
@@ -31,14 +31,14 @@ void cudaMalloc(T)(ref T* devPtr, ulong nitems) nothrow @nogc
 }
 
 deprecated
-void cudaMallocManaged(T)(ref T* devPtr, ulong nitems, uint flags = cudaMemAttachGlobal) nothrow @nogc
+void cudaMallocManaged(T)(ref T* devPtr, ulong nitems, uint flags = cudaMemAttachGlobal) @nogc nothrow
 {
 	void* tmp;
 	enforceCudart(cudart.cudaMallocManaged(&tmp, nitems * T.sizeof, flags));
 	devPtr = cast(T*)tmp;
 }
 
-void cudaMallocManaged(T)(ref T[] devPtr, ulong nitems, uint flags = cudaMemAttachGlobal) nothrow @nogc
+void cudaMallocManaged(T)(ref T[] devPtr, ulong nitems, uint flags = cudaMemAttachGlobal) @nogc nothrow
 {
 	void* tmp;
 	enforceCudart(cudart.cudaMallocManaged(&tmp, nitems * T.sizeof, flags));
@@ -46,12 +46,12 @@ void cudaMallocManaged(T)(ref T[] devPtr, ulong nitems, uint flags = cudaMemAtta
 }
 
 deprecated
-void cudaFree(void* devPtr) nothrow @nogc
+void cudaFree(void* devPtr) @nogc nothrow
 {
 	enforceCudart(cudart.cudaFree(devPtr));
 }
 
-void cudaFree(T)(ref T[] devPtr) nothrow @nogc
+void cudaFree(T)(ref T[] devPtr) @nogc nothrow
 {
 	enforceCudart(cudart.cudaFree(devPtr.ptr));
 	devPtr.destroy();
@@ -62,7 +62,7 @@ void cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind) 
 	enforceCudart(cudart.cudaMemcpy(dst, src, count, kind));
 }
 
-void cudaDeviceSynchronize() nothrow @nogc
+void cudaDeviceSynchronize() @nogc nothrow
 {
 	enforceCudart(cudart.cudaDeviceSynchronize());
 }
@@ -74,7 +74,7 @@ int cudaGetDeviceCount() @nogc nothrow pure
 	return result;
 }
 
-void cudaSetDevice(int device)
+void cudaSetDevice(int device) @nogc nothrow
 {
 	enforceCudart(cudart.cudaSetDevice(device));
 }
@@ -82,7 +82,7 @@ void cudaSetDevice(int device)
 /**
  * Utility wrapper to enforce error check for cuda functions.
  */
-package void enforceCudart(cudaError_t error) pure nothrow @safe @nogc
+package void enforceCudart(cudaError_t error) @nogc nothrow pure @safe
 {
 	if (error != cudaError_t.cudaSuccess)
 		throw new Error(error.toString);
