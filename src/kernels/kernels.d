@@ -272,7 +272,7 @@ private extern (C++) void cuda_BLX_a(
  *     a = Minimum crossover value.
  *     b = Maximum crossover value.
  *     alpha = α parameter of BLX-α crossover. Must be &ge 0. Determines how much to extend the search space, where 0 means
- *         not to extend at all. Apperantly it is considered 0.5 shows the best results.
+ *         not to extend at all. Apperantly it is considered that 0.5 shows the best results.
  *     u = Pointer to an array of random bits. To prevent rounding errors it is of uint type rather than float value
  *         in range [0; 1]. These bits will be translated to float, where 0 translates to the left bound of the search space
  *         and uint.max - to the right bound.
