@@ -57,7 +57,7 @@ void cudaFree(T)(ref T[] devPtr) nothrow @nogc
 	devPtr.destroy();
 }
 
-void cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind) nothrow @nogc
+void cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind) @nogc nothrow pure
 {
 	enforceCudart(cudart.cudaMemcpy(dst, src, count, kind));
 }
@@ -67,7 +67,7 @@ void cudaDeviceSynchronize() nothrow @nogc
 	enforceCudart(cudart.cudaDeviceSynchronize());
 }
 
-int cudaGetDeviceCount() @nogc nothrow
+int cudaGetDeviceCount() @nogc nothrow pure
 {
 	int result;
 	enforceCudart(cudart.cudaGetDeviceCount(&result));

@@ -23,8 +23,8 @@ extern(C) package nothrow @nogc:
 	cudaError_t cudaMalloc(void** devPtr, size_t size);
 	cudaError_t cudaMallocManaged(void** devPtr, size_t size, uint flags = cudaMemAttachGlobal); 
 	cudaError_t cudaFree(void* devPtr);
-	cudaError_t cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind);
+	cudaError_t cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind) pure;
 	cudaError_t cudaDeviceSynchronize();
-	cudaError_t cudaGetDeviceCount(int* count);
+	cudaError_t cudaGetDeviceCount(int* count) pure;
 	cudaError_t cudaSetDevice(int device);
 
