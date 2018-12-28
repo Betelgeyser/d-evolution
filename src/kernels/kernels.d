@@ -32,7 +32,7 @@ version (unittest)
 }
 
 
-private extern (C++) void cuda_tanh(float* x, const size_t n) @nogc nothrow;
+private extern (C++) void cuda_tanh(float* x, const size_t n) @nogc nothrow pure;
 /**
  * Calculate hyperbolic tangent of each element of an array $(D_PARAM x) on a GPU in place.
  *
@@ -48,7 +48,7 @@ private extern (C++) void cuda_tanh(float* x, const size_t n) @nogc nothrow;
  * Params:
  *     x = Array to calculate.
  */
-void cudaTanh(float[] x) @nogc nothrow @trusted
+void cudaTanh(float[] x) @nogc nothrow pure @trusted
 {
 	cuda_tanh(x.ptr, x.length);
 }
@@ -73,7 +73,7 @@ unittest
 	assert (equal!approxEqual(data, result));
 }
 
-private extern (C++) void cuda_ReLU(float* x, const size_t n) @nogc nothrow;
+private extern (C++) void cuda_ReLU(float* x, const size_t n) @nogc nothrow pure;
 /**
  * Calculate rectified linear unit of each element of an array $(D_PARAM x) on a GPU in place.
  *
@@ -94,7 +94,7 @@ private extern (C++) void cuda_ReLU(float* x, const size_t n) @nogc nothrow;
  * Params:
  *     x = Array to calculate.
  */
-void cudaReLU(float[] x) @nogc nothrow @trusted
+void cudaReLU(float[] x) @nogc nothrow pure @trusted
 {
 	cuda_ReLU(x.ptr, x.length);
 }
@@ -119,7 +119,7 @@ unittest
 	assert (equal!approxEqual(data, result));
 }
 
-private extern (C++) void cuda_LeakyReLU(float* x, const size_t n) @nogc nothrow;
+private extern (C++) void cuda_LeakyReLU(float* x, const size_t n) @nogc nothrow pure;
 /**
  * Calculate leaky rectified linear unit of each element of an array $(D_PARAM x) on a GPU in place.
  *
@@ -140,7 +140,7 @@ private extern (C++) void cuda_LeakyReLU(float* x, const size_t n) @nogc nothrow
  * Params:
  *     x = Array to calculate.
  */
-void cudaLeakyReLU(float[] x) @nogc nothrow @trusted
+void cudaLeakyReLU(float[] x) @nogc nothrow pure @trusted
 {
 	cuda_LeakyReLU(x.ptr, x.length);
 }
@@ -165,7 +165,7 @@ unittest
 	assert (equal!approxEqual(data, result));
 }
 
-private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, const size_t count) @nogc nothrow;
+private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, const size_t count) @nogc nothrow pure;
 /**
  * Transform uniformly distrubuted random bits into uniformly distributed random floating point numbers in range 
  * [$(D_PARAM a); $(D_PARAM b)], where $(D_PARAM a) &le; $(D_PARAM b). 0 will translate to $(D_PARAM a) and uint.max
@@ -186,7 +186,7 @@ private extern (C++) void cuda_scale(void* ptr, const float  a, const float  b, 
  *
  * Returns: A new pointer to the array $(D_PARAM x) of float type.
  */
-float[] cudaScale(uint[] x, in float a, in float b) @nogc nothrow
+float[] cudaScale(uint[] x, in float a, in float b) @nogc nothrow pure
 in
 {
 	assert (a <= b);
@@ -233,7 +233,7 @@ private extern (C++) void cuda_BLX_a(
 	const float alpha,
 	const(uint*) u,
 	const size_t n
-) @nogc nothrow;
+) @nogc nothrow pure;
 /**
  * BLX-α crossover.
  *
@@ -279,7 +279,7 @@ private extern (C++) void cuda_BLX_a(
  *         in range [0; 1]. These bits will be translated to float, where 0 translates to the left bound of the search space
  *         and uint.max - to the right bound.
  */
-void cudaBLXa(in float[] x, in float[] y, float[] offspring, in float a, in float b, const float alpha, in uint[] u) @nogc nothrow
+void cudaBLXa(in float[] x, in float[] y, float[] offspring, in float a, in float b, const float alpha, in uint[] u) @nogc nothrow pure
 in
 {
 	assert (offspring.length == x.length);
@@ -340,7 +340,7 @@ unittest
 	assert (equal!approxEqual(offspring, result));
 }
 
-private extern(C++) void cuda_RBS(uint* ranks, const float* scores, const size_t count) @nogc nothrow;
+private extern(C++) void cuda_RBS(uint* ranks, const float* scores, const size_t count) @nogc nothrow pure;
 /**
  * Rank based parent selection.
  *
@@ -358,7 +358,7 @@ private extern(C++) void cuda_RBS(uint* ranks, const float* scores, const size_t
  *     ranks = Ranks selected based on scores.
  *     scores = Array of scores.
  */
-void cudaRBS(uint[] ranks, in float[] scores) @nogc nothrow
+void cudaRBS(uint[] ranks, in float[] scores) @nogc nothrow pure
 in
 {
 	assert (ranks.length == scores.length);
@@ -390,7 +390,7 @@ unittest
 	assert (equal(ranks, result));
 }
 
-private extern(C++) void cuda_fill(float* x, const float val, const size_t n) @nogc nothrow;
+private extern(C++) void cuda_fill(float* x, const float val, const size_t n) @nogc nothrow pure;
 /**
  * Fill the array $(D_PARAM x) on a GPU with the value $(D_PARAM val).
  *
@@ -398,7 +398,7 @@ private extern(C++) void cuda_fill(float* x, const float val, const size_t n) @n
  *     x = An array to fill.
  *     val = A value to fill with.
  */
-void cudaFill(float[] x, in float val) @nogc nothrow
+void cudaFill(float[] x, in float val) @nogc nothrow pure
 {
 	cuda_fill(x.ptr, val, x.length);
 }
@@ -422,7 +422,7 @@ unittest
 	assert (equal!approxEqual(data, result));
 }
 
-private extern(C++) void cuda_L2(const(float)* x, float* y, const uint dim, const size_t count) @nogc nothrow;
+private extern(C++) void cuda_L2(const(float)* x, float* y, const uint dim, const size_t count) @nogc nothrow pure;
 /**
  * Per-vector calculation of the Euclidean distance (L2 norm) of a vector array on a GPU.
  *
@@ -431,7 +431,7 @@ private extern(C++) void cuda_L2(const(float)* x, float* y, const uint dim, cons
  *         Thus, each row is a dimention.
  *     y = A resulting array of L2 norm values. Its length must equals to number of the columns in the input matrix.
  */
-void cudaL2(in Matrix x, float[] y) nothrow
+void cudaL2(in Matrix x, float[] y) nothrow pure
 {
 	if (x.rows != y.length)
 		throw new Error("Input and output arrays have different sizes.");
