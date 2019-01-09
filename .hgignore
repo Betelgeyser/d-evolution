@@ -10,6 +10,7 @@ trace.def
 profile.*
 profilegc.log
 *.so
+*.orig
 log
 log.*
 dnn
