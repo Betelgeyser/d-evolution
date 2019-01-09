@@ -51,14 +51,6 @@ version (unittest)
 	}
 }
 
-class MatrixError : Error
-{
-	this (string msg, string file = __FILE__, size_t line = __LINE__)
-	{
-		super(msg, file, line);
-	}
-}
-
 import core.exception : RangeError;
 
 
@@ -97,18 +89,18 @@ struct Matrix
 		return values[i];
 	}
 	
-	float opIndex(in size_t i, in size_t j) const nothrow pure @safe
+	float opIndex(in size_t i, in size_t j) const @nogc nothrow pure @safe
 	{
 		if (i >= _rows || j >= _cols)
-			throw new RangeError("Matrix size is %dx%d, but [%d; %d] is indexed.".format(_rows, _cols, i, j));
+			throw new Error("Matrix range violation.");
 		
 		return values[i + j * _rows];
 	}
 	
-	float opIndexAssign(in float value, in size_t i, in size_t j) nothrow pure @safe
+	float opIndexAssign(in float value, in size_t i, in size_t j) @nogc nothrow pure @safe
 	{
 		if (i >= _rows || j >= _cols)
-			throw new RangeError("Matrix size is %dx%d, but [%d; %d] is indexed.".format(_rows, _cols, i, j));
+			throw new Error("Matrix range violation.");
 		
 		return values[i + j * _rows] = value;
 	}
@@ -182,7 +174,7 @@ struct Matrix
 		scope(failure) freeMem();
 		
 		if (rows < 1 || cols < 1)
-			throw new Error("Matrix size must be at least 1x1, got %dx%d".format(rows, cols));
+			throw new Error("Wrong matrix size.");
 		
 		_rows = rows;
 		_cols = cols;
@@ -411,7 +403,7 @@ void gemm(in Matrix A, in bool transA, in Matrix B, in bool transB, ref Matrix C
 	int ldc = C.rows;
 	
 	if (C.rows != m || C.cols != n || k != (transB ? B.cols : B.rows))
-		throw new MatrixError("Invalid matrix-matrix multiplication.");
+		throw new Error("Invalid matrix-matrix multiplication.");
 	
 	immutable float alpha = 1;
 	immutable float beta  = 0;
@@ -504,7 +496,7 @@ void geam(in float alpha, in Matrix A, in bool transA, in float beta, in Matrix 
 	int ldc = C.rows;
 	
 	if (C.rows != m || C.cols != n)
-		throw new MatrixError("Illegal matrix-matrix addition.");
+		throw new Error("Illegal matrix-matrix addition.");
 	
 	cublasSgeam(
 		cublasHandle,
@@ -575,7 +567,7 @@ unittest
 void transpose(in Matrix A, ref Matrix C, cublasHandle_t cublasHandle) nothrow
 {
 	if (A.rows != C.cols || A.cols != C.rows)
-		throw new MatrixError(
+		throw new Error(
 			"Illegal matrix transpose from %dx%d to %dx%d"
 			.format(A.rows, A.cols, C.rows, C.cols)
 		);
