@@ -311,7 +311,7 @@ struct Matrix
 	 */
 	static void copy(in Matrix src, Matrix dst) nothrow pure @safe
 	{
-		if (!isSameSize(src, dst))
+		if (src.rows != dst.rows || src.cols != dst.cols)
 			throw new Error(
 				"Source and destination matrices have different sizes %dx%d and %dx%d."
 				.format(src.rows, src.cols, dst.rows, dst.cols)
@@ -357,14 +357,6 @@ struct Matrix
 		foreach (i, c; copy)
 			assert (c == matrix[from * matrix.rows + i]);
 	}
-}
-
-/**
- * Returns $(D_KEYWORD true) if sizes of A and B are equal. Otherwise returns $(D_KEYWORD false).
- */
-static bool isSameSize(in Matrix A, in Matrix B) nothrow pure @safe
-{
-	return A.rows == B.rows && A.cols == B.cols;
 }
 
 /**
