@@ -164,33 +164,25 @@ struct Network
 	/**
 	 * Returns: How many input values the network takes.
 	 */
-	@property uint inputLength() const @nogc nothrow
+	@property uint inputs() const @nogc nothrow
 	{
-		return inputLayer.connectionsLength();
+		return inputLayer.inputs;
 	}
 	
 	/**
 	 * Returns: How many output values the network returns.
 	 */
-	@property uint outputLength() const @nogc nothrow
+	@property uint outputs() const @nogc nothrow
 	{
-		return outputLayer.neuronsLength();
+		return outputLayer.neurons;
 	}
 	
 	/**
 	 * Returns: The number of neurons per a hidden layer.
 	 */
-	@property uint neuronsPerLayer() const @nogc nothrow
+	@property uint width() const @nogc nothrow
 	{
-		return inputLayer.neuronsLength;
-	}
-	
-	/**
-	 * Returns: Size of the network in bytes.
-	 */
-	@property size_t size() const @nogc nothrow
-	{
-		return inputLayer.size + outputLayer.size + (hiddenLayers.length ? hiddenLayers.length * hiddenLayers[0].size : 0);
+		return inputLayer.neurons;
 	}
 	
 	/**
@@ -231,17 +223,17 @@ struct Network
 		
 		with (network)
 		{
-			assert (depth           == params.layers);
-			assert (neuronsPerLayer == params.neurons);
+			assert (depth == params.layers);
+			assert (width == params.neurons);
 			
-			assert (inputLayer.connectionsLength == params.inputs + biasLength);
-			assert (inputLayer.neuronsLength     == params.neurons);
+			assert (inputLayer.inputs  == params.inputs);
+			assert (inputLayer.neurons == params.neurons);
 			
-			assert (outputLayer.connectionsLength == params.neurons + biasLength);
-			assert (outputLayer.neuronsLength     == params.outputs);
+			assert (outputLayer.inputs  == params.neurons);
+			assert (outputLayer.neurons == params.outputs);
 				
-			assert (hiddenLayers.all!(x => x.connectionsLength == params.neurons + biasLength));
-			assert (hiddenLayers.all!(x => x.neuronsLength     == params.neurons));
+			assert (hiddenLayers.all!(l => l.inputs  == params.neurons));
+			assert (hiddenLayers.all!(l => l.neurons == params.neurons));
 			
 			// Not that network should test layers, but need to check whether network creates all layers or not
 			assert (
@@ -291,8 +283,8 @@ struct Network
 	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const
 	{
 		enforce(
-			inputs.cols == inputLength - biasLength,
-			"Inputs must have %d columns, got %d".format(inputLength - biasLength, inputs.cols)
+			inputs.cols == this.inputs - biasLength,
+			"Inputs must have %d columns, got %d".format(this.inputs - biasLength, inputs.cols)
 		);
 		
 		auto inputsE = Matrix(inputs.rows, inputs.cols + biasLength); // Extended
@@ -301,10 +293,10 @@ struct Network
 		inputsE.colSlice(0, inputs.cols).values[0 .. $] = inputs.values[0 .. $];
 		cudaFill(inputsE.colSlice(inputsE.cols - biasLength, inputsE.cols), biasWeight);
 		
-		auto prev = Matrix(inputs.rows, neuronsPerLayer + biasLength);
+		auto prev = Matrix(inputs.rows, width + biasLength);
 		scope(exit) prev.freeMem();
 		
-		auto next = Matrix(inputs.rows, neuronsPerLayer + biasLength);
+		auto next = Matrix(inputs.rows, width + biasLength);
 		scope(exit) next.freeMem();
 		
 		cudaFill(prev.colSlice(prev.cols - biasLength, prev.cols), biasWeight);
