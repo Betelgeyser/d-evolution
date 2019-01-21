@@ -116,11 +116,6 @@ struct Matrix
 		assert (_rows >= 1 && _cols >= 1, "Matrix size must be at least 1x1, got %dx%d".format(_rows, _cols));
 	}
 	
-//	@property float* ptr() inout @nogc nothrow pure
-//	{
-//		return values.ptr;
-//	}
-	
 	/**
 	 * Returns: The number of rows.
 	 */
