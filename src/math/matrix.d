@@ -79,64 +79,7 @@ struct Matrix
 	// TODO: Pointer should not be reassignable.
 	float[] values; /// A pointer to an allocated memory.
 	
-	size_t opDollar() const @nogc nothrow pure @safe
 	{
-		return values.length;
-	}
-	
-	float opIndex(in size_t i) const @nogc nothrow pure @safe
-	{
-		return values[i];
-	}
-	
-	float opIndex(in size_t i, in size_t j) const @nogc nothrow pure @safe
-	{
-		if (i >= _rows || j >= _cols)
-			throw new Error("Matrix range violation.");
-		
-		return values[i + j * _rows];
-	}
-	
-	float opIndexAssign(in float value, in size_t i, in size_t j) @nogc nothrow pure @safe
-	{
-		if (i >= _rows || j >= _cols)
-			throw new Error("Matrix range violation.");
-		
-		return values[i + j * _rows] = value;
-	}
-	
-	{
-	
-	/**
-	 * Returns: The number of rows.
-	 */
-	@property uint rows() const @nogc nothrow pure @safe
-	{
-		return _rows;
-	}
-	
-	/**
-	 * Returns: The number of columns.
-	 */
-	@property uint cols() const @nogc nothrow pure @safe
-	{
-		return _cols;
-	}
-	
-	/**
-	 * Returns: The number of elements.
-	 */
-	@property size_t length() const @nogc nothrow pure @safe
-	{
-		return values.length;
-	}
-	
-	/**
-	 * Returns: The size of the matrix in bytes.
-	 */
-	@property size_t size() const @nogc nothrow pure @safe
-	{
-		return length * ElementType!(typeof(values)).sizeof;
 	}
 	
 	/**
@@ -248,6 +191,77 @@ struct Matrix
 		
 		assert (D.rows == 2 && D.cols == 3);
 		assert (equal!approxEqual(D.values, [1, 1, 2, 2, 3, 3])); // Remember, cuBLAS is column-major
+	}
+	
+	size_t opDollar() const @nogc nothrow pure @safe
+	{
+		return values.length;
+	}
+	
+	float opIndex(in size_t i) const @nogc nothrow pure @safe
+	{
+		return values[i];
+	}
+	
+	float opIndexAssign(in float value, in size_t i) @nogc nothrow pure @safe
+	{
+		return values[i] = value;
+	}
+	
+	float opIndex(in size_t i, in size_t j) const @nogc nothrow pure @safe
+	{
+		if (i >= _rows || j >= _cols)
+			throw new Error("Matrix range violation.");
+		
+		return values[i + j * _rows];
+	}
+	
+	float opIndexAssign(in float value, in size_t i, in size_t j) @nogc nothrow pure @safe
+	{
+		if (i >= _rows || j >= _cols)
+			throw new Error("Matrix range violation.");
+		
+		return values[i + j * _rows] = value;
+	}
+	
+	/**
+	 * Returns: The number of rows.
+	 */
+	@property uint rows() const @nogc nothrow pure @safe
+	{
+		return _rows;
+	}
+	
+	/**
+	 * Returns: The number of columns.
+	 */
+	@property uint cols() const @nogc nothrow pure @safe
+	{
+		return _cols;
+	}
+	
+	/**
+	 * Returns: The number of elements.
+	 */
+	@property size_t length() const @nogc nothrow pure @safe
+	{
+		return values.length;
+	}
+	
+	/**
+	 * Returns: The size of the matrix in bytes.
+	 */
+	@property size_t size() const @nogc nothrow pure @safe
+	{
+		return length * ElementType!(typeof(values)).sizeof;
+	}
+	
+	/**
+	 * Returns: Pointer to the values array.
+	 */
+	@property inout(float*) ptr() inout @nogc nothrow pure
+	{
+		return _values.ptr;
 	}
 	
 	/**
