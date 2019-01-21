@@ -17,6 +17,8 @@ module neural.layer;
 
 // Standard D modules
 import std.algorithm : all, each;
+import std.conv      : to;
+import std.json      : JSONType, JSONValue;
 import std.math      : isFinite;
 import std.string    : format;
 
@@ -32,6 +34,7 @@ import math;
 version (unittest)
 {
 	import std.algorithm : equal;
+	import std.json      : parseJSON, toJSON;
 	import std.math      : approxEqual;
 	
 	private cublasHandle_t cublasHandle;
@@ -83,30 +86,24 @@ struct LayerParams
  */
 struct Layer
 {
-	// TODO: Not sure about setting _weigths visibility to package, it should be private. But then it will be difficult
-	// to set it to controlled values in other neural submodules. Perhaps there should be a constructor taking
-	// initialized array.
-	package Matrix _weights; /// Connections' weights.
+	private Matrix _weights; /// The matrix that stores values of the neurons' weights.
 	
 	invariant
 	{
-		assert (&_weights, "The weights matrix is incorrect.");
-		assert (_weights.rows >= 1 + biasLength,
-			"The weights matrix must have at least `biasLength + 1` rows. 1 comes for a neuron.");
 	}
 	
 	/**
-	 * Returns: The number of connections per neuron (including bias).
+	 * Returns: The number of input parameters the layer takes, excluding bias.
 	 */
-	@property uint connectionsLength() const @nogc nothrow pure @safe
+	@property uint inputs() const @nogc nothrow pure @safe
 	{
-		return _weights.rows;
+		return _weights.rows - biasLength;
 	}
 	
 	/**
 	 * Returns: The number of neurons in the layer.
 	 */
-	@property uint neuronsLength() const @nogc nothrow pure @safe
+	@property uint neurons() const @nogc nothrow pure @safe
 	{
 		return _weights.cols;
 	}
@@ -122,7 +119,7 @@ struct Layer
 	/**
 	 * Returns: The weights array of the layer.
 	 */
-	@property const(float[]) weights() const @nogc nothrow pure @safe
+	@property inout(float[]) weights() inout @nogc nothrow pure @safe
 	{
 		return _weights.values;
 	}
@@ -142,12 +139,7 @@ struct Layer
 	 *     params = Layer parameters.
 	 *     pool = Pseudorandom number generator.
 	 */
-	this(in LayerParams params, RandomPool pool)
-	in
-	{
-		assert (&params, "Incorrect layer parameters.");
-	}
-	body
+	this(in LayerParams params, RandomPool pool) nothrow
 	{
 		scope(failure) freeMem();
 		
@@ -156,7 +148,7 @@ struct Layer
 		auto tmpPtr = cudaScale(pool(length), params.min, params.max);
 		cudaDeviceSynchronize();
 		
-		_weights.values[0 .. $] = tmpPtr[0 .. $];
+		_weights.values[] = tmpPtr[];
 	}
 	
 	///
@@ -164,15 +156,16 @@ struct Layer
 	{
 		mixin(writeTest!__ctor);
 		
-		immutable LayerParams params = { inputs : 20, neurons : 30 };
+		immutable LayerParams params = { inputs : 5, neurons : 10 };
 		
 		auto layer = Layer(params, randomPool);
 		scope(exit) layer.freeMem();
 		
 		with (layer)
 		{
-			assert (connectionsLength == params.inputs + biasLength);
-			assert (neuronsLength     == params.neurons);
+			assert (inputs  == params.inputs);
+			assert (neurons == params.neurons);
+			assert (length  == (params.inputs + biasLength) * params.neurons);
 			
 			assert (weights.all!(x => isFinite(x)));
 			assert (weights.all!(x => x >= params.min && x <= params.max));
