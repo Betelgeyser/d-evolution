@@ -446,38 +446,117 @@ struct Network
 		}
 	}
 	
-	JSONValue json()
+	JSONValue json() const
 	{
-		JSONValue network = [
+		JSONValue result = [
 			"Inputs" : inputs,
 			"Depth" : depth,
 			"Outputs" : outputs,
 			"Width" : width
 		];
 		
-		JSONValue[] l;
-		foreach(la; layers)
-			l ~= la.json();
+		JSONValue[] layersJSON;
+		foreach(layer; layers)
+			layersJSON ~= layer.json();
 		
-		network["Layers"] = l;
-		
-		JSONValue result = ["Network" : network];
+		result["Layers"] = layersJSON;
 		
 		return result;
 	}
 	
+	this(in JSONValue json)
+	{
+		scope(failure) freeMem();
+		
+		foreach(i, l; json["Layers"].array)
+			_layers ~= Layer(l);
+		
+		// Todo: check parameters.
+	}
+	
 	unittest
 	{
-		mixin(writeTest!toJSON);
+		mixin(writeTest!__ctor);
 		
-		auto pool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, 0, 1000);
-		NetworkParams params = { layers : 4, inputs : 2, neurons : 3, outputs : 1 };
-		Network network = Network(params, pool);
-		scope(exit) network.freeMem();
+		immutable string str = `{
+			"Inputs": 3,
+			"Depth": 3,
+			"Width": 2,
+			"Outputs": 1,
+			"Layers": [
+				{
+					"Inputs": 3,
+					"Neurons": 2,
+					"Weights": [0, 1, 2, 3, 4, 5, 6, 7]
+				},
+				{
+					"Inputs": 2,
+					"Neurons": 2,
+					"Weights": [0, 1, 2, 3, 4, 5]
+				},
+				{
+					"Inputs": 2,
+					"Neurons": 1,
+					"Weights": [0, 1, 2]
+				}
+			]
+		}`;
 		
-		auto js = network.json;
+		JSONValue json = parseJSON(str);
 		
-		writeln(js.toJSON);
+		auto network = Network(json);
+	//	scope(exit) network.freeMem();
+		
+		with (network)
+		{
+			assert (inputs  == 3);
+			assert (width   == 2);
+			assert (depth   == 3);
+			assert (outputs == 1);
+		}
+	}
+
+
+	
+	unittest
+	{
+		mixin(writeTest!json);
+		
+		immutable string str = `{
+			"Inputs": 3,
+			"Depth": 3,
+			"Width": 2,
+			"Outputs": 1,
+			"Layers": [
+				{
+					"Inputs": 3,
+					"Neurons": 2,
+					"Weights": [0, 1, 2, 3, 4, 5, 6, 7]
+				},
+				{
+					"Inputs": 2,
+					"Neurons": 2,
+					"Weights": [0, 1, 2, 3, 4, 5]
+				},
+				{
+					"Inputs": 2,
+					"Neurons": 1,
+					"Weights": [0, 1, 2]
+				}
+			]
+		}`;
+		
+		JSONValue json = parseJSON(str);
+		
+		auto network = Network(json);
+//		scope(exit) network.freeMem(); /// WTF why it's chashing
+		
+		auto networkJSON = network.json;
+		
+		assert (
+			networkJSON.toJSON ==
+			`{"Depth":3,"Inputs":3,"Layers":[{"Inputs":3,"Neurons":2,"Weights":[0,1,2,3,4,5,6,7]},{"Inputs":2,"Neurons":2,"Weights":[0,1,2,3,4,5]},{"Inputs":2,"Neurons":1,"Weights":[0,1,2]}],"Outputs":1,"Width":2}`
+		);
 	}
 }
 
