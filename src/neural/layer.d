@@ -165,6 +165,116 @@ struct Layer
 	}
 	
 	/**
+	 * Constructs the layer from a JSON struct.
+	 *
+	 * This method returns a JSON struct instead of a string representation if JSON
+	 * because it will
+	 */
+	this(in JSONValue json)
+	{
+		scope(failure) freeMem();
+		
+		auto layer = json["Layer"];
+		
+		_weights = Matrix(
+			(layer["Inputs"].integer() + biasLength).to!uint,
+			layer["Neurons"].integer().to!uint
+		);
+		
+		foreach(i, v; layer["Weights"].array)
+			switch (v.type)
+			{
+				case JSONType.float_:
+					_weights.values[i] = v.floating();
+					break;
+				
+				case JSONType.integer:
+					_weights.values[i] = v.integer().to!float;
+					break;
+				
+				case JSONType.uinteger:
+					_weights.values[i] = v.uinteger().to!float;
+					break;
+				
+				default:
+					throw new Exception("json matrix value is not a number.");
+			}
+	}
+	
+	///
+	unittest
+	{
+		mixin(writeTest!__ctor);
+		
+		immutable string str = `{
+			"Layer": {
+				"Inputs": 3,
+				"Neurons": 2,
+				"Weights": [
+					0,    -1,   2.0, 3.5,
+					-4.0, -5.5, 6,   7
+				]
+			}
+		}`;
+		
+		JSONValue json = parseJSON(str);
+		
+		auto layer = Layer(json);
+		scope(exit) layer.freeMem();
+		
+		assert (layer.inputs  == 3);
+		assert (layer.length  == (3 + biasLength) * 2);
+		assert (layer.neurons == 2);
+		
+		assert (equal!approxEqual(layer.weights, [0.0, -1.0, 2.0, 3.5, -4.0, -5.5, 6.0, 7.0]));
+	}
+	
+	/**
+	 * Returns: A JSON structure representing the layer.
+	 *
+	 * This method returns a JSON struct instead of a string representation because
+	 * it will further be used by a network to construct its own JSON representation.
+	 */
+	JSONValue json() const
+	{
+		JSONValue layer = [
+			"Inputs" : inputs,
+			"Neurons" : neurons
+		];
+		
+		layer["Weights"] = weights;
+		
+		return JSONValue(["Layer" : layer]);
+	}
+	
+	///
+	unittest
+	{
+		mixin(writeTest!json);
+		
+		immutable string str = `{
+			"Layer": {
+				"Inputs": 3,
+				"Neurons": 2,
+				"Weights": [
+					 0,   -1,   2.0, 3.5,
+					-4.0, -5.5, 6,   7
+				]
+			}
+		}`;
+		
+		Layer layer = Layer(str.parseJSON());
+		scope(exit) layer.freeMem();
+		
+		auto layerJSON = layer.json;
+		
+		assert (
+			layerJSON.toJSON ==
+			`{"Layer":{"Inputs":3,"Neurons":2,"Weights":[0,-1,2,3.5,-4,-5.5,6,7]}}`
+		);
+	}
+	
+	/**
 	 * Free memory.
 	 *
 	 * For the reason how D works with structs memory freeing moved from destructor to
