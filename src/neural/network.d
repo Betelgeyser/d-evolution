@@ -68,8 +68,8 @@ struct NetworkParams
 	uint  neurons; /// Number of neurons in every hidden layer.
 	uint  layers;  /// Number of hidden layers (excluding input and output layers).
 
-	float min = -1; /// Minimal generated weight.
-	float max =  1; /// Maximal generated weight.
+	float min = -1.0; /// Minimal generated weight.
+	float max =  1.0; /// Maximal generated weight.
 	
 	invariant
 	{
