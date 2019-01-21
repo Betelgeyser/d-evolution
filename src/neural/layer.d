@@ -174,14 +174,12 @@ struct Layer
 	{
 		scope(failure) freeMem();
 		
-		auto layer = json["Layer"];
-		
 		_weights = Matrix(
-			(layer["Inputs"].integer() + biasLength).to!uint,
-			layer["Neurons"].integer().to!uint
+			(json["Inputs"].integer() + biasLength).to!uint,
+			json["Neurons"].integer().to!uint
 		);
 		
-		foreach(i, v; layer["Weights"].array)
+		foreach(i, v; json["Weights"].array)
 			switch (v.type)
 			{
 				case JSONType.float_:
@@ -207,14 +205,12 @@ struct Layer
 		mixin(writeTest!__ctor);
 		
 		immutable string str = `{
-			"Layer": {
-				"Inputs": 3,
-				"Neurons": 2,
-				"Weights": [
-					0,    -1,   2.0, 3.5,
-					-4.0, -5.5, 6,   7
-				]
-			}
+			"Inputs": 3,
+			"Neurons": 2,
+			"Weights": [
+				0,    -1,   2.0, 3.5,
+				-4.0, -5.5, 6,   7
+			]
 		}`;
 		
 		JSONValue json = parseJSON(str);
@@ -237,14 +233,14 @@ struct Layer
 	 */
 	JSONValue json() const
 	{
-		JSONValue layer = [
+		JSONValue result = [
 			"Inputs" : inputs,
 			"Neurons" : neurons
 		];
 		
-		layer["Weights"] = weights;
+		result["Weights"] = weights;
 		
-		return JSONValue(["Layer" : layer]);
+		return result;
 	}
 	
 	///
@@ -253,14 +249,12 @@ struct Layer
 		mixin(writeTest!json);
 		
 		immutable string str = `{
-			"Layer": {
-				"Inputs": 3,
-				"Neurons": 2,
-				"Weights": [
-					 0,   -1,   2.0, 3.5,
-					-4.0, -5.5, 6,   7
-				]
-			}
+			"Inputs": 3,
+			"Neurons": 2,
+			"Weights": [
+				 0,   -1,   2.0, 3.5,
+				-4.0, -5.5, 6,   7
+			]
 		}`;
 		
 		Layer layer = Layer(str.parseJSON());
@@ -270,7 +264,7 @@ struct Layer
 		
 		assert (
 			layerJSON.toJSON ==
-			`{"Layer":{"Inputs":3,"Neurons":2,"Weights":[0,-1,2,3.5,-4,-5.5,6,7]}}`
+			`{"Inputs":3,"Neurons":2,"Weights":[0,-1,2,3.5,-4,-5.5,6,7]}`
 		);
 	}
 	
