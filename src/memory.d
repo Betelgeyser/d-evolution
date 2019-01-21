@@ -80,7 +80,7 @@ struct Block
 		_isAllocated = isAllocated;
 	}
 	
-	this(void* ptr, in size_t size, in bool isAllocated = false, void* prev = null, void* next = null) @nogc nothrow pure @safe
+	this(void* ptr, in size_t size, in bool isAllocated = false, void* prev = null, void* next = null) @nogc nothrow pure
 	{
 		_ptr         = ptr;
 		_size        = size;
@@ -107,7 +107,7 @@ struct Block
 	/**
 	 * Returns: Pointer to the memory block.
 	 */
-	@property void* ptr() @nogc nothrow pure @safe
+	@property void* ptr() @nogc nothrow pure
 	{
 		return _ptr;
 	}
@@ -123,7 +123,7 @@ struct Block
 	/**
 	 * Returns: Pointer of (not 'to') the previous adjucent block.
 	 */
-	@property void* prev() @nogc nothrow pure @safe
+	@property void* prev() @nogc nothrow pure
 	{
 		return _prev;
 	}
@@ -131,7 +131,7 @@ struct Block
 	/**
 	 * Returns: Pointer of (not 'to') the next adjucent block.
 	 */
-	@property void* next() @nogc nothrow pure @safe
+	@property void* next() @nogc nothrow pure
 	{
 		return _next;
 	}
