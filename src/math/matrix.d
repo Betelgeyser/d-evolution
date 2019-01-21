@@ -76,10 +76,12 @@ struct Matrix
 {
 	alias values this;
 	
-	// TODO: Pointer should not be reassignable.
-	float[] values; /// A pointer to an allocated memory.
-	
+	/**
+	 * Returns: Array of stored values.
+	 */
+	@property inout(float[]) values() inout @nogc nothrow pure @safe
 	{
+		return _values;
 	}
 	
 	/**
@@ -108,8 +110,8 @@ struct Matrix
 		_rows = rows;
 		_cols = cols;
 		
-		version(UMM) values = UMM.allocate!float(_rows * _cols);
-		else cudaMallocManaged(values, _rows * _cols);
+		version(UMM) _values = UMM.allocate!float(_rows * _cols);
+		else cudaMallocManaged(_values, _rows * _cols);
 	}
 	
 	///
@@ -149,8 +151,8 @@ struct Matrix
 		string firstLine = matchFirst(csv, firstLineCTR)[0];
 		_cols = firstLine.count(",").to!uint + 1;
 		
-		version(UMM) values = UMM.allocate!float(_rows * _cols);
-		else cudaMallocManaged(values, _rows * _cols);
+		version(UMM) _values = UMM.allocate!float(_rows * _cols);
+		else cudaMallocManaged(_values, _rows * _cols);
 		
 		size_t i = 0;
 		foreach (record; csv.csvReader!float)
@@ -285,12 +287,15 @@ struct Matrix
 		_rows = rows;
 		_cols = cols;
 		
-		values = origin;
+		_values = origin;
+	}
 	
 	private
 	{
 		uint _rows; /// Number of rows.
 		uint _cols; /// Number of columns.
+		
+		private float[] _values; /// Array of stored values.
 	}
 	
 	invariant
@@ -308,8 +313,8 @@ struct Matrix
 	 */
 	void freeMem() nothrow
 	{
-		version(UMM) UMM.free(values);
-		else cudaFree(values);
+		version(UMM) UMM.free(_values);
+		else cudaFree(_values);
 	}
 	
 	/**
