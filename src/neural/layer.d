@@ -61,9 +61,9 @@ struct LayerParams
 {
 	uint  inputs;  /// Number of layer input connections.
 	uint  neurons; /// Number of neurons.
-
-	float min = -1; /// Minimum generated weight.
-	float max =  1; /// Maximum generated weight.
+	
+	float min = -1.0; /// Minimum generated weight.
+	float max =  1.0; /// Maximum generated weight.
 	
 	invariant
 	{
