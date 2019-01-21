@@ -20,6 +20,7 @@ module neural.network;
 // Standard D modules
 import std.algorithm : all, each, swap;
 import std.exception : enforce;
+import std.json      : JSONValue;
 import std.math      : isFinite;
 import std.string    : format;
 
@@ -40,6 +41,7 @@ immutable float biasWeight = 1.0; /// Weight of every bias connection.
 version (unittest)
 {
 	import std.algorithm : equal;
+	import std.json      : toJSON;
 	import std.math      : approxEqual;
 	
 	private cublasHandle_t cublasHandle;
@@ -442,6 +444,40 @@ struct Network
 					assert (w >= _min && w <= _max);
 				}
 		}
+	}
+	
+	JSONValue json()
+	{
+		JSONValue network = [
+			"Inputs" : inputs,
+			"Depth" : depth,
+			"Outputs" : outputs,
+			"Width" : width
+		];
+		
+		JSONValue[] l;
+		foreach(la; layers)
+			l ~= la.json();
+		
+		network["Layers"] = l;
+		
+		JSONValue result = ["Network" : network];
+		
+		return result;
+	}
+	
+	unittest
+	{
+		mixin(writeTest!toJSON);
+		
+		auto pool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, 0, 1000);
+		NetworkParams params = { layers : 4, inputs : 2, neurons : 3, outputs : 1 };
+		Network network = Network(params, pool);
+		scope(exit) network.freeMem();
+		
+		auto js = network.json;
+		
+		writeln(js.toJSON);
 	}
 }
 
