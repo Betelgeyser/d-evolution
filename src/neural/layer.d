@@ -125,14 +125,6 @@ struct Layer
 	}
 	
 	/**
-	 * Returns: The size of the memory in bytes.
-	 */
-	@property size_t size() const @nogc nothrow pure @safe
-	{
-		return _weights.size;
-	}
-	
-	/**
 	 * Consctroctor with random initialization.
 	 *
 	 * Params:
@@ -211,13 +203,6 @@ struct Layer
 	 *     activate = If set to `true` activation function will be applied to the result.
 	 */
 	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle, in bool activate = true) const nothrow
-	in
-	{
-		assert (inputs.cols   == connectionsLength);
-		assert (inputs.rows   == outputs.rows);
-		assert (neuronsLength == outputs.cols);
-	}
-	body
 	{
 		gemm(inputs, false, _weights, false, outputs, cublasHandle);
 		
