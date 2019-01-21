@@ -160,17 +160,6 @@ struct Population
 	}
 	
 	/**
-	 * Returns: The required size of the population in bytes.
-	 *
-	 * The required size means that total amount of memory is counted including additional memory to store offspring and
-	 * other implementation details.
-	 */
-	@property size_t size() const @nogc nothrow
-	{
-		return _individuals.length * _individuals[0].size;
-	}
-	
-	/**
 	 * Returns: The number of the current generation, where 0 means initial generation.
 	 */
 	@property ulong generation() const @nogc nothrow pure @safe

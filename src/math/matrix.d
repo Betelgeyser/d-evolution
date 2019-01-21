@@ -347,12 +347,12 @@ struct Matrix
 	inout(Matrix) colSlice(in uint i, in uint j) inout nothrow pure @safe
 	{
 		if (j > _cols)
-			throw new RangeError("Matrix size is %dx%d, but %d column is indexed.".format(_rows, _cols, j));
+			throw new RangeError("Matrix range violation.");
 		
 		if (i >= j)
-			throw new RangeError("Invalid range [%d, %d].".format(i, j));
+			throw new RangeError("Invalid slice boundaries.");
 		
-		return inout Matrix(_rows, j - i, values[i * _rows .. j * _rows]);
+		return inout Matrix(rows, j - i, values[i * rows .. j * rows]);
 	}
 	
 	///
