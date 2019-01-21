@@ -105,16 +105,7 @@ struct Matrix
 		return values[i + j * _rows] = value;
 	}
 	
-	private
 	{
-		uint _rows; /// Number of rows.
-		uint _cols; /// Number of columns.
-	}
-	
-	invariant
-	{
-		assert (_rows >= 1 && _cols >= 1, "Matrix size must be at least 1x1, got %dx%d".format(_rows, _cols));
-	}
 	
 	/**
 	 * Returns: The number of rows.
@@ -281,6 +272,16 @@ struct Matrix
 		_cols = cols;
 		
 		values = origin;
+	
+	private
+	{
+		uint _rows; /// Number of rows.
+		uint _cols; /// Number of columns.
+	}
+	
+	invariant
+	{
+		assert (_rows >= 1 && _cols >= 1, "Matrix size must be at least 1x1, got %dx%d".format(_rows, _cols));
 	}
 	
 	/**
