@@ -136,6 +136,33 @@ struct Matrix
 	}
 	
 	/**
+	 * Wraps an array into a matrix.
+	 *
+	 * Or, could be used to create a new matrix from a part of another one.
+	 *
+	 * Params:
+	 *     rows = Number of rows.
+	 *     cols = Number of columns.
+	 *     origin = Array to create matrix from.
+	 */
+	this(in uint rows, in uint cols, inout(float[]) values) @nogc inout nothrow pure @safe
+	{
+		if (values is null)
+			throw new Error("Creating a matrix from null array.");
+		
+		if (rows < 1 || cols < 1)
+			throw new Error("Wrong matrix size.");
+		
+		if (rows * cols != values.length)
+			throw new Error("Wrong matrix lenght.");
+		
+		_rows = rows;
+		_cols = cols;
+		
+		_values = values;
+	}
+	
+	/**
 	 * Create a matrix and allocate memory for it from csv data.
 	 *
 	 * Params:
@@ -264,30 +291,6 @@ struct Matrix
 	@property inout(float*) ptr() inout @nogc nothrow pure
 	{
 		return _values.ptr;
-	}
-	
-	/**
-	 * Wraps an array into a matrix.
-	 *
-	 * Or, could be used to create a new matrix from a part of another one.
-	 *
-	 * Params:
-	 *     rows = Number of rows.
-	 *     cols = Number of columns.
-	 *     origin = Array to create matrix from.
-	 */
-	private this(in uint rows, in uint cols, inout(float[]) origin) inout nothrow pure @safe
-	in
-	{
-		assert (origin.length == cols * rows, "Matrix size is %dx%d, but got %d elements.".format(rows, cols, origin.length));
-		assert (rows >= 1 && cols >= 1, "Matrix size must be at least 1x1, got %dx%d".format(rows, cols));
-	}
-	body
-	{
-		_rows = rows;
-		_cols = cols;
-		
-		_values = origin;
 	}
 	
 	private
