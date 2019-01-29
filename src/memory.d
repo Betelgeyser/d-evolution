@@ -18,8 +18,9 @@
 module memory; // TODO: All contents of this module are non thread-safe!
 
 /*
- * TODO: Use associative arrays (hashmaps) to free block at O(n) and then append them list of free blocks.
- * One more option is to use self balancing binary search tree for free blocks to speed up searching of a sufficient free block.
+ * TODO: Use associative arrays (hashmaps) to free block at O(1) and then append them to the list of free blocks.
+ * One more option is to use self balancing binary search tree for freeing blocks to speed up searching of a sufficient
+ * free block.
  */
 
 // Standard D modules
