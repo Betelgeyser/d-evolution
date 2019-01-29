@@ -192,7 +192,6 @@ void main(string[] args)
 	scope(exit) population.freeMem();
 	
 	writeln(" [ " ~ "done".ansiFormat(ANSIColor.green) ~ " ]");
-	writeln("\tEstimated memory usage: " ~ population.size.humanReadable.ansiFormat(ANSIColor.white));
 	
 	writeln("\tTime limit is set to " ~ "%s".ansiFormat(ANSIColor.white).format(timeLimit.seconds()));
 	
@@ -292,56 +291,9 @@ void main(string[] args)
 	
 	cudaDeviceSynchronize();
 	
-//	float vMase = MASE(validationOutputsT, validationApproxT, cublasHandle);
-//	float vMae  = MAE(validationOutputsT, validationApproxT, cublasHandle);
-//	float vMpe  = MPE(validationOutputsT, validationApproxT, cublasHandle);
-//	
-//	cudaDeviceSynchronize();
-//	
-//	auto l2Outputs = Matrix(1, trainingOutputs.rows);
-//	scope(exit) l2Outputs.freeMem();
-//	
-//	auto l2Approx = Matrix(1, approx.rows);
-//	scope(exit) l2Approx.freeMem();
-//	
-//	cudaL2(trainingOutputsT, l2Outputs.values);
-//	cudaL2(approxT, l2Approx.values);
-//	
-//	cudaDeviceSynchronize();
-//	
+	import std.json;
+	auto result = population.best().json();
 	writeln();
-	writeln("Training dataset:");
-	
-	for (int i = 0; i < trainingApprox.rows; ++i)
-		if (i % 50 == 0)
-			writeln("(%g,\t%g,\t%g,\t%g)\t(%g,\t%g,\t%g,\t%g))".format(
-				trainingOutputs[i, 0],
-				trainingOutputs[i, 1],
-				trainingOutputs[i, 2],
-				trainingOutputs[i, 3],
-				trainingApprox[i, 0],
-				trainingApprox[i, 1],
-				trainingApprox[i, 2],
-				trainingApprox[i, 3]
-			));
-	
-//	writeln();
-//	writeln("Validation dataset:");
-//	writeln("Real (MPa)  , Approx (MPa)");
-//	
-//	for (int i = 0; i < validationApprox.rows; ++i)
-//		writeln("%g, %g".format(validationOutputs[i, 0], validationApprox[i, 0]));
-//	writeln("\tTraning dataset:"
-//		~ " best MASE = " ~ "%g".ansiFormat(ANSIColor.white).format(tMase)
-//		~ ", best MAE = " ~ "%g".ansiFormat(ANSIColor.white).format(tMae)
-//		~ ", best MPE = " ~ "%g%%".ansiFormat(ANSIColor.white).format(tMpe)
-//	);
-//	writeln("\tValidation dataset:"
-//		~ " best MASE = " ~ "%g".ansiFormat(ANSIColor.white).format(vMase)
-//		~ ", best MAE = " ~ "%g".ansiFormat(ANSIColor.white).format(vMae)
-//		~ ", best MPE = " ~ "%g%%".ansiFormat(ANSIColor.white).format(vMpe)
-//	);
-	writeln();
-	writeln("Best solution so far is ", population.best());
+	writeln("Best solution so far is ", result.toJSON());
 }}
 
