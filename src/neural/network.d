@@ -285,8 +285,8 @@ struct Network
 	void opCall(in Matrix inputs, Matrix outputs, cublasHandle_t cublasHandle) const
 	{
 		enforce(
-			inputs.cols == this.inputs - biasLength,
-			"Inputs must have %d columns, got %d".format(this.inputs - biasLength, inputs.cols)
+			inputs.cols == this.inputs,
+			"Inputs must have %d columns, got %d".format(this.inputs, inputs.cols)
 		);
 		
 		auto inputsE = Matrix(inputs.rows, inputs.cols + biasLength); // Extended
