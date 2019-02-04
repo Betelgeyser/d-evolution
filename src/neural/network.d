@@ -41,7 +41,7 @@ immutable float biasWeight = 1.0; /// Weight of every bias connection.
 version (unittest)
 {
 	import std.algorithm : equal;
-	import std.json      : toJSON;
+	import std.json      : parseJSON, toJSON;
 	import std.math      : approxEqual;
 	
 	private cublasHandle_t cublasHandle;
