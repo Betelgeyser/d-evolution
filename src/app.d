@@ -16,12 +16,13 @@
 
 // Standard D modules
 import core.time              : Duration, minutes, seconds;
+import std.conv               : ConvException, to;
 import std.datetime.stopwatch : StopWatch;
 import std.file               : readText;
 import std.getopt             : defaultGetoptPrinter, getopt;
 import std.math               : approxEqual, isFinite, lround;
 import std.random             : unpredictableSeed;
-import std.stdio              : stdout, write, writeln;
+import std.stdio              : stderr, stdout, write, writeln;
 import std.string             : format;
 
 // Cuda modules
@@ -36,13 +37,38 @@ import math.matrix          : Matrix, transpose;
 import math.random          : RandomPool;
 import math.statistics      : MAE, MPE;
 
+class CLIException : Exception
+{
+	this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) @nogc nothrow pure @safe
+	{
+		super(msg, file, line, nextInChain);
+	}
+	
+	this(string msg, Throwable nextInChain, string file = __FILE__, size_t line = __LINE__) @nogc nothrow pure @safe
+	{
+		super(msg, file, line, nextInChain);
+	}
+}
+
+uint seed; /// Seed for the PRNG.
+
+void parseSeed(string option, string value)
+{
+	if (value != "random")
+		try
+			seed = value.to!uint;
+		catch (ConvException e)
+			throw new CLIException("Unrecognized seed value. Seed must be an unsigned integer or \"random\". Use --help for more information.", e);
+}
+
 void main(string[] args)
 {
 	version (unittest) {} else {
+	seed = unpredictableSeed(); // Default runtime initialization. unpredictableSeed cannot be determined at compile time.
 	uint   device;         /// GPU device to use.
-	uint   timeLimit;      /// Time limit to train ANN, seconds.
 	uint   populationSize; /// Population size.
 	uint   report;         /// Report every X generation.
+	uint   timeLimit;      /// Time limit to train ANN, seconds.
 	string fitnessString;  /// Error function.
 	string pathToData;     /// Path to the folder cointaining datasets. Must be of the specific structure.
 	
@@ -56,25 +82,36 @@ void main(string[] args)
 	
 	immutable helpString = "Use " ~ args[0] ~ " --help for help.";
 	
-	auto opts = getopt(
-		args,
-		"path",         "Path to data directory.",                   &pathToData,
-		"device|d",     "GPU device to use.",                        &device,
-		"time|t",       "Time limit, seconds.",                      &timeLimit,
-		"layers|l",     "Number of layers.",                         &layers,
-		"neurons|n",    "Number of neurons.",                        &neurons,
-		"population|p", "Population multiplier.",                    &populationSize,
-		"report|r",     "Print training report every X generations", &report,
-		"fitness-function|f", "Fitness function. Available values: MAE (default), MPE", &fitnessString,
-		"min",          "Minimum connection weight.",                &min,
-		"max",          "Maximum connection weight.",                &max
-	);
-	
-	if (opts.helpWanted)
+	try
 	{
-		defaultGetoptPrinter("\n\tDNN is D Neural Network. It uses neuroevolution to learn.\n", opts.options);
+		auto opts = getopt(
+			args,
+			"path",         "Path to the data directory.",               &pathToData,
+			"device|d",     "GPU device to use.",                        &device,
+			"time|t",       "Time limit, seconds.",                      &timeLimit,
+			"layers|l",     "Number of layers.",                         &layers,
+			"neurons|n",    "Number of neurons.",                        &neurons,
+			"population|p", "Population size.",                          &populationSize,
+			"report|r",     "Print training report every X generations", &report,
+			"fitness-function|f", "Fitness function. Available values: MAE (default), MPE", &fitnessString,
+			"min",          "Minimum connection weight.",                &min,
+			"max",          "Maximum connection weight.",                &max,
+			"seed|s",       "Seed for the PRNG. May be set to a specific unsigned integer number or \"random\" (default).", &parseSeed
+		);
+		
+		if (opts.helpWanted)
+		{
+			defaultGetoptPrinter("\n\tDNN is D Neural Network. It uses neuroevolution to learn.\n", opts.options);
+			return;
+		}
+	}
+	catch(CLIException e)
+	{
+		stderr.writeln(e.msg);
 		return;
 	}
+	
+	writeln("PRNG seed is set to %d.".ansiFormat(ANSIColor.white).format(seed));
 	
 	if (device >= cudaGetDeviceCount())
 	{
