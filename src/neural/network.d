@@ -468,8 +468,11 @@ struct Network
 	{
 		scope(failure) freeMem();
 		
-		foreach(i, l; json["Layers"].array)
-			_layers ~= Layer(l);
+		auto JSONLayers = json["Layers"].array;
+		
+		_layers = nogcMalloc!Layer(JSONLayers.length);
+		foreach(i, l; JSONLayers)
+			_layers[i] = Layer(l);
 		
 		// Todo: check parameters.
 	}
@@ -505,7 +508,7 @@ struct Network
 		JSONValue json = parseJSON(str);
 		
 		auto network = Network(json);
-	//	scope(exit) network.freeMem();
+		scope(exit) network.freeMem();
 		
 		with (network)
 		{
@@ -549,7 +552,7 @@ struct Network
 		JSONValue json = parseJSON(str);
 		
 		auto network = Network(json);
-//		scope(exit) network.freeMem(); /// WTF why it's chashing
+		scope(exit) network.freeMem();
 		
 		auto networkJSON = network.json;
 		
