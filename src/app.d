@@ -50,22 +50,33 @@ class CLIException : Exception
 	}
 }
 
-uint seed; /// Seed for the PRNG.
+uint seed;   /// Seed for the PRNG.
+uint device; /// GPU device to use.
 
-void parseSeed(string option, string value)
+void parseSeed(string option, string value) @safe
 {
-	if (value != "random")
+	if (value != "random") // "random" is a valid value
 		try
 			seed = value.to!uint;
 		catch (ConvException e)
-			throw new CLIException("Unrecognized seed value. Seed must be an unsigned integer or \"random\". Use --help for more information.", e);
+			throw new CLIException("seed must be a positive integer value or \"random\".", e);
+}
+
+void parseDevice(string option, string value)
+{
+	try
+		device = value.to!uint;
+	catch (ConvException e)
+		throw new CLIException("invalid device id.");
+	
+	if (device >= cudaGetDeviceCount())
+		throw new CLIException("invalid device id.");
 }
 
 void main(string[] args)
 {
 	version (unittest) {} else {
 	seed = unpredictableSeed(); // Default runtime initialization. unpredictableSeed cannot be determined at compile time.
-	uint   device;         /// GPU device to use.
 	uint   populationSize; /// Population size.
 	uint   report;         /// Report every X generation.
 	uint   timeLimit;      /// Time limit to train ANN, seconds.
@@ -87,7 +98,7 @@ void main(string[] args)
 		auto opts = getopt(
 			args,
 			"path",         "Path to the data directory.",               &pathToData,
-			"device|d",     "GPU device to use.",                        &device,
+			"device|d",     "GPU device to use.",                        &parseDevice,
 			"time|t",       "Time limit, seconds.",                      &timeLimit,
 			"layers|l",     "Number of layers.",                         &layers,
 			"neurons|n",    "Number of neurons.",                        &neurons,
@@ -107,17 +118,11 @@ void main(string[] args)
 	}
 	catch(CLIException e)
 	{
-		stderr.writeln(e.msg);
+		stderr.writeln("Abort: %s Use --help for more information.".format(e.msg));
 		return;
 	}
 	
 	writeln("PRNG seed is set to %d.".ansiFormat(ANSIColor.white).format(seed));
-	
-	if (device >= cudaGetDeviceCount())
-	{
-		writeln("%d GPU device is not found.".format(device));
-		return;
-	}
 	
 	if (neurons < 2) // Why 2? Isn't 1 sufficient?
 	{
