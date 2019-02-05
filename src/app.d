@@ -20,6 +20,7 @@ import std.conv               : ConvException, to;
 import std.datetime.stopwatch : StopWatch;
 import std.file               : readText;
 import std.getopt             : defaultGetoptPrinter, getopt;
+import std.json               : toJSON;
 import std.math               : approxEqual, isFinite, lround;
 import std.random             : unpredictableSeed;
 import std.stdio              : stderr, stdout, write, writeln;
@@ -301,43 +302,14 @@ void main(string[] args)
 	}
 	stopWatch.stop();
 	
-//	auto trainingOutputsT = Matrix(trainingOutputs.cols, trainingOutputs.rows);
-//	scope(exit) trainingOutputsT.freeMem();
-//	
-//	auto validationOutputsT = Matrix(validationOutputs.cols, validationOutputs.rows);
-//	scope(exit) validationOutputsT.freeMem();
-//	
 	auto trainingApprox = Matrix(trainingOutputs.rows, trainingOutputs.cols);
 	scope(exit) trainingApprox.freeMem();
-//	
-//	auto trainingApproxT = Matrix(trainingOutputs.cols, trainingOutputs.rows);
-//	scope(exit) trainingApproxT.freeMem();
-//	
+	
 	auto validationApprox = Matrix(validationOutputs.rows, validationOutputs.cols);
 	scope(exit) validationApprox.freeMem();
-//	
-//	auto validationApproxT = Matrix(validationOutputs.cols, validationOutputs.rows);
-//	scope(exit) validationApproxT.freeMem();
-//	
-	population.best()(trainingInputs, trainingApprox, cublasHandle);
-	
-//	transpose(trainingOutputs, trainingOutputsT, cublasHandle);
-//	transpose(trainingApprox, trainingApproxT, cublasHandle);
 	
 	cudaDeviceSynchronize();
 	
-//	float tMase = MASE(trainingOutputsT, trainingApproxT, cublasHandle);
-//	float tMae  = MAE(trainingOutputsT, trainingApproxT, cublasHandle);
-//	float tMpe  = MPE(trainingOutputsT, trainingApproxT, cublasHandle);
-//	
-//	cudaDeviceSynchronize();
-//	
-	population.best()(validationInputs, validationApprox, cublasHandle);
-//	transpose(validationApprox, validationApproxT, cublasHandle);
-	
-	cudaDeviceSynchronize();
-	
-	import std.json;
 	auto result = population.best().json();
 	writeln();
 	writeln("Best solution so far is ", result.toJSON());
