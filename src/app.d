@@ -50,8 +50,11 @@ class CLIException : Exception
 	}
 }
 
-uint seed;   /// Seed for the PRNG.
 uint device; /// GPU device to use.
+uint seed;   /// Seed for the PRNG.
+
+/// Pointer to a fitness function used in training.
+float function(in Matrix, in Matrix, cublasHandle_t) fitnessFunction = &MAE;
 
 void parseSeed(string option, string value) @safe
 {
@@ -73,6 +76,23 @@ void parseDevice(string option, string value)
 		throw new CLIException("invalid device id.");
 }
 
+void parseFitness(string option, string value)
+{
+	switch (value)
+	{
+		case "MAE":
+			fitnessFunction = &MAE;
+			break;
+		
+		case "MPE":
+			fitnessFunction = &MPE;
+			break;
+		
+		default:
+			throw new CLIException("invalid fitness function.");
+	}
+}
+
 void main(string[] args)
 {
 	version (unittest) {} else {
@@ -80,7 +100,6 @@ void main(string[] args)
 	uint   populationSize; /// Population size.
 	uint   report;         /// Report every X generation.
 	uint   timeLimit;      /// Time limit to train ANN, seconds.
-	string fitnessString;  /// Error function.
 	string pathToData;     /// Path to the folder cointaining datasets. Must be of the specific structure.
 	
 	// Network parameters
@@ -104,7 +123,7 @@ void main(string[] args)
 			"neurons|n",    "Number of neurons.",                        &neurons,
 			"population|p", "Population size.",                          &populationSize,
 			"report|r",     "Print training report every X generations", &report,
-			"fitness-function|f", "Fitness function. Available values: MAE (default), MPE", &fitnessString,
+			"fitness-function|f", "Fitness function. Available values: MAE (default), MPE", &parseFitness,
 			"min",          "Minimum connection weight.",                &min,
 			"max",          "Maximum connection weight.",                &max,
 			"seed|s",       "Seed for the PRNG. May be set to a specific unsigned integer number or \"random\" (default).", &parseSeed
@@ -158,18 +177,6 @@ void main(string[] args)
 	{
 		writeln("Population must be at leats 2 individuals.");
 		return;
-	}
-	
-	if (fitnessString != "")
-	{
-		if (fitnessString == "MAE")
-			fitnessFunction = &MAE;
-		
-		if (fitnessString == "MPE")
-			fitnessFunction = &MPE;
-		
-//		if (fitnessString == "MASE")
-//			fitnessFunction = &MASE;
 	}
 	
 	cudaSetDevice(device);
