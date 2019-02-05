@@ -181,9 +181,6 @@ void main(string[] args)
 	
 	cudaSetDevice(device);
 	
-	immutable seed = unpredictableSeed();
-	writeln("Random seed = %d".ansiFormat(ANSIColor.white).format(seed));
-	
 	auto pool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, seed);
 	scope(exit) pool.freeMem();
 	
