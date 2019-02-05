@@ -251,6 +251,118 @@ struct Network
 		}
 	}
 	
+	this(in JSONValue json)
+	{
+		scope(failure) freeMem();
+		
+		auto JSONLayers = json["Layers"].array;
+		
+		_layers = nogcMalloc!Layer(JSONLayers.length);
+		foreach(i, l; JSONLayers)
+			_layers[i] = Layer(l);
+	}
+	
+	unittest
+	{
+		mixin(writeTest!__ctor);
+		
+		immutable string str = `{
+			"Inputs": 3,
+			"Depth": 3,
+			"Width": 2,
+			"Outputs": 1,
+			"Layers": [
+				{
+					"Inputs": 3,
+					"Neurons": 2,
+					"Weights": [0, 1, 2, 3, 4, 5, 6, 7]
+				},
+				{
+					"Inputs": 2,
+					"Neurons": 2,
+					"Weights": [0, 1, 2, 3, 4, 5]
+				},
+				{
+					"Inputs": 2,
+					"Neurons": 1,
+					"Weights": [0, 1, 2]
+				}
+			]
+		}`;
+		
+		JSONValue json = parseJSON(str);
+		
+		auto network = Network(json);
+		scope(exit) network.freeMem();
+		
+		with (network)
+		{
+			assert (inputs  == 3);
+			assert (width   == 2);
+			assert (depth   == 3);
+			assert (outputs == 1);
+		}
+	}
+	
+	JSONValue json() const
+	{
+		JSONValue result = [
+			"Inputs" : inputs,
+			"Depth" : depth,
+			"Outputs" : outputs,
+			"Width" : width
+		];
+		
+		JSONValue[] layersJSON;
+		foreach(layer; layers)
+			layersJSON ~= layer.json();
+		
+		result["Layers"] = layersJSON;
+		
+		return result;
+	}
+	
+	unittest
+	{
+		mixin(writeTest!json);
+		
+		immutable string str = `{
+			"Inputs": 3,
+			"Depth": 3,
+			"Width": 2,
+			"Outputs": 1,
+			"Layers": [
+				{
+					"Inputs": 3,
+					"Neurons": 2,
+					"Weights": [0, 1, 2, 3, 4, 5, 6, 7]
+				},
+				{
+					"Inputs": 2,
+					"Neurons": 2,
+					"Weights": [0, 1, 2, 3, 4, 5]
+				},
+				{
+					"Inputs": 2,
+					"Neurons": 1,
+					"Weights": [0, 1, 2]
+				}
+			]
+		}`;
+		
+		JSONValue json = parseJSON(str);
+		
+		auto network = Network(json);
+		scope(exit) network.freeMem();
+		
+		auto networkJSON = network.json;
+		
+		assert (
+			networkJSON.toJSON ==
+			`{"Depth":3,"Inputs":3,"Layers":[{"Inputs":3,"Neurons":2,"Weights":[0,1,2,3,4,5,6,7]},{"Inputs":2,"Neurons":2,"Weights":[0,1,2,3,4,5]},{"Inputs":2,"Neurons":1,"Weights":[0,1,2]}],"Outputs":1,"Width":2}`
+		);
+	}
+	
 	/**
 	 * Free memory.
 	 *
@@ -444,122 +556,6 @@ struct Network
 					assert (w >= _min && w <= _max);
 				}
 		}
-	}
-	
-	JSONValue json() const
-	{
-		JSONValue result = [
-			"Inputs" : inputs,
-			"Depth" : depth,
-			"Outputs" : outputs,
-			"Width" : width
-		];
-		
-		JSONValue[] layersJSON;
-		foreach(layer; layers)
-			layersJSON ~= layer.json();
-		
-		result["Layers"] = layersJSON;
-		
-		return result;
-	}
-	
-	this(in JSONValue json)
-	{
-		scope(failure) freeMem();
-		
-		auto JSONLayers = json["Layers"].array;
-		
-		_layers = nogcMalloc!Layer(JSONLayers.length);
-		foreach(i, l; JSONLayers)
-			_layers[i] = Layer(l);
-		
-		// Todo: check parameters.
-	}
-	
-	unittest
-	{
-		mixin(writeTest!__ctor);
-		
-		immutable string str = `{
-			"Inputs": 3,
-			"Depth": 3,
-			"Width": 2,
-			"Outputs": 1,
-			"Layers": [
-				{
-					"Inputs": 3,
-					"Neurons": 2,
-					"Weights": [0, 1, 2, 3, 4, 5, 6, 7]
-				},
-				{
-					"Inputs": 2,
-					"Neurons": 2,
-					"Weights": [0, 1, 2, 3, 4, 5]
-				},
-				{
-					"Inputs": 2,
-					"Neurons": 1,
-					"Weights": [0, 1, 2]
-				}
-			]
-		}`;
-		
-		JSONValue json = parseJSON(str);
-		
-		auto network = Network(json);
-		scope(exit) network.freeMem();
-		
-		with (network)
-		{
-			assert (inputs  == 3);
-			assert (width   == 2);
-			assert (depth   == 3);
-			assert (outputs == 1);
-		}
-	}
-
-
-	
-	unittest
-	{
-		mixin(writeTest!json);
-		
-		immutable string str = `{
-			"Inputs": 3,
-			"Depth": 3,
-			"Width": 2,
-			"Outputs": 1,
-			"Layers": [
-				{
-					"Inputs": 3,
-					"Neurons": 2,
-					"Weights": [0, 1, 2, 3, 4, 5, 6, 7]
-				},
-				{
-					"Inputs": 2,
-					"Neurons": 2,
-					"Weights": [0, 1, 2, 3, 4, 5]
-				},
-				{
-					"Inputs": 2,
-					"Neurons": 1,
-					"Weights": [0, 1, 2]
-				}
-			]
-		}`;
-		
-		JSONValue json = parseJSON(str);
-		
-		auto network = Network(json);
-		scope(exit) network.freeMem();
-		
-		auto networkJSON = network.json;
-		
-		assert (
-			networkJSON.toJSON ==
-			`{"Depth":3,"Inputs":3,"Layers":[{"Inputs":3,"Neurons":2,"Weights":[0,1,2,3,4,5,6,7]},{"Inputs":2,"Neurons":2,"Weights":[0,1,2,3,4,5]},{"Inputs":2,"Neurons":1,"Weights":[0,1,2]}],"Outputs":1,"Width":2}`
-		);
 	}
 }
 
