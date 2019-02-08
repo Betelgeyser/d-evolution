@@ -18,8 +18,9 @@
 import core.time              : Duration, minutes, seconds;
 import std.conv               : ConvException, to;
 import std.datetime.stopwatch : StopWatch;
+import std.exception          : basicExceptionCtors;
 import std.file               : readText;
-import std.getopt             : defaultGetoptPrinter, getopt;
+import std.getopt             : defaultGetoptPrinter, getopt, GetOptException;
 import std.json               : toJSON;
 import std.math               : approxEqual, isFinite, lround;
 import std.random             : unpredictableSeed;
@@ -38,17 +39,9 @@ import math.matrix          : Matrix, transpose;
 import math.random          : RandomPool;
 import math.statistics      : MAE, MPE;
 
-class CLIException : Exception
+class CLIException : GetOptException
 {
-	this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable nextInChain = null) @nogc nothrow pure @safe
-	{
-		super(msg, file, line, nextInChain);
-	}
-	
-	this(string msg, Throwable nextInChain, string file = __FILE__, size_t line = __LINE__) @nogc nothrow pure @safe
-	{
-		super(msg, file, line, nextInChain);
-	}
+	mixin basicExceptionCtors;
 }
 
 uint device; /// GPU device to use.
@@ -63,7 +56,7 @@ void parseSeed(string option, string value) @safe
 		try
 			seed = value.to!uint;
 		catch (ConvException e)
-			throw new CLIException("seed must be a positive integer value or \"random\".", e);
+			throw new CLIException("Seed must be a positive integer value or \"random\"", e);
 }
 
 void parseDevice(string option, string value)
@@ -71,14 +64,17 @@ void parseDevice(string option, string value)
 	try
 		device = value.to!uint;
 	catch (ConvException e)
-		throw new CLIException("invalid device id.");
+		throw new CLIException("Invalid device id");
 	
 	if (device >= cudaGetDeviceCount())
-		throw new CLIException("invalid device id.");
+		throw new CLIException("Invalid device id");
 }
 
 void parseFitness(string option, string value)
 {
+	if (!trainingMode)
+		throw new CLIException("--fitness-function optione is avaliable in the training mode only");
+	
 	switch (value)
 	{
 		case "MAE":
@@ -90,7 +86,7 @@ void parseFitness(string option, string value)
 			break;
 		
 		default:
-			throw new CLIException("invalid fitness function.");
+			throw new CLIException("Invalid fitness function");
 	}
 }
 
@@ -136,9 +132,9 @@ void main(string[] args)
 			return;
 		}
 	}
-	catch(CLIException e)
+	catch(GetOptException e)
 	{
-		stderr.writeln("Abort: %s Use --help for more information.".format(e.msg));
+		stderr.writeln("Abort: %s. Use --help for more information.".format(e.msg));
 		return;
 	}
 	
