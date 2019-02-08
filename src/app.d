@@ -37,7 +37,7 @@ import common               : ANSIColor, ansiFormat, humanReadable;
 import evolution.population : NetworkParams, Population;
 import math.matrix          : Matrix, transpose;
 import math.random          : RandomPool;
-import math.statistics      : MAE, MPE;
+import math.statistics      : MAE, MAPE;
 
 class CLIException : GetOptException
 {
@@ -85,8 +85,8 @@ void parseFitness(string option, string value)
 			fitnessFunction = &MAE;
 			break;
 		
-		case "MPE":
-			fitnessFunction = &MPE;
+		case "MAPE":
+			fitnessFunction = &MAPE;
 			break;
 		
 		default:

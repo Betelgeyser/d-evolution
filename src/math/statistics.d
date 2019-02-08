@@ -191,24 +191,25 @@ unittest
  * See_also:
  *     $(LINK https://en.wikipedia.org/wiki/Mean_percentage_error)
  */
-float MPE(in Matrix A, in Matrix B, cublasHandle_t cublasHandle)
+float MAPE(in Matrix actual, in Matrix predicted, cublasHandle_t cublasHandle)
 {
-	if (A.rows != B.rows || A.cols != B.cols)
-		throw new Error("Input matricies must have same size, got %dx%d and %dx%d.".format(A.rows, A.cols, B.rows, B.cols));
+	if (actual.rows != predicted.rows || actual.cols != predicted.cols)
+		throw new Error("Input matricies must have same size, got %dx%d and %dx%d."
+		.format(actual.rows, actual.cols, predicted.rows, predicted.cols));
 	
-	auto error = Matrix(A.rows, 1);
-	scope(exit) error.freeMem();
+	auto absError = Matrix(actual.rows, 1);
+	scope(exit) absError.freeMem();
 	
-	auto C = Matrix(A.rows, 1);
-	scope(exit) C.freeMem();
+	auto actualNorm = Matrix(actual.rows, 1);
+	scope(exit) actualNorm.freeMem();
 	
-	AE(A, B, error, cublasHandle);
-	cudaL2(A, C);
+	AE(actual, predicted, absError, cublasHandle);
+	cudaL2(actual, actualNorm);
 	cudaDeviceSynchronize();
 	
 	float result = 0;
-	foreach (i, v; error.values)
-		result += error[i] / C[i] / error.length;
+	foreach (i, v; absError.values)
+		result += absError[i] / actualNorm[i] / absError.length;
 	
 	return result * 100;
 }
