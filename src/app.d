@@ -44,14 +44,18 @@ class CLIException : GetOptException
 	mixin basicExceptionCtors;
 }
 
-uint device; /// GPU device to use.
-uint seed;   /// Seed for the PRNG.
+bool trainingMode; /// If $(D_KEYWORD true), then dnn will run in training mode.
+uint device;       /// GPU device to use.
+uint seed;         /// Seed for the PRNG.
 
 /// Pointer to a fitness function used in training.
 float function(in Matrix, in Matrix, cublasHandle_t) fitnessFunction = &MAE;
 
 void parseSeed(string option, string value) @safe
 {
+	if (!trainingMode)
+		throw new CLIException("--seed option is avaliable for the training mode only");
+	
 	if (value != "random") // "random" is a valid value
 		try
 			seed = value.to!uint;
@@ -106,8 +110,6 @@ void main(string[] args)
 	float min;
 	float max;
 	
-	float function(in Matrix, in Matrix, cublasHandle_t) fitnessFunction = &MAE;
-	
 	immutable helpString = "Use " ~ args[0] ~ " --help for help.";
 	
 	try
@@ -121,6 +123,7 @@ void main(string[] args)
 			"neurons|n",    "Number of neurons.",                        &neurons,
 			"population|p", "Population size.",                          &populationSize,
 			"report|r",     "Print training report every X generations", &report,
+			"training",       "Run dnn in training mode.",                 &trainingMode,
 			"fitness-function|f", "Fitness function. Available values: MAE (default), MPE", &parseFitness,
 			"min",          "Minimum connection weight.",                &min,
 			"max",          "Maximum connection weight.",                &max,
@@ -180,138 +183,141 @@ void main(string[] args)
 	
 	cudaSetDevice(device);
 	
-	auto pool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, seed);
-	scope(exit) pool.freeMem();
-	
-	cublasHandle_t cublasHandle;
-	cublasCreate(cublasHandle);
-	scope(exit) cublasDestroy(cublasHandle);
-	
-	auto trainingInputs = Matrix(readText(pathToData ~ "/training/inputs.csv"));
-	scope(exit) trainingInputs.freeMem();
-	
-	auto trainingOutputs = Matrix(readText(pathToData ~ "/training/outputs.csv"));
-	scope(exit) trainingOutputs.freeMem();
-	
-	auto validationInputs = Matrix(readText(pathToData ~ "/validation/inputs.csv"));
-	scope(exit) validationInputs.freeMem();
-	
-	auto validationOutputs = Matrix(readText(pathToData ~ "/validation/outputs.csv"));
-	scope(exit) validationOutputs.freeMem();
-	
-	NetworkParams params = {
-		inputs  : trainingInputs.cols,
-		neurons : neurons,
-		outputs : trainingOutputs.cols,
-		layers  : layers,
-		min     : min,
-		max     : max
-	};
-	
-	writeln(
-		("\tNetwork parameters: "
-			~ "%d".ansiFormat(ANSIColor.white) ~ " inputs, "
-			~ "%d".ansiFormat(ANSIColor.white) ~ " hidden neurons, "
-			~ "%d".ansiFormat(ANSIColor.white) ~ " outputs, "
-			~ "%d".ansiFormat(ANSIColor.white) ~ " layers, "
-			~ "minimum weigth is " ~ "%g ".ansiFormat(ANSIColor.white)
-			~ "maximun weight is " ~ "%g. ".ansiFormat(ANSIColor.white)
-		).format(
-			params.inputs,
-			params.neurons,
-			params.outputs,
-			params.layers,
-			params.min,
-			params.max
-	));
-	
-	writeln(
-		("\tPopulation size is " ~ "%d".ansiFormat(ANSIColor.white) ~ " networks")
-			.format(populationSize)
-	);
-	
-	write("\tGenerating population...");
-	stdout.flush();
-	
-	auto population = Population(params, populationSize, pool, fitnessFunction);
-	scope(exit) population.freeMem();
-	
-	writeln(" [ " ~ "done".ansiFormat(ANSIColor.green) ~ " ]");
-	
-	writeln("\tTime limit is set to " ~ "%s".ansiFormat(ANSIColor.white).format(timeLimit.seconds()));
-	
-	StopWatch stopWatch;
-	stopWatch.start();
-	while (true)
+	if (trainingMode)
 	{
-		auto time = stopWatch.peek();
-		string reportString; /// Caching generation report prevents output from fast scrolling which causes your eyes bleed.
+		auto pool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, seed);
+		scope(exit) pool.freeMem();
 		
-		// Calculation error on training dataset. Evolution desision is based on it.
-		population.fitness(trainingInputs, trainingOutputs, cublasHandle);
+		cublasHandle_t cublasHandle;
+		cublasCreate(cublasHandle);
+		scope(exit) cublasDestroy(cublasHandle);
 		
-		if (report == 0 || population.generation % report == 0 || time >= timeLimit.seconds())
-		{
-			reportString = "\tGeneration #%d:".format(population.generation).ansiFormat(ANSIColor.white);
-			
-			reportString ~= ("\n\t\tT: best = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightGreen)
-				~ "    mean = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightYellow)
-				~ "    worst = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightRed)
+		auto trainingInputs = Matrix(readText(pathToData ~ "/training/inputs.csv"));
+		scope(exit) trainingInputs.freeMem();
+		
+		auto trainingOutputs = Matrix(readText(pathToData ~ "/training/outputs.csv"));
+		scope(exit) trainingOutputs.freeMem();
+		
+		auto validationInputs = Matrix(readText(pathToData ~ "/validation/inputs.csv"));
+		scope(exit) validationInputs.freeMem();
+		
+		auto validationOutputs = Matrix(readText(pathToData ~ "/validation/outputs.csv"));
+		scope(exit) validationOutputs.freeMem();
+		
+		NetworkParams params = {
+			inputs  : trainingInputs.cols,
+			neurons : neurons,
+			outputs : trainingOutputs.cols,
+			layers  : layers,
+			min     : min,
+			max     : max
+		};
+		
+		writeln(
+			("\tNetwork parameters: "
+				~ "%d".ansiFormat(ANSIColor.white) ~ " inputs, "
+				~ "%d".ansiFormat(ANSIColor.white) ~ " hidden neurons, "
+				~ "%d".ansiFormat(ANSIColor.white) ~ " outputs, "
+				~ "%d".ansiFormat(ANSIColor.white) ~ " layers, "
+				~ "minimum weigth is " ~ "%g ".ansiFormat(ANSIColor.white)
+				~ "maximun weight is " ~ "%g. ".ansiFormat(ANSIColor.white)
 			).format(
-				population.best.fitness,
-				population.mean,
-				population.worst
-			);
-			
-			auto validationApprox = Matrix(validationOutputs.rows, validationOutputs.cols);
-			scope(exit) validationApprox.freeMem();
-			
-			population.best()(validationInputs, validationApprox, cublasHandle);
-			
-			auto Error = fitnessFunction(validationOutputs, validationApprox, cublasHandle);
-			
-			cudaDeviceSynchronize();
-			
-			reportString ~= "\n\t\tV: best = " ~ "%e".ansiFormat(ANSIColor.green).format(Error);
-			reportString ~= "\n\t\t%s".format(timeLimit.seconds() - time) ~ " left\n";
-			
-			writeln(reportString);
-		}
+				params.inputs,
+				params.neurons,
+				params.outputs,
+				params.layers,
+				params.min,
+				params.max
+		));
 		
-		if (time >= timeLimit.seconds())
+		writeln(
+			("\tPopulation size is " ~ "%d".ansiFormat(ANSIColor.white) ~ " networks")
+				.format(populationSize)
+		);
+		
+		write("\tGenerating population...");
+		stdout.flush();
+		
+		auto population = Population(params, populationSize, pool, fitnessFunction);
+		scope(exit) population.freeMem();
+		
+		writeln(" [ " ~ "done".ansiFormat(ANSIColor.green) ~ " ]");
+		
+		writeln("\tTime limit is set to " ~ "%s".ansiFormat(ANSIColor.white).format(timeLimit.seconds()));
+		
+		StopWatch stopWatch;
+		stopWatch.start();
+		while (true)
 		{
-			writeln("\tExceeded time limit [ " ~ "stopped".ansiFormat(ANSIColor.red) ~ " ]");
-			break;
+			auto time = stopWatch.peek();
+			string reportString; /// Caching generation report prevents output from fast scrolling which causes your eyes bleed.
+			
+			// Calculation error on training dataset. Evolution desision is based on it.
+			population.fitness(trainingInputs, trainingOutputs, cublasHandle);
+			
+			if (report == 0 || population.generation % report == 0 || time >= timeLimit.seconds())
+			{
+				reportString = "\tGeneration #%d:".format(population.generation).ansiFormat(ANSIColor.white);
+				
+				reportString ~= ("\n\t\tT: best = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightGreen)
+					~ "    mean = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightYellow)
+					~ "    worst = ".ansiFormat(ANSIColor.white) ~ "%e".ansiFormat(ANSIColor.brightRed)
+				).format(
+					population.best.fitness,
+					population.mean,
+					population.worst
+				);
+				
+				auto validationApprox = Matrix(validationOutputs.rows, validationOutputs.cols);
+				scope(exit) validationApprox.freeMem();
+				
+				population.best()(validationInputs, validationApprox, cublasHandle);
+				
+				auto Error = fitnessFunction(validationOutputs, validationApprox, cublasHandle);
+				
+				cudaDeviceSynchronize();
+				
+				reportString ~= "\n\t\tV: best = " ~ "%e".ansiFormat(ANSIColor.green).format(Error);
+				reportString ~= "\n\t\t%s".format(timeLimit.seconds() - time) ~ " left\n";
+				
+				writeln(reportString);
+			}
+			
+			if (time >= timeLimit.seconds())
+			{
+				writeln("\tExceeded time limit [ " ~ "stopped".ansiFormat(ANSIColor.red) ~ " ]");
+				break;
+			}
+			
+			if (population.best.fitness <= 0.1)
+			{
+				writeln("\tAcceptable solution found [ " ~ "stopped".ansiFormat(ANSIColor.green) ~ " ]");
+				break;
+			}
+			
+//			if (approxEqual(population.best.fitness, population.worst, 1000) && approxEqual(population.best.fitness, population.mean, 1000))
+//			{
+//				writeln("\tGenetic divercity lost [ " ~ "stopped".ansiFormat(ANSIColor.red) ~ " ]");
+//				break;
+//			}
+			
+			population.evolve(pool);
 		}
+		stopWatch.stop();
 		
-		if (population.best.fitness <= 0.1)
-		{
-			writeln("\tAcceptable solution found [ " ~ "stopped".ansiFormat(ANSIColor.green) ~ " ]");
-			break;
-		}
+		auto trainingApprox = Matrix(trainingOutputs.rows, trainingOutputs.cols);
+		scope(exit) trainingApprox.freeMem();
 		
-//		if (approxEqual(population.best.fitness, population.worst, 1000) && approxEqual(population.best.fitness, population.mean, 1000))
-//		{
-//			writeln("\tGenetic divercity lost [ " ~ "stopped".ansiFormat(ANSIColor.red) ~ " ]");
-//			break;
-//		}
+		auto validationApprox = Matrix(validationOutputs.rows, validationOutputs.cols);
+		scope(exit) validationApprox.freeMem();
 		
-		population.evolve(pool);
+		cudaDeviceSynchronize();
+		
+		auto result = population.best().json();
 		auto f = File(outputFile, "w");
 		f.write(result.toJSON());
+		writeln();
+		writeln("Best solution so far is ", result.toJSON());
 	}
-	stopWatch.stop();
-	
-	auto trainingApprox = Matrix(trainingOutputs.rows, trainingOutputs.cols);
-	scope(exit) trainingApprox.freeMem();
-	
-	auto validationApprox = Matrix(validationOutputs.rows, validationOutputs.cols);
-	scope(exit) validationApprox.freeMem();
-	
-	cudaDeviceSynchronize();
-	
-	auto result = population.best().json();
-	writeln();
-	writeln("Best solution so far is ", result.toJSON());
 }}
 
