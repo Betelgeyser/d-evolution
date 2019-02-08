@@ -24,7 +24,7 @@ import std.getopt             : defaultGetoptPrinter, getopt, GetOptException;
 import std.json               : toJSON;
 import std.math               : approxEqual, isFinite, lround;
 import std.random             : unpredictableSeed;
-import std.stdio              : stderr, stdout, write, writeln;
+import std.stdio              : File, stderr, stdout, write, writeln;
 import std.string             : format;
 
 // Cuda modules
@@ -98,6 +98,7 @@ void main(string[] args)
 	uint   report;         /// Report every X generation.
 	uint   timeLimit;      /// Time limit to train ANN, seconds.
 	string pathToData;     /// Path to the folder cointaining datasets. Must be of the specific structure.
+	string outputFile = "result.json";
 	
 	// Network parameters
 	uint  layers;
@@ -123,7 +124,8 @@ void main(string[] args)
 			"fitness-function|f", "Fitness function. Available values: MAE (default), MPE", &parseFitness,
 			"min",          "Minimum connection weight.",                &min,
 			"max",          "Maximum connection weight.",                &max,
-			"seed|s",       "Seed for the PRNG. May be set to a specific unsigned integer number or \"random\" (default).", &parseSeed
+			"seed|s",       "Seed for the PRNG. May be set to a specific unsigned integer number or \"random\" (default).", &parseSeed,
+			"output-file|of", "Output file to save trained results.",      &outputFile
 		);
 		
 		if (opts.helpWanted)
@@ -295,6 +297,8 @@ void main(string[] args)
 //		}
 		
 		population.evolve(pool);
+		auto f = File(outputFile, "w");
+		f.write(result.toJSON());
 	}
 	stopWatch.stop();
 	
