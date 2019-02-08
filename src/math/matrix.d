@@ -143,7 +143,7 @@ struct Matrix
 	 * Params:
 	 *     rows = Number of rows.
 	 *     cols = Number of columns.
-	 *     origin = Array to create matrix from.
+	 *     values = Array to create matrix from.
 	 */
 	this(in uint rows, in uint cols, inout(float[]) values) @nogc inout nothrow pure @safe
 	{

@@ -204,6 +204,7 @@ struct Population
 	 *     params = Networks of the population are generated using this parameters.
 	 *     size = Number of individuals in a single generation.
 	 *     pool = Pool of random values.
+	 *     fitnessFunction = Fitness tunction to use during the evolution process. MAE is default.
 	 */
 	this(in NetworkParams params, in ulong size, RandomPool pool, float function(in Matrix, in Matrix, cublasHandle_t) fitnessFunction = &math.MAE)
 	in

@@ -67,7 +67,8 @@ struct RandomPool
 	 * Setup the pool and generate new bits.
 	 *
 	 * Params:
-	 *     generator = Curand pseudorandom number generator.
+	 *     rngType = Type of the cuda random number generator.
+	 *     seed = Seed.
 	 *     size = Pool size in bytes. Defaults to 2GiB.
 	 */
 	this(in curandRngType_t rngType, in ulong seed = 0, in size_t size = 536_870_912) nothrow

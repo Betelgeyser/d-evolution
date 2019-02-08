@@ -49,9 +49,9 @@ version (unittest)
 
 
 /**
- * Calculate an Absolute Error between $(D_PARAM A) and $(D_PARAM B) arrays of vectors on GPU.
+ * Calculate an Absolute Error between $(D_PARAM actual) and $(D_PARAM predicted) arrays of vectors on a GPU.
  *
- * Resulting array $(D_PARAM error) is calculated by formula:
+ * The resulting array $(D_PARAM error) is calculated by the formula:
  *
  * <math>
  *   <mrow>
@@ -68,8 +68,8 @@ version (unittest)
  *   </mrow>
  * </math>
  *
- * Though $(D_PARAM A) and $(D_PARAM B) are of the type `Matrix` this is a technical convinience. They are interpreted
- * as arrays of vectors where a single column is a single vector.
+ * Though $(D_PARAM actual) and $(D_PARAM predicted) variables are of the type `Matrix` this is a technical convinience.
+ * They are interpreted as arrays of vectors where a single column is a single vector.
  *
  * Params:
  *     actual = Matrix of actual values.
@@ -129,10 +129,10 @@ unittest
 }
 
 /**
- * Calculate the Mean Absolute Error between $(D_PARAM A) and $(D_PARAM B) arrays of vectors on GPU.
+ * Calculate the Mean Absolute Error between $(D_PARAM actual) and $(D_PARAM predicted) arrays of vectors on GPU.
  *
- * Though $(D_PARAM A) and $(D_PARAM B) are of the type `Matrix` this is a technical convinience. They are interpreted
- * as arrays of vectors where a single column is a single vector.
+ * Though $(D_PARAM actual) and $(D_PARAM predicted) variables are of the type `Matrix` this is a technical convinience.
+ * They are interpreted as arrays of vectors where a single column is a single vector.
  *
  * Calls cudaDeviceSyncronize() internally.
  *
@@ -186,7 +186,7 @@ unittest
 }
 
 /**
- * Calculate the Mean Percentage Error between $(D_PARAM A) and $(D_PARAM B) arrays of vectors on GPU.
+ * Calculate the Mean Absolute Percentage Error between $(D_PARAM actual) and $(D_PARAM predicted) arrays of vectors on GPU.
  *
  * See_also:
  *     $(LINK https://en.wikipedia.org/wiki/Mean_percentage_error)
