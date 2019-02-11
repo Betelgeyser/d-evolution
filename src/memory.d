@@ -39,7 +39,7 @@ UnifiedMemoryManager UMM;
 private:
 
 immutable blockSize = 128 * 2^^20; /// Size of a newly allocated block. Defaults to 128 MiB. This number is purely random,
-                                          /// probably it will need some optimization later.
+                                   /// probably it will need some optimization later.
 
 /**
  * Continuous block of memory. It is the minimum unit of allocation.

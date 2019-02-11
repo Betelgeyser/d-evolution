@@ -195,7 +195,7 @@ struct Layer
 					break;
 				
 				default:
-					throw new Exception("json matrix value is not a number.");
+					throw new Exception("JSON matrix value is not a number.");
 			}
 	}
 	
