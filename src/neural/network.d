@@ -102,18 +102,6 @@ struct NetworkParams
 		LayerParams result = { min : this.min, max : this.max, inputs : this.neurons, neurons : this.outputs };
 		return result;
 	}
-	
-	/**
-	 * Returns: The number of independent parameters uniquely defining a network. That is total number of connections'
-	 *     weights of the neurons in the current implementation.
-	 */
-	@property ulong degreesOfFreedom() const @nogc nothrow pure @safe
-	{
-		return
-			neurons * (inputs  + biasLength) +
-			outputs * (neurons + biasLength) +
-			neurons * (neurons + biasLength) * (layers - 2);
-	}
 }
 
 /**
