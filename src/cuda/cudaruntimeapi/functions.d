@@ -44,6 +44,24 @@ void cudaMallocManaged(T)(ref T[] devPtr, ulong nitems, uint flags = cudaMemAtta
 	devPtr = (cast(T*)tmp)[0 .. nitems];
 }
 
+/**
+ * Safe wrapper around cudaMallocManaged.
+ *
+ * This function is trusted because it returns an array rather than a raw pointer.
+ * The length of the array is exactly the number of the allocated items. The array itself
+ * provides a safer interface to the allocated memory as it performs bounds check.
+ *
+ * The value of the array can be reassigned, its length can be changed and that will cause
+ * a GC allocation. In that case cuda memory will not be accessible any more. This behaviour is better
+ * to be avoided, but it should not affect memory safety.
+ */
+T[] cudaMallocManaged(T)(ulong nitems, uint flags = cudaMemAttachGlobal) @nogc nothrow pure @trusted
+{
+	void* tmp;
+	enforceCudart(cudart.cudaMallocManaged(&tmp, nitems * T.sizeof, flags));
+	return (cast(T*)tmp)[0 .. nitems];
+}
+
 void cudaFree(void* devPtr) @nogc nothrow
 {
 	enforceCudart(cudart.cudaFree(devPtr));
