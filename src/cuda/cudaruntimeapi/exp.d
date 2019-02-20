@@ -20,11 +20,17 @@ module cuda.cudaruntimeapi.exp;
 import cuda.cudaruntimeapi.types;
 
 extern(C) package @nogc nothrow:
-	cudaError_t cudaMalloc(void** devPtr, size_t size);
-	cudaError_t cudaMallocManaged(void** devPtr, size_t size, uint flags = cudaMemAttachGlobal); 
-	cudaError_t cudaFree(void* devPtr);
-	cudaError_t cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind) pure;
+	/**
+	 * These functions are pure in contrast with the regular `malloc`. `malloc` returns errors through
+	 * global `errno` variable which makes it impure. `cudaMallocaManaged` returns errors through
+	 * return error codes and does not affect global state (in weak puruty sense).
+	 */
+	pure cudaError_t cudaMalloc(void** devPtr, size_t size);
+	pure cudaError_t cudaMallocManaged(void** devPtr, size_t size, uint flags = cudaMemAttachGlobal);
+	pure cudaError_t cudaFree(void* devPtr);
+	
+	pure cudaError_t cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind);
 	cudaError_t cudaDeviceSynchronize();
-	cudaError_t cudaGetDeviceCount(int* count) pure;
+	pure cudaError_t cudaGetDeviceCount(int* count);
 	cudaError_t cudaSetDevice(int device);
 
