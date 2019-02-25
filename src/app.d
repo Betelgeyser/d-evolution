@@ -54,7 +54,7 @@ float function(in Matrix, in Matrix, cublasHandle_t) fitnessFunction = &MAE;
 void parseSeed(string option, string value) @safe
 {
 	if (!trainingMode)
-		throw new CLIException("--seed option is avaliable for the training mode only");
+		throw new CLIException("--seed option is only compatible with training mode");
 	
 	if (value != "random") // "random" is a valid value
 		try
@@ -77,7 +77,7 @@ void parseDevice(string option, string value)
 void parseFitness(string option, string value) @safe
 {
 	if (!trainingMode)
-		throw new CLIException("--fitness-function optione is avaliable in the training mode only");
+		throw new CLIException("--fitness-function option is only compatible with training mode");
 	
 	switch (value)
 	{
@@ -96,12 +96,11 @@ void parseFitness(string option, string value) @safe
 
 void main(string[] args)
 {
-	version (unittest) {} else {
 	seed = unpredictableSeed(); // Default runtime initialization. unpredictableSeed cannot be determined at compile time.
 	uint   populationSize; /// Population size.
 	uint   report;         /// Report every X generation.
 	uint   timeLimit;      /// Time limit to train ANN, seconds.
-	string pathToData;     /// Path to the folder cointaining datasets. Must be of the specific structure.
+	string data;     /// Path to the folder cointaining datasets. Must be of the specific structure.
 	string outputFile = "result.json";
 	
 	// Network parameters
@@ -116,7 +115,7 @@ void main(string[] args)
 	{
 		auto opts = getopt(
 			args,
-			"path",         "Path to the data directory.",               &pathToData,
+			"data",         "Path to the data directory.",               &data,
 			"device|d",     "GPU device to use.",                        &parseDevice,
 			"time|t",       "Time limit, seconds.",                      &timeLimit,
 			"layers|l",     "Number of layers.",                         &layers,
@@ -136,6 +135,15 @@ void main(string[] args)
 			defaultGetoptPrinter("\n\tDNN is D Neural Network. It uses neuroevolution to learn.\n", opts.options);
 			return;
 		}
+		
+		if (!min.isFinite)
+			throw new CLIException("Minimum connection weight must be a finite value");
+		
+		if (!max.isFinite)
+			throw new CLIException("Maximum connection weight must be a finite value");
+		
+		if (min >= max)
+			throw new CLIException("Invalid connection weight boundaries");
 	}
 	catch(GetOptException e)
 	{
@@ -157,24 +165,6 @@ void main(string[] args)
 		return;
 	}
 	
-	if (!isFinite(min))
-	{
-		writeln("Minimum weigth must be a finite number, not %g".format(min));
-		return;
-	}
-	
-	if (!isFinite(max))
-	{
-		writeln("Maximum weigth must be a finite number, not %g".format(max));
-		return;
-	}
-	
-	if (min >= max)
-	{
-		writeln("The minimum weight %g must be less than the maximum weight %g.".format(min, max));
-		return;
-	}
-	
 	if (populationSize < 2)
 	{
 		writeln("Population must be at leats 2 individuals.");
@@ -192,16 +182,16 @@ void main(string[] args)
 		cublasCreate(cublasHandle);
 		scope(exit) cublasDestroy(cublasHandle);
 		
-		auto trainingInputs = Matrix(readText(pathToData ~ "/training/inputs.csv"));
+		auto trainingInputs = Matrix(readText(data ~ "/training/inputs.csv"));
 		scope(exit) trainingInputs.freeMem();
 		
-		auto trainingOutputs = Matrix(readText(pathToData ~ "/training/outputs.csv"));
+		auto trainingOutputs = Matrix(readText(data ~ "/training/outputs.csv"));
 		scope(exit) trainingOutputs.freeMem();
 		
-		auto validationInputs = Matrix(readText(pathToData ~ "/validation/inputs.csv"));
+		auto validationInputs = Matrix(readText(data ~ "/validation/inputs.csv"));
 		scope(exit) validationInputs.freeMem();
 		
-		auto validationOutputs = Matrix(readText(pathToData ~ "/validation/outputs.csv"));
+		auto validationOutputs = Matrix(readText(data ~ "/validation/outputs.csv"));
 		scope(exit) validationOutputs.freeMem();
 		
 		NetworkParams params = {
@@ -319,5 +309,5 @@ void main(string[] args)
 		writeln();
 		writeln("Best solution so far is ", result.toJSON());
 	}
-}}
+}
 
