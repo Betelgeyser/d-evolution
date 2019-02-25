@@ -231,7 +231,7 @@ struct Layer
 	 * This method returns a JSON struct instead of a string representation because
 	 * it will further be used by a network to construct its own JSON representation.
 	 */
-	JSONValue json() const
+	JSONValue json() const pure @safe
 	{
 		JSONValue result = [
 			"Inputs" : inputs,

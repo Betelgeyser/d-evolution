@@ -74,7 +74,7 @@ void parseDevice(string option, string value)
 		throw new CLIException("Invalid device id");
 }
 
-void parseFitness(string option, string value)
+void parseFitness(string option, string value) @safe
 {
 	if (!trainingMode)
 		throw new CLIException("--fitness-function optione is avaliable in the training mode only");
