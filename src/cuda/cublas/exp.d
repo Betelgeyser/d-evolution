@@ -24,7 +24,7 @@ package:
 	alias cublasDestroy = cublasDestroy_v2;
 	alias cublasSgemm   = cublasSgemm_v2;
 
-extern(C) nothrow @nogc:
+extern(C) nothrow pure @nogc:
 	cublasStatus_t cublasCreate_v2(cublasHandle_t* handle);
 	cublasStatus_t cublasDestroy_v2(cublasHandle_t handle);
 	cublasStatus_t cublasSgemm_v2(

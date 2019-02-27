@@ -25,14 +25,36 @@ import cuda.common;
 import cuda.cublas.types;
 static import cublas = cuda.cublas.exp;
 
+deprecated("Use CublasHandle class instead.")
 void cublasCreate(ref cublasHandle_t handle) nothrow @nogc
 {
 	enforceCublas(cublas.cublasCreate(&handle));
 }
 
+deprecated("Use CublasHandle class instead.")
 void cublasDestroy(cublasHandle_t handle) nothrow @nogc
 {
 	enforceCublas(cublas.cublasDestroy(handle));
+}
+
+/**
+ * A convenient wrapper around cublasHandle_t.
+ */
+final class CublasHandle
+{
+	alias handle this;
+	
+	this() @nogc nothrow pure
+	{
+		enforceCublas(cublas.cublasCreate(&handle));
+	}
+	
+	~this() @nogc nothrow pure
+	{
+		enforceCublas(cublas.cublasCreate(&handle));
+	}
+	
+	cublasHandle_t handle;
 }
 
 /**
