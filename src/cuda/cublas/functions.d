@@ -19,6 +19,8 @@
  */
 module cuda.cublas.functions;
 
+import std.exception : basicExceptionCtors;
+
 import cuda.common;
 import cuda.cublas.types;
 static import cublas = cuda.cublas.exp;
@@ -144,8 +146,21 @@ void cublasSgeam(
 	);
 }
 
-package void enforceCublas(cublasStatus_t error) pure nothrow @safe @nogc
+/**
+ * Throws an error if the cublas error code is an error.
+ *
+ * This function eliminates the need of checking an error code returned by a cublas function call.
+ */
+package void enforceCublas(cublasStatus_t error) @nogc nothrow pure @safe
 {
-	assert (error == cublasStatus_t.CUBLAS_STATUS_SUCCESS, error.toString);
+	if (error != cublasStatus_t.CUBLAS_STATUS_SUCCESS)
+		throw new CublasError(error.toString);
 }
 
+/**
+ * Cublas error class.
+ */
+class CublasError : Error
+{
+	mixin basicExceptionCtors;
+}
