@@ -60,8 +60,7 @@ unittest
 	
 	immutable length = 5;
 	
-	float[] data;
-	cudaMallocManaged(data, length);
+	auto data = cudaMallocManaged!float(length);
 	scope(exit) cudaFree(data);
 	
 	data[0 .. $] = [-1_000, -1, 0, 1, 1_000];
@@ -106,8 +105,7 @@ unittest
 	
 	immutable length = 3;
 	
-	float[] data;
-	cudaMallocManaged(data, length);
+	auto data = cudaMallocManaged!float(length);
 	scope(exit) cudaFree(data);
 	
 	data[0 .. $] = [-1, 0, 1];
@@ -152,8 +150,7 @@ unittest
 	
 	immutable length = 3;
 	
-	float[] data;
-	cudaMallocManaged(data, length);
+	auto data = cudaMallocManaged!float(length);
 	scope(exit) cudaFree(data);
 	
 	data[0 .. $] = [-1, 0, 1];
@@ -202,8 +199,7 @@ unittest
 	
 	immutable length = 3;
 	
-	uint[] data;
-	cudaMallocManaged(data, length);
+	auto data = cudaMallocManaged!uint(length);
 	scope(exit) cudaFree(data);
 	
 	data[0 .. $]   = [uint.min, uint.max / 2, uint.max];
@@ -303,25 +299,21 @@ unittest
 	immutable alpha  = 0.5;
 	
 	// Initialize parents
-	float[] x;
-	cudaMallocManaged(x, length);
+	auto x = cudaMallocManaged!float(length);
 	scope(exit) cudaFree(x);
 	
-	float[] y;
-	cudaMallocManaged(y, length);
+	auto y = cudaMallocManaged!float(length);
 	scope(exit) cudaFree(y);
 	
 	x[0 .. $] = [0, 1, -1];
 	y[0 .. $] = [0, 0,  2];
 	
 	// An offspring does not need to be initialized, just allocate memory
-	float[] offspring;
-	cudaMallocManaged(offspring, length);
+	auto offspring = cudaMallocManaged!float(length);
 	scope(exit) cudaFree(offspring);
 	
 	// There should be pregenerated random values
-	uint[] u;
-	cudaMallocManaged(u, length);
+	auto u = cudaMallocManaged!uint(length);
 	scope(exit) cudaFree(u);
 	
 	u[0 .. $] = [0, uint.max / 2, uint.max];
@@ -372,12 +364,10 @@ unittest
 {
 	mixin(writeTest!cudaRBS);
 	
-	uint[] ranks;
-	cudaMallocManaged(ranks, 5);
+	auto ranks = cudaMallocManaged!uint(5);
 	scope(exit) cudaFree(ranks);
 	
-	float[] scores;
-	cudaMallocManaged(scores, 5);
+	auto scores = cudaMallocManaged!float(5);
 	scope(exit) cudaFree(scores);
 	
 	scores[0 .. $] = [0.0, 0.1, 3.0, 4.5, 47.123];
@@ -409,8 +399,7 @@ unittest
 	
 	immutable length = 5;
 	
-	float[] data;
-	cudaMallocManaged(data, length);
+	auto data = cudaMallocManaged!float(length);
 	scope(exit) cudaFree(data);
 	
 	cudaFill(data,           1);
@@ -449,8 +438,7 @@ unittest
 	Matrix data = Matrix(length, dim);
 	scope(exit) data.freeMem();
 	
-	float[] norm;
-	cudaMallocManaged(norm, length);
+	auto norm = cudaMallocManaged!float(length);
 	scope(exit) cudaFree(norm);
 	
 	data.values.each!"a = i";

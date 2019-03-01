@@ -25,6 +25,7 @@ import cuda.common;
 import cuda.cudaruntimeapi.types;
 static import cudart = cuda.cudaruntimeapi.exp;
 
+deprecated
 void cudaMalloc(T)(ref T* devPtr, ulong nitems) @nogc nothrow
 {
 	void* tmp;
@@ -32,6 +33,7 @@ void cudaMalloc(T)(ref T* devPtr, ulong nitems) @nogc nothrow
 	devPtr = cast(T*)tmp;
 }
 
+deprecated
 void cudaMallocManaged(T)(ref T* devPtr, ulong nitems, uint flags = cudaMemAttachGlobal) @nogc nothrow
 {
 	void* tmp;
@@ -39,15 +41,8 @@ void cudaMallocManaged(T)(ref T* devPtr, ulong nitems, uint flags = cudaMemAttac
 	devPtr = cast(T*)tmp;
 }
 
-void cudaMallocManaged(T)(ref T[] devPtr, ulong nitems, uint flags = cudaMemAttachGlobal) @nogc nothrow
-{
-	void* tmp;
-	enforceCudart(cudart.cudaMallocManaged(&tmp, nitems * T.sizeof, flags));
-	devPtr = (cast(T*)tmp)[0 .. nitems];
-}
-
 /**
- * Safe wrapper around cudaMallocManaged.
+ * Trusted wrapper around cudaMallocManaged.
  *
  * This function is trusted because it returns an array rather than a raw pointer.
  * The length of the array is exactly the number of the allocated items. The array itself
@@ -64,17 +59,19 @@ T[] cudaMallocManaged(T)(ulong nitems, uint flags = cudaMemAttachGlobal) @nogc n
 	return (cast(T*)tmp)[0 .. nitems];
 }
 
-void cudaFree(void* devPtr) @nogc nothrow
+void cudaMallocManaged(T)(ref T[] devPtr, ulong nitems, uint flags = cudaMemAttachGlobal) @nogc nothrow pure @safe
 {
-	enforceCudart(cudart.cudaFree(devPtr));
+	devPtr.destroy();
+	devPtr = cudaMallocManaged!T(nitems, flags);
 }
 
-void cudaFree(T)(ref T[] devPtr) @nogc nothrow
+void cudaFree(T)(ref T[] devPtr) @nogc nothrow pure @trusted
 {
 	enforceCudart(cudart.cudaFree(devPtr.ptr));
 	devPtr.destroy();
 }
 
+deprecated
 void cudaMemcpy(void* dst, const(void)* src, size_t count, cudaMemcpyKind kind) @nogc nothrow pure
 {
 	enforceCudart(cudart.cudaMemcpy(dst, src, count, kind));

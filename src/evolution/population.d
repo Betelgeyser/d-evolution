@@ -367,15 +367,13 @@ struct Population
 		
 		immutable float ranksSum = AS(1, _size, _size);
 		
-		uint[] xParents;
-		cudaMallocManaged(xParents, _size - _elite);
+		auto xParents = cudaMallocManaged!uint(_size - _elite);
 		scope(exit) cudaFree(xParents);
 		
 		float[] randomScores = pool(_size - _elite).cudaScale(0, ranksSum);
 		cudaRBS(xParents, randomScores);
 		
-		uint[] yParents;
-		cudaMallocManaged(yParents, _size - _elite);
+		auto yParents = cudaMallocManaged!uint(_size - _elite);
 		scope(exit) cudaFree(yParents);
 		
 		randomScores = pool(_size - _elite).cudaScale(0, ranksSum);
