@@ -172,15 +172,13 @@ void main(string[] args)
 	}
 	
 	cudaSetDevice(device);
+	scope auto cublasHandle = new CublasHandle();
 	
 	if (trainingMode)
 	{
 		auto pool = RandomPool(curandRngType_t.PSEUDO_DEFAULT, seed);
 		scope(exit) pool.freeMem();
 		
-		cublasHandle_t cublasHandle;
-		cublasCreate(cublasHandle);
-		scope(exit) cublasDestroy(cublasHandle);
 		
 		auto trainingInputs = Matrix(readText(data ~ "/training/inputs.csv"));
 		scope(exit) trainingInputs.freeMem();

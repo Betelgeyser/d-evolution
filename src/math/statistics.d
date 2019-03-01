@@ -33,18 +33,6 @@ version (unittest)
 {
 	import std.algorithm : each, equal;
 	import std.math      : approxEqual;
-	
-	private cublasHandle_t cublasHandle;
-	
-	static this()
-	{
-		cublasCreate(cublasHandle);
-	}
-	
-	static ~this()
-	{
-		cublasDestroy(cublasHandle);
-	}
 }
 
 
@@ -121,6 +109,8 @@ unittest
 	A.each!"a = i";
 	P.each!"a = 1.5 * i";
 	
+	scope auto cublasHandle = new CublasHandle();
+	
 	AE(A, P, E, cublasHandle);
 	cudaDeviceSynchronize();
 	
@@ -179,6 +169,8 @@ unittest
 	
 	A.each!"a = i";
 	P.each!"a = 1.5 * i";
+	
+	scope auto cublasHandle = new CublasHandle();
 	
 	float error = MAE(A, P, cublasHandle);
 	

@@ -37,18 +37,6 @@ version (unittest)
 {
 	import std.algorithm : equal;
 	import std.math      : approxEqual;
-	
-	private cublasHandle_t cublasHandle;
-	
-	static this()
-	{
-		cublasCreate(cublasHandle);
-	}
-	
-	static ~this()
-	{
-		cublasDestroy(cublasHandle);
-	}
 }
 
 import core.exception : RangeError;
@@ -447,6 +435,8 @@ unittest
 	A.each!"a = i";
 	B.each!"a = i";
 	
+	scope auto cublasHandle = new CublasHandle();
+
 	gemm(A, false, B, false, C, cublasHandle);
 	cudaDeviceSynchronize();
 	
@@ -537,6 +527,8 @@ unittest
 	A.each!"a = i";
 	B.each!"a = i";
 	
+	scope auto cublasHandle = new CublasHandle();
+	
 	geam(1, A, false, 2, B, false, C, cublasHandle);
 	
 	float[] result = [
@@ -612,6 +604,8 @@ unittest
 	scope(exit) C.freeMem();
 	
 	A.each!"a = i";
+	
+	scope auto cublasHandle = new CublasHandle();
 	
 	transpose(A, C, cublasHandle);
 	cudaDeviceSynchronize();
