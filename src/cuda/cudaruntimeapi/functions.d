@@ -19,6 +19,8 @@
  */
 module cuda.cudaruntimeapi.functions;
 
+import std.exception : basicExceptionCtors;
+
 import cuda.common;
 import cuda.cudaruntimeapi.types;
 static import cudart = cuda.cudaruntimeapi.exp;
@@ -101,6 +103,10 @@ void cudaSetDevice(int device) @nogc nothrow
 package void enforceCudart(cudaError_t error) @nogc nothrow pure @safe
 {
 	if (error != cudaError_t.cudaSuccess)
-		throw new Error(error.toString);
+		throw new CudaRuntimeError(error.toString);
 }
 
+class CudaRuntimeError : Error
+{
+	mixin basicExceptionCtors;
+}
