@@ -123,7 +123,7 @@ struct Individual
 /**
  * Rank selection only
  */
-struct Population
+class Population
 {
 	private
 	{
@@ -214,8 +214,6 @@ struct Population
 	}
 	body
 	{
-		scope(failure) freeMem();
-		
 		_size          = size;
 		_networkParams = params;
 		_individuals   = nogcMalloc!Individual(size * 2);
@@ -239,8 +237,7 @@ struct Population
 		NetworkParams params = { inputs : 4, outputs : 2, neurons : 3, layers : 4 };
 		immutable size = 100;
 		
-		auto population = Population(params, size, randomPool);
-		scope(exit) population.freeMem();
+		scope auto population = new Population(params, size, randomPool);
 		
 		assert (population._currentGeneration.length == size);
 		assert (population._newGeneration.length     == size);
@@ -263,15 +260,7 @@ struct Population
 		}
 	}
 	
-	/**
-	 * Free memory.
-	 *
-	 * For the reason how D works with structs memory freeing moved from destructor to
-	 * the the distinct function. Either allocating structs on stack or in heap or both
-	 * causes spontaneous destructors calls. Apparently structs are not intended
-	 * to be used with dynamic memory, probably it should be implemented as a class.  
-	 */
-	void freeMem() nothrow
+	~this() nothrow
 	{
 		_individuals.each!(x => x.freeMem());
 		
@@ -332,8 +321,7 @@ struct Population
 		NetworkParams params = { inputs : 5, outputs : 2, neurons : 4, layers : 5 };
 		immutable size = 100;
 		
-		auto population = Population(params, size, randomPool);
-		scope(exit) population.freeMem();
+		scope auto population = new Population(params, size, randomPool);
 		cudaDeviceSynchronize();
 		
 		// Fill fitness values with random data
@@ -409,8 +397,7 @@ struct Population
 		NetworkParams params = { inputs : 5, outputs : 1, neurons : 3, layers : 5, min : -1.0e3, max : 1.0e3 };
 		immutable size = 100;
 		
-		auto population = Population(params, size, pool);
-		scope(exit) population.freeMem();
+		scope auto population = new Population(params, size, pool);
 		
 		population.evolve(pool);
 	}

@@ -226,8 +226,7 @@ void main(string[] args)
 		write("\tGenerating population...");
 		stdout.flush();
 		
-		auto population = Population(params, populationSize, pool, fitnessFunction);
-		scope(exit) population.freeMem();
+		scope auto population = new Population(params, populationSize, pool, fitnessFunction);
 		
 		writeln(" [ " ~ "done".ansiFormat(ANSIColor.green) ~ " ]");
 		
